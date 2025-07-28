@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Moodle</string>
+    <string name="screen_recording_title">Screen recording</string>
+    <string name="screen_recording_in_progress">Recording in progress...</string>
+    <string name="screen_recording_channel_name">Screen Recording Channel</string>
+    <string name="start_recording">Start recording</string>
+    <string name="stop_recording">Stop recording</string>
 </resources>
