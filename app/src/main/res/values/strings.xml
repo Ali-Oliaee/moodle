@@ -5,4 +5,7 @@
     <string name="screen_recording_channel_name">Screen Recording Channel</string>
     <string name="start_recording">Start recording</string>
     <string name="stop_recording">Stop recording</string>
+    <string name="recording_started">Screen recording started</string>
+    <string name="recording_stopped">Screen recording stopped</string>
+    <string name="recording_permission_required">Screen recording permission is required</string>
 </resources>

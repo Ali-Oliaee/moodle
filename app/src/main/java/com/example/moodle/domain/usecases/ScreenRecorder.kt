@@ -18,6 +18,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.content.getSystemService
 import androidx.window.layout.WindowMetricsCalculator
+import com.example.moodle.R
 import com.example.moodle.core.NotificationHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -134,6 +135,21 @@ class ScreenRecordService: Service() {
             }
         }
     }
+    
+    private fun showRecordingStatusNotification(isStarted: Boolean) {
+        serviceScope.launch(Dispatchers.Main) {
+            try {
+                val message = if (isStarted) {
+                    getString(R.string.recording_started)
+                } else {
+                    getString(R.string.recording_stopped)
+                }
+                Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Log.e("ScreenRecorder", "Error showing status toast: ${e.message}")
+            }
+        }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when(intent?.action) {
@@ -188,6 +204,8 @@ class ScreenRecordService: Service() {
             mediaRecorder.start()
 
             virtualDisplay = createVirtualDisplay()
+            
+            showRecordingStatusNotification(true)
         } catch (e: Exception) {
             releaseResources()
             stopService()
@@ -201,6 +219,7 @@ class ScreenRecordService: Service() {
             mediaRecorder.reset()
         } catch (e: Exception) {
         } finally {
+            showRecordingStatusNotification(false)
             releaseResources()
             saveToGallery()
             stopService()
