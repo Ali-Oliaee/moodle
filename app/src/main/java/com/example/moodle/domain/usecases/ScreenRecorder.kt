@@ -93,7 +93,7 @@ class ScreenRecordService: Service() {
                             val bytesCopied = inputStream.copyTo(outputStream)
                         }
                     }
-                    showSaveSuccessNotification("Video saved to gallery")
+                    showSaveSuccessNotification("ضبط صفحه با موفقیت ثبت شد")
                 } ?: run {
                     saveToDownloadsAsFallback()
                 }
@@ -112,16 +112,16 @@ class ScreenRecordService: Service() {
             val destFile = File(downloadsDir, "screen_recording_${System.currentTimeMillis()}.mp4")
             outputFile.copyTo(destFile, overwrite = true)
             
-            showSaveSuccessNotification("Video saved to Downloads/ScreenRecordings")
+            showSaveSuccessNotification("ضبط صفحه با موفقیت ثبت شد")
         } catch (e: Exception) {
             try {
                 val externalDir = File(getExternalFilesDir(null), "ScreenRecordings")
                 externalDir.mkdirs()
                 val destFile = File(externalDir, "screen_recording_${System.currentTimeMillis()}.mp4")
                 outputFile.copyTo(destFile, overwrite = true)
-                showSaveSuccessNotification("Video saved to app files: ${destFile.absolutePath}")
+                showSaveSuccessNotification("ضبط صفحه با موفقیت ثبت شد")
             } catch (e2: Exception) {
-                showSaveSuccessNotification("Video saved to app cache: ${outputFile.absolutePath}")
+                showSaveSuccessNotification("ضبط صفحه با موفقیت ثبت شد")
             }
         }
     }

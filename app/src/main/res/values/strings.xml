@@ -1,11 +1,11 @@
 <resources>
     <string name="app_name">Moodle</string>
-    <string name="screen_recording_title">Screen recording</string>
-    <string name="screen_recording_in_progress">Recording in progress...</string>
-    <string name="screen_recording_channel_name">Screen Recording Channel</string>
-    <string name="start_recording">Start recording</string>
-    <string name="stop_recording">Stop recording</string>
-    <string name="recording_started">Screen recording started</string>
-    <string name="recording_stopped">Screen recording stopped</string>
-    <string name="recording_permission_required">Screen recording permission is required</string>
+    <string name="screen_recording_title">ضبط صفحه</string>
+    <string name="screen_recording_in_progress">ضبط صفحه در حال انجام است</string>
+    <string name="screen_recording_channel_name">کانال ضبط صفحه</string>
+    <string name="start_recording">ضبط صفحه شروع شد</string>
+    <string name="stop_recording">ضبط صفحه پایان یافت</string>
+    <string name="recording_started">ضبط صفحه آغاز شد</string>
+    <string name="recording_stopped">ضبط صفحه پایان یافت</string>
+    <string name="recording_permission_required">اجازه ضبط صفحه لازم است</string>
 </resources>

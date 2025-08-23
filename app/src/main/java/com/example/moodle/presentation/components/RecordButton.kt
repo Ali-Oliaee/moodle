@@ -22,14 +22,9 @@ fun RecordButton(
     onStopRecording: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val buttonColor by animateFloatAsState(
-        targetValue = if (isRecording) 1f else 0f,
-        animationSpec = tween(durationMillis = 300),
-        label = "buttonColor"
-    )
-    
     IconButton(
         onClick = {
+            android.util.Log.d("RecordButton", "Button clicked, isRecording: $isRecording")
             if (isRecording) {
                 onStopRecording()
             } else {
@@ -37,18 +32,22 @@ fun RecordButton(
             }
         },
         modifier = modifier
-            .size(48.dp)
+            .size(56.dp) // Make button bigger for better visibility
+            .background(
+                color = Color.White.copy(alpha = 0.9f), // Semi-transparent white background
+                shape = RoundedCornerShape(28.dp)
+            )
             .border(
-                width = 1.dp,
-                color = if (isRecording) Color.Red else Color.Gray,
-                shape = RoundedCornerShape(25.dp)
+                width = 2.dp, // Thicker border
+                color = if (isRecording) Color.Red else Color.Blue,
+                shape = RoundedCornerShape(28.dp)
             )
     ) {
         Box(
             modifier = Modifier
-                .size(20.dp)
+                .size(24.dp) // Bigger inner circle
                 .background(
-                    color = if (isRecording) Color.Red else Color.Gray,
+                    color = if (isRecording) Color.Red else Color.Blue,
                     shape = CircleShape
                 )
         )

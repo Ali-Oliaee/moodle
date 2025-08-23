@@ -44,10 +44,7 @@ fun WhiteBoard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Whiteboard",
-                style = MaterialTheme.typography.headlineSmall
-            )
+           
             IconButton(
                 onClick = onLogout,
                 modifier = Modifier.size(48.dp)

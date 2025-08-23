@@ -66,6 +66,6 @@ fun ColumnScope.CanvasControls(
     Button(
         onClick = onClearCanvas
     ) {
-        Text("Clear Canvas")
+        Text("پاک کردن صفحه")
     }
 }
