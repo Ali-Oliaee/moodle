@@ -1,6 +1,7 @@
 package com.example.moodle.data.repository
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
@@ -37,15 +38,20 @@ class AuthRepository(
             
             if (response.isSuccessful && response.body() != null) {
                 val loginResponse = response.body()!!
-                if (loginResponse.success && loginResponse.token != null) {
+
+                // Consider login successful if token is present, regardless of success field
+                if (loginResponse.token != null) {
                     // Save authentication data
                     saveAuthData(loginResponse)
                     Result.success(loginResponse)
                 } else {
-                    Result.failure(Exception(loginResponse.message))
+                    // If no token, use the message from response or provide a default error
+                    val errorMessage = loginResponse.message ?: "Login failed: No authentication token received"
+                    Result.failure(Exception(errorMessage))
                 }
             } else {
-                Result.failure(Exception("Login failed: ${response.code()}"))
+                val errorMessage = "Login failed: ${response.code()}"
+                Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -114,9 +120,12 @@ class AuthRepository(
     private suspend fun saveAuthData(loginResponse: LoginResponse) {
         context.dataStore.edit { preferences ->
             preferences[KEY_AUTH_TOKEN] = loginResponse.token!!
-            preferences[KEY_REFRESH_TOKEN] = loginResponse.refreshToken!!
-            preferences[KEY_IS_LOGGED_IN] = true
+            // Only save refresh token if it's not null
+            loginResponse.refreshToken?.let { refreshToken ->
+                preferences[KEY_REFRESH_TOKEN] = refreshToken
+            }
             
+            preferences[KEY_IS_LOGGED_IN] = true
             loginResponse.data?.let { userData ->
                 preferences[KEY_USER_ID] = userData.id
                 preferences[KEY_USER_EMAIL] = userData.username

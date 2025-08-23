@@ -60,9 +60,10 @@ class LoginViewModel(
                         isLoginSuccessful = true
                     )
                 } else {
+                    val errorMessage = result.exceptionOrNull()?.message ?: "ورود ناموفق"
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = result.exceptionOrNull()?.message ?: "ورود ناموفق"
+                        error = errorMessage
                     )
                 }
             } catch (e: Exception) {
