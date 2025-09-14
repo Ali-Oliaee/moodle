@@ -1,3 +1,8 @@
+val keystorePath: String? = providers.gradleProperty("MYAPP_STORE_FILE").orNull
+val keystorePassword: String? = providers.gradleProperty("MYAPP_STORE_PASSWORD").orNull
+val keyAliasValue: String? = providers.gradleProperty("MYAPP_KEY_ALIAS").orNull
+val keyPasswordValue: String? = providers.gradleProperty("MYAPP_KEY_PASSWORD").orNull
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -17,15 +22,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -35,6 +31,27 @@ android {
     }
     buildFeatures {
         compose = false
+    }
+
+    signingConfigs {
+        if (keystorePath != null && keystorePassword != null && keyAliasValue != null && keyPasswordValue != null) {
+            create("release") {
+                val path = keystorePath!!
+                require(file(path).exists()) { "Keystore not found at $path" }
+                storeFile = file(path)
+                storePassword = keystorePassword!!
+                keyAlias = keyAliasValue!!
+                keyPassword = keyPasswordValue!!
+            }
+        }
+    }
+    buildTypes {
+        getByName("release") {
+            if (signingConfigs.findByName("release") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+            isMinifyEnabled = true
+        }
     }
 }
 
