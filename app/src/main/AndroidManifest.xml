@@ -25,9 +25,9 @@
             </intent-filter>
         </activity>
 
-        <activity
+        <!-- <activity
         android:name=".ui.recorder.RecorderActivity"
-        android:exported="false" />
+        android:exported="false" /> -->
 
         <!-- <service
             android:name=".ScreenRecordService"
