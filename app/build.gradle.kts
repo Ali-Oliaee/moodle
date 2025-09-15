@@ -1,38 +1,36 @@
-val keystorePath: String? = providers.gradleProperty("MYAPP_STORE_FILE").orNull
-val keystorePassword: String? = providers.gradleProperty("MYAPP_STORE_PASSWORD").orNull
-val keyAliasValue: String? = providers.gradleProperty("MYAPP_KEY_ALIAS").orNull
-val keyPasswordValue: String? = providers.gradleProperty("MYAPP_KEY_PASSWORD").orNull
+// :app build.gradle.kts (AGP 4.2.x expects "apply(plugin=…)", not catalogs/alias)
+
+val keystorePath: String? = providers.gradleProperty("MYAPP_STORE_FILE").forUseAtConfigurationTime().orNull
+val keystorePassword: String? = providers.gradleProperty("MYAPP_STORE_PASSWORD").forUseAtConfigurationTime().orNull
+val keyAliasValue: String? = providers.gradleProperty("MYAPP_KEY_ALIAS").forUseAtConfigurationTime().orNull
+val keyPasswordValue: String? = providers.gradleProperty("MYAPP_KEY_PASSWORD").forUseAtConfigurationTime().orNull
 
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
+    id("com.android.application")
+    id("kotlin-android")
+    id("kotlin-kapt")
 }
 
 android {
-    namespace = "com.example.moodle"
-    compileSdk = 30
+    // AGP 4.2 uses *Version() methods in Kotlin DSL
+    compileSdkVersion(26)
 
     defaultConfig {
         applicationId = "com.example.moodle"
-        minSdk = 30
-        targetSdk = 30
+        minSdkVersion(21)
+        targetSdkVersion(26)
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
-    buildFeatures {
-        compose = false
-    }
+    kotlinOptions { jvmTarget = "1.8" }
 
+    // No Compose in this toolchain; do not enable buildFeatures.compose
     signingConfigs {
         if (keystorePath != null && keystorePassword != null && keyAliasValue != null && keyPasswordValue != null) {
             create("release") {
@@ -56,36 +54,34 @@ android {
 }
 
 dependencies {
-    // Core UI (Views)
-    implementation ("androidx.appcompat:appcompat:1.3.1")
-    implementation ("com.google.android.material:material:1.4.0")
-    implementation ("androidx.constraintlayout:constraintlayout:2.1.4")
+    // === Legacy Support Libraries compatible with compileSdk/targetSdk 26 ===
+    implementation("com.android.support:appcompat-v7:26.1.0")
+    implementation("com.android.support:design:26.1.0")                // Material design widgets (pre-AndroidX)
+    implementation("com.android.support.constraint:constraint-layout:1.1.3")
 
-    // AndroidX core + activity/fragment
-    implementation ("androidx.core:core-ktx:1.6.0")
-    implementation ("androidx.activity:activity-ktx:1.3.1")
-    implementation ("androidx.fragment:fragment-ktx:1.3.6")
+    // Fragments, v4 support (if you need it)
+    implementation("com.android.support:support-v4:26.1.0")
 
-   // Lifecycle (SDK 30–friendly)
-    implementation ("androidx.lifecycle:lifecycle-runtime-ktx:2.3.1")
-    implementation ("androidx.lifecycle:lifecycle-viewmodel-ktx:2.3.1")
-    implementation ("androidx.lifecycle:lifecycle-livedata-ktx:2.3.1")
-    implementation ("androidx.savedstate:savedstate:1.1.0")
+    // Architecture Components (pre-AndroidX)
+    implementation("android.arch.lifecycle:runtime:1.1.1")
+    implementation("android.arch.lifecycle:viewmodel:1.1.1")
+    implementation("android.arch.lifecycle:livedata:1.1.1")
+    // If you use @OnLifecycleEvent or need generated code:
+    kapt("android.arch.lifecycle:compiler:1.1.1")
 
-    // DataStore
-    implementation ("androidx.datastore:datastore-preferences:1.0.0")
+    // NOTE: Remove AndroidX KTX libs (core-ktx, activity-ktx, fragment-ktx) – not available pre-AndroidX
+    // NOTE: Replace DataStore (AndroidX) with SharedPreferences on SDK 26
 
-    // Networking (yours are fine)
-    implementation ("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation ("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation ("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    // Networking (unchanged)
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+     implementation("com.squareup.okhttp3:okhttp:4.9.3")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
 
-    // Coroutines (keep, or pin to 1.6.4 if you want to be extra conservative)
-    implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    // Coroutines compatible with Kotlin 1.5.31 / Java 8
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.2")
 
-    // (tests) pick older versions compatible with the above if needed
-    testImplementation ("junit:junit:4.13.2")
-    androidTestImplementation ("androidx.test.ext:junit:1.1.3")
-    androidTestImplementation ("androidx.test.espresso:espresso-core:3.4.0")
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("com.android.support.test:runner:1.0.2")
+    androidTestImplementation("com.android.support.test.espresso:espresso-core:3.0.2")
 }
