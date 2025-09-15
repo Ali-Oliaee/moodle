@@ -1,4 +1,4 @@
-package com.example.moodle
+package com.example.moodle.ui.recorder
 
 import android.app.Activity
 import android.content.Intent
@@ -8,19 +8,19 @@ import android.widget.Button
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import com.example.moodle.R
+import com.example.moodle.ScreenRecordService
 
-class MainActivity : AppCompatActivity() {
+class RecorderActivity : AppCompatActivity() {
 
     private val mediaProjectionManager by lazy {
         getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
     }
 
-    // Ask user for screen-capture consent
     private val captureLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
-            // Start foreground service with the projection data
             val intent = Intent(this, ScreenRecordService::class.java).apply {
                 action = ScreenRecordService.ACTION_START
                 putExtra(ScreenRecordService.EXTRA_RESULT_CODE, result.resultCode)
@@ -35,14 +35,17 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_recorder)
 
-        findViewById<Button>(R.id.startRecordBtn).setOnClickListener {
+        val startBtn = findViewById<Button>(R.id.startRecordBtn)
+        val stopBtn = findViewById<Button>(R.id.stopRecordBtn)
+
+        startBtn.setOnClickListener {
             val captureIntent = mediaProjectionManager.createScreenCaptureIntent()
             captureLauncher.launch(captureIntent)
         }
 
-        findViewById<Button>(R.id.stopRecordBtn).setOnClickListener {
+        stopBtn.setOnClickListener {
             val stopIntent = Intent(this, ScreenRecordService::class.java).apply {
                 action = ScreenRecordService.ACTION_STOP
             }
