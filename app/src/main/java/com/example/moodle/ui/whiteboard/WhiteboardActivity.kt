@@ -13,9 +13,12 @@ import android.os.Bundle
 import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
 import android.widget.Button
+import android.widget.TextView
 import android.widget.Toast
 import com.example.moodle.R
 import com.example.moodle.ui.whiteboard.ScreenRecordService
+import com.example.moodle.data.datastore.UserPreferences
+import com.example.moodle.ui.login.LoginActivity
 
 class WhiteboardActivity : AppCompatActivity() {
 
@@ -29,7 +32,10 @@ class WhiteboardActivity : AppCompatActivity() {
     }
 
     private lateinit var toggleRecordBtn: Button
+    private lateinit var btnLogout: Button
+    private lateinit var tvWelcome: TextView
     private var isRecording = false
+    private lateinit var userPreferences: UserPreferences
     
     private val mediaProjectionManager by lazy {
         getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
@@ -54,6 +60,7 @@ class WhiteboardActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_whiteboard)
 
+        userPreferences = UserPreferences(this)
         initializeViews()
         registerRecordingStateReceiver()
         updateButtonAppearance()
@@ -61,10 +68,24 @@ class WhiteboardActivity : AppCompatActivity() {
 
     private fun initializeViews() {
         toggleRecordBtn = findViewById(R.id.toggleRecordBtn)
+        btnLogout = findViewById(R.id.btnLogout)
+        tvWelcome = findViewById(R.id.tvWelcome)
+        
+        // Set welcome message with username
+        val username = userPreferences.getUsername()
+        tvWelcome.text = if (!username.isNullOrBlank()) {
+            "Welcome, $username!"
+        } else {
+            "Welcome to Whiteboard!"
+        }
         
         toggleRecordBtn.setOnClickListener {
             if (isRecording) stopRecording()
             else startRecording()
+        }
+        
+        btnLogout.setOnClickListener {
+            logout()
         }
     }
 
@@ -156,6 +177,16 @@ class WhiteboardActivity : AppCompatActivity() {
             addAction("RECORDING_STOPPED")
         }
         registerReceiver(recordingStateReceiver, filter)
+    }
+
+    private fun logout() {
+        userPreferences.clearAllData()
+        Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
+        
+        val intent = Intent(this, LoginActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
     }
 
     override fun onDestroy() {

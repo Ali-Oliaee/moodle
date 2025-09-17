@@ -13,33 +13,35 @@ class AuthRepository(
 ) {
     
     suspend fun login(
-        serverUrl: String, 
         username: String, 
         password: String, 
         service: String = "moodle_mobile_app"
     ): Result<LoginResponse> = withContext(Dispatchers.IO) {
         try {
-            // Create API service with dynamic server URL
-            val apiService = ApiClient.createApiService(serverUrl)
-            
+            val apiService = ApiClient.createApiService()
+
             val response = apiService.login(username, password, service).execute()
-            
+        
             if (response.isSuccessful) {
                 val body = response.body()
                 
                 when {
                     body == null -> {
+                        Log.d("Moodle-Auth", "Login failed: Empty response body")
                         Result.failure(Exception("Empty response from server"))
                     }
-                    body.success == true && !body.token.isNullOrBlank() -> {
-                        // Save login credentials and token
+                    !body.token.isNullOrBlank() -> {
                         prefs.saveAuthToken(body.token!!)
                         prefs.saveUsername(username)
                         
                         Result.success(body)
                     }
                     else -> {
-                        val errorMsg = body.message ?: "Login failed - Invalid credentials"
+                        Log.d("Moodle-Auth", "Login failed: No token received")
+                        Log.d("Moodle-Auth", "Success flag: ${body.success}")
+                        Log.d("Moodle-Auth", "Message: ${body.message}")
+                        
+                        val errorMsg = body.message ?: "Login failed - No authentication token received"
                         Result.failure(Exception(errorMsg))
                     }
                 }
