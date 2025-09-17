@@ -5,7 +5,7 @@ import android.os.Bundle
 import android.widget.Button
 import android.support.v7.app.AppCompatActivity
 import com.example.moodle.R
-import com.example.moodle.ui.recorder.RecorderActivity
+import com.example.moodle.ui.whiteboard.WhiteboardActivity
 
 class LoginActivity : AppCompatActivity() {
 
@@ -13,10 +13,5 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
 
-        val screenRecorderBtn = findViewById<Button>(R.id.screenRecorderBtn)
-        
-        screenRecorderBtn.setOnClickListener {
-            startActivity(Intent(this, RecorderActivity::class.java))
-        }
     }
 }

@@ -28,11 +28,11 @@
         </activity>
 
         <activity
-            android:name=".ui.recorder.RecorderActivity"
+            android:name=".ui.whiteboard.WhiteboardActivity"
             android:exported="false" />
 
         <service
-            android:name=".ui.recorder.ScreenRecordService"
+            android:name=".ui.whiteboard.ScreenRecordService"
             android:exported="false" />
     </application>
 </manifest>

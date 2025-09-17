@@ -1,20 +1,23 @@
-package com.example.moodle.ui.recorder
+package com.example.moodle.ui.whiteboard
 
 import android.Manifest
 import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
-import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
 import android.widget.Button
 import android.widget.Toast
 import com.example.moodle.R
+import com.example.moodle.ui.whiteboard.ScreenRecordService
 
-class RecorderActivity : AppCompatActivity() {
+class WhiteboardActivity : AppCompatActivity() {
 
     companion object {
         private const val REQUEST_CODE_SCREEN_CAPTURE = 1000
@@ -25,28 +28,57 @@ class RecorderActivity : AppCompatActivity() {
         )
     }
 
+    private lateinit var toggleRecordBtn: Button
+    private var isRecording = false
+    
     private val mediaProjectionManager by lazy {
         getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_recorder)
-
-        val startBtn = findViewById<Button>(R.id.startRecordBtn)
-        val stopBtn = findViewById<Button>(R.id.stopRecordBtn)
-
-        startBtn.setOnClickListener {
-            if (checkPermissions()) {
-                requestScreenCapture()
-            } else {
-                requestPermissions()
+    private val recordingStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                "RECORDING_STARTED" -> {
+                    isRecording = true
+                    updateButtonAppearance()
+                }
+                "RECORDING_STOPPED" -> {
+                    isRecording = false
+                    updateButtonAppearance()
+                }
             }
         }
+    }
 
-        stopBtn.setOnClickListener {
-            stopRecording()
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_whiteboard)
+
+        initializeViews()
+        registerRecordingStateReceiver()
+        updateButtonAppearance()
+    }
+
+    private fun initializeViews() {
+        toggleRecordBtn = findViewById(R.id.toggleRecordBtn)
+        
+        toggleRecordBtn.setOnClickListener {
+            if (isRecording) stopRecording()
+            else startRecording()
         }
+    }
+
+    private fun startRecording() {
+        if (checkPermissions()) requestScreenCapture()
+        else requestPermissions()
+    }
+
+    private fun stopRecording() {
+        val intent = Intent(this, ScreenRecordService::class.java).apply {
+            action = ScreenRecordService.ACTION_STOP
+        }
+        startService(intent)
+        Toast.makeText(this, "Recording stopped", Toast.LENGTH_SHORT).show()
     }
 
     private fun requestScreenCapture() {
@@ -61,7 +93,9 @@ class RecorderActivity : AppCompatActivity() {
     }
 
     private fun requestPermissions() {
-        ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            requestPermissions(REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+        }
     }
 
     override fun onRequestPermissionsResult(
@@ -74,6 +108,7 @@ class RecorderActivity : AppCompatActivity() {
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                 Toast.makeText(this, "Permissions granted. You can now start recording.", Toast.LENGTH_SHORT).show()
+                startRecording()
             } else {
                 Toast.makeText(this, "Permissions denied. Cannot record screen.", Toast.LENGTH_LONG).show()
             }
@@ -85,7 +120,7 @@ class RecorderActivity : AppCompatActivity() {
         
         if (requestCode == REQUEST_CODE_SCREEN_CAPTURE) {
             if (resultCode == Activity.RESULT_OK && data != null) {
-                startRecording(resultCode, data)
+                startRecordingService(resultCode, data)
                 Toast.makeText(this, "Recording started", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this, "Screen capture permission denied", Toast.LENGTH_SHORT).show()
@@ -93,14 +128,13 @@ class RecorderActivity : AppCompatActivity() {
         }
     }
 
-    private fun startRecording(resultCode: Int, data: Intent) {
+    private fun startRecordingService(resultCode: Int, data: Intent) {
         val intent = Intent(this, ScreenRecordService::class.java).apply {
             action = ScreenRecordService.ACTION_START
             putExtra(ScreenRecordService.EXTRA_RESULT_CODE, resultCode)
             putExtra(ScreenRecordService.EXTRA_DATA_INTENT, data)
         }
         
-        // For SDK 26+, use startForegroundService; for older versions, use startService
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent)
         } else {
@@ -108,11 +142,28 @@ class RecorderActivity : AppCompatActivity() {
         }
     }
 
-    private fun stopRecording() {
-        val stopIntent = Intent(this, ScreenRecordService::class.java).apply {
-            action = ScreenRecordService.ACTION_STOP
+    private fun updateButtonAppearance() {
+        if (isRecording) {
+            toggleRecordBtn.setBackgroundResource(R.drawable.square_button)
+        } else {
+            toggleRecordBtn.setBackgroundResource(R.drawable.circle_button)
         }
-        startService(stopIntent)
-        Toast.makeText(this, "Stopping recording…", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun registerRecordingStateReceiver() {
+        val filter = IntentFilter().apply {
+            addAction("RECORDING_STARTED")
+            addAction("RECORDING_STOPPED")
+        }
+        registerReceiver(recordingStateReceiver, filter)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            unregisterReceiver(recordingStateReceiver)
+        } catch (e: Exception) {
+            // Receiver might not be registered
+        }
     }
 }

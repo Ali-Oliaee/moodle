@@ -1,4 +1,4 @@
-package com.example.moodle.ui.recorder
+package com.example.moodle.ui.whiteboard
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -122,6 +122,8 @@ class ScreenRecordService : Service() {
         try {
             mediaRecorder?.start()
             Log.i("ScreenRecordService", "Recording started: ${currentOutputFile!!.absolutePath}")
+            // Broadcast recording started
+            sendBroadcast(Intent("RECORDING_STARTED"))
         } catch (e: Exception) {
             Log.e("ScreenRecordService", "start() failed", e)
             stopRecording()
@@ -179,6 +181,9 @@ class ScreenRecordService : Service() {
         stopForeground(true)
         stopSelf()
         currentOutputFile = null
+        
+        // Broadcast recording stopped
+        sendBroadcast(Intent("RECORDING_STOPPED"))
     }
 
     private fun createOutputFile(): File {
