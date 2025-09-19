@@ -63,16 +63,15 @@ class LoginActivity : AppCompatActivity() {
 
         // Validate inputs
         if (username.isBlank()) {
-            showError("Username cannot be empty")
+            showError("نام کاربری نمی تواند خالی باشد")
             return
         }
         
         if (password.isBlank()) {
-            showError("Password cannot be empty")
+            showError("رمز عبور نمی تواند خالی باشد")
             return
         }
 
-        // Show loading and perform login
         showLoading()
         hideError()
         
@@ -83,17 +82,17 @@ class LoginActivity : AppCompatActivity() {
                 result.fold(
                     onSuccess = { loginResponse ->
                         hideLoading()
-                        Toast.makeText(this@LoginActivity, "Login successful!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@LoginActivity, "ورود با موفقیت انجام شد", Toast.LENGTH_SHORT).show()
                         navigateToWhiteboard()
                     },
                     onFailure = { exception ->
                         hideLoading()
-                        showError(exception.message ?: "Login failed")
+                        showError(exception.message ?: "مشکلی در ورود به سامانه رخ داده است")
                     }
                 )
             } catch (e: Exception) {
                 hideLoading()
-                showError("Unexpected error: ${e.message}")
+                showError("مشکلی در ورود به سامانه رخ داده است: ${e.message}")
             }
         }
     }
@@ -101,13 +100,13 @@ class LoginActivity : AppCompatActivity() {
     private fun showLoading() {
         progressBar.visibility = View.VISIBLE
         btnLogin.isEnabled = false
-        btnLogin.text = "Logging in..."
+        btnLogin.text = "در حال ورود..."
     }
 
     private fun hideLoading() {
         progressBar.visibility = View.GONE
         btnLogin.isEnabled = true
-        btnLogin.text = "Login"
+        btnLogin.text = "ورود"
     }
 
     private fun showError(error: String) {
