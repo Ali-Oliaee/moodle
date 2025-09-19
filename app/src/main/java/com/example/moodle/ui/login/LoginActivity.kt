@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.support.design.widget.TextInputEditText
 import android.support.v7.app.AppCompatActivity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -13,6 +14,7 @@ import com.example.moodle.R
 import com.example.moodle.ui.whiteboard.WhiteboardActivity
 import com.example.moodle.data.repository.AuthRepository
 import com.example.moodle.data.datastore.UserPreferences
+import com.example.moodle.utils.FontHelper
 import kotlinx.coroutines.*
 
 class LoginActivity : AppCompatActivity() {
@@ -33,6 +35,7 @@ class LoginActivity : AppCompatActivity() {
 
         authRepository = AuthRepository(UserPreferences(this))
         initializeViews()
+        applyFonts()
         setupClickListeners()
         checkLoginStatus()
     }
@@ -43,6 +46,11 @@ class LoginActivity : AppCompatActivity() {
         btnLogin = findViewById(R.id.btnLogin)
         progressBar = findViewById(R.id.progressBar)
         tvError = findViewById(R.id.tvError)
+    }
+
+    private fun applyFonts() {
+        val rootView = findViewById<ViewGroup>(android.R.id.content)
+        FontHelper.applyFontToViewGroup(this, rootView)
     }
 
     private fun checkLoginStatus() {

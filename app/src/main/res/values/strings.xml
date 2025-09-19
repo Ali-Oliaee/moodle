@@ -2,62 +2,62 @@
     <string name="app_name">Moodle</string>
     
     <!-- Whiteboard Activity -->
-    <string name="welcome_message">Welcome!</string>
-    <string name="welcome_user_message">Welcome, %1$s!</string>
-    <string name="welcome_default_message">Welcome to Whiteboard!</string>
-    <string name="logout">Logout</string>
-    <string name="logged_out_successfully">Logged out successfully</string>
+    <string name="welcome_message">خوش آمدید!</string>
+    <string name="welcome_user_message">خوش آمدید, %1$s!</string>
+    <string name="welcome_default_message">خوش آمدید به سامانه!</string>
+    <string name="logout">خروج</string>
+    <string name="logged_out_successfully">خروج با موفقیت انجام شد</string>
     
     <!-- Recording -->
-    <string name="recording_started">Recording started</string>
-    <string name="recording_stopped">Recording stopped</string>
-    <string name="permissions_granted">Permissions granted. You can now start recording.</string>
-    <string name="permissions_denied">Permissions denied. Cannot record screen.</string>
-    <string name="screen_capture_denied">Screen capture permission denied</string>
+    <string name="recording_started">ضبط شروع شد</string>
+    <string name="recording_stopped">ضبط متوقف شد</string>
+    <string name="permissions_granted">اجازه ها داده شد. حالا می توانید ضبط کنید.</string>
+    <string name="permissions_denied">اجازه ها رد شد. ضبط تصویر ممکن نیست.</string>
+    <string name="screen_capture_denied">اجازه ضبط تصویر رد شد</string>
     
     <!-- Drawing Tools -->
-    <string name="tool_pen">Pen</string>
-    <string name="tool_eraser">Eraser</string>
-    <string name="tool_highlighter">Highlighter</string>
-    <string name="drawing_mode">Drawing Mode</string>
-    <string name="pan_mode">Pan Mode</string>
+    <string name="tool_pen">قلم</string>
+    <string name="tool_eraser">روشن کننده</string>
+    <string name="tool_highlighter">روشن کننده</string>
+    <string name="drawing_mode">حالت رسم</string>
+    <string name="pan_mode">حالت پان</string>
     
     <!-- Actions -->
-    <string name="undo">Undo</string>
-    <string name="redo">Redo</string>
-    <string name="clear_all">Clear All</string>
-    <string name="clear_confirm">Are you sure you want to clear the whiteboard?</string>
-    <string name="yes">Yes</string>
-    <string name="no">No</string>
+    <string name="undo">برگشت</string>
+    <string name="redo">بازگردانی</string>
+    <string name="clear_all">پاک کردن همه</string>
+    <string name="clear_confirm">آیا مطمئن هستید که می خواهید پاک کنید؟</string>
+    <string name="yes">بله</string>
+    <string name="no">خیر</string>
     
     <!-- Colors -->
-    <string name="color_black">Black</string>
-    <string name="color_red">Red</string>
-    <string name="color_blue">Blue</string>
-    <string name="color_green">Green</string>
-    <string name="color_yellow">Yellow</string>
-    <string name="color_purple">Purple</string>
-    <string name="color_orange">Orange</string>
+    <string name="color_black">سیاه</string>
+    <string name="color_red">قرمز</string>
+    <string name="color_blue">آبی</string>
+    <string name="color_green">سبز</string>
+    <string name="color_yellow">زرد</string>
+    <string name="color_purple">بنفش</string>
+    <string name="color_orange">نارنجی</string>
     
     <!-- Stroke Width -->
-    <string name="stroke_thin">Thin</string>
-    <string name="stroke_medium">Medium</string>
-    <string name="stroke_thick">Thick</string>
+    <string name="stroke_thin">ریز</string>
+    <string name="stroke_medium">متوسط</string>
+    <string name="stroke_thick">سفت</string>
     
     <!-- Gestures -->
-    <string name="double_tap_reset">Double tap to reset zoom</string>
-    <string name="pinch_to_zoom">Pinch to zoom</string>
-    <string name="pan_to_move">Pan to move canvas</string>
+    <string name="double_tap_reset">دوباره کلیک کنید تا تنظیمات رویاگرانی را بازنشانی کنید</string>
+    <string name="pinch_to_zoom">دستگیره کنید تا رویاگرانی را تغییر دهید</string>
+    <string name="pan_to_move">دستگیره کنید تا رویاگرانی را تغییر دهید</string>
     
     <!-- Content Descriptions for Accessibility -->
-    <string name="desc_record_button">Record screen</string>
-    <string name="desc_pen_tool">Select pen tool</string>
-    <string name="desc_eraser_tool">Select eraser tool</string>
-    <string name="desc_highlighter_tool">Select highlighter tool</string>
-    <string name="desc_undo_button">Undo last action</string>
-    <string name="desc_redo_button">Redo last action</string>
-    <string name="desc_clear_button">Clear whiteboard</string>
-    <string name="desc_color_picker">Select color</string>
-    <string name="desc_stroke_width">Select stroke width</string>
-    <string name="desc_mode_toggle">Toggle between drawing and pan mode</string>
+    <string name="desc_record_button">ضبط تصویر</string>
+    <string name="desc_pen_tool">انتخاب قلم</string>   
+    <string name="desc_eraser_tool">انتخاب روشن کننده</string>
+    <string name="desc_highlighter_tool">انتخاب روشن کننده</string>
+    <string name="desc_undo_button">برگشت از آخرین عمل</string>
+    <string name="desc_redo_button">بازگردانی آخرین عمل</string>
+    <string name="desc_clear_button">پاک کردن رویاگرانی</string>
+    <string name="desc_color_picker">انتخاب رنگ</string>
+    <string name="desc_stroke_width">انتخاب عرض خط</string>
+    <string name="desc_mode_toggle">تغییر بین حالت رسم و حالت پان</string>
 </resources>

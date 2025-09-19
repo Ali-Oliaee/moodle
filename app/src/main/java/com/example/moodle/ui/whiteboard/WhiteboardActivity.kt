@@ -14,11 +14,13 @@ import android.os.Bundle
 import android.support.v4.content.ContextCompat
 import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
+import android.view.ViewGroup
 import android.widget.*
 import com.example.moodle.R
 import com.example.moodle.ui.whiteboard.ScreenRecordService
 import com.example.moodle.data.datastore.UserPreferences
 import com.example.moodle.ui.login.LoginActivity
+import com.example.moodle.utils.FontHelper
 
 class WhiteboardActivity : AppCompatActivity() {
 
@@ -83,6 +85,7 @@ class WhiteboardActivity : AppCompatActivity() {
 
         userPreferences = UserPreferences(this)
         initializeViews()
+        applyFonts()
         setupToolListeners()
         setupColorListeners()
         setupStrokeWidthListener()
@@ -146,6 +149,11 @@ class WhiteboardActivity : AppCompatActivity() {
         btnLogout.setOnClickListener {
             logout()
         }
+    }
+
+    private fun applyFonts() {
+        val rootView = findViewById<ViewGroup>(android.R.id.content)
+        FontHelper.applyFontToViewGroup(this, rootView)
     }
 
     private fun setupToolListeners() {

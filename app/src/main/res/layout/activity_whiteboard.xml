@@ -9,7 +9,6 @@
     android:background="#F5F5F5"
     tools:context=".ui.whiteboard.WhiteboardActivity">
 
-    <!-- Top Toolbar -->
     <LinearLayout
         android:id="@+id/topToolbar"
         android:layout_width="match_parent"
@@ -20,16 +19,7 @@
         android:elevation="4dp"
         app:layout_constraintTop_toTopOf="parent">
 
-        <TextView
-            android:id="@+id/tvWelcome"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/welcome_message"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:gravity="center_vertical"
-            android:layout_gravity="center_vertical" />
+      
 
         <Button
             android:id="@+id/toggleRecordBtn"
@@ -51,9 +41,19 @@
             android:paddingStart="12dp"
             android:paddingEnd="12dp" />
 
+        <TextView
+            android:id="@+id/tvWelcome"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/welcome_message"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:gravity="center_vertical"
+            android:layout_gravity="center_vertical" />
+
     </LinearLayout>
 
-    <!-- Whiteboard Canvas -->
     <com.example.moodle.ui.whiteboard.WhiteboardView
         android:id="@+id/whiteboardView"
         android:layout_width="0dp"
@@ -64,7 +64,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Bottom Toolbar -->
     <ScrollView
         android:id="@+id/bottomToolbar"
         android:layout_width="match_parent"
@@ -80,7 +79,6 @@
             android:orientation="vertical"
             android:padding="8dp">
 
-            <!-- Tool Selection Row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -167,7 +165,6 @@
 
             </LinearLayout>
 
-            <!-- Color Picker Row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -248,7 +245,6 @@
 
             </LinearLayout>
 
-            <!-- Stroke Width Row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
