@@ -1,3 +1,63 @@
 <resources>
     <string name="app_name">Moodle</string>
+    
+    <!-- Whiteboard Activity -->
+    <string name="welcome_message">Welcome!</string>
+    <string name="welcome_user_message">Welcome, %1$s!</string>
+    <string name="welcome_default_message">Welcome to Whiteboard!</string>
+    <string name="logout">Logout</string>
+    <string name="logged_out_successfully">Logged out successfully</string>
+    
+    <!-- Recording -->
+    <string name="recording_started">Recording started</string>
+    <string name="recording_stopped">Recording stopped</string>
+    <string name="permissions_granted">Permissions granted. You can now start recording.</string>
+    <string name="permissions_denied">Permissions denied. Cannot record screen.</string>
+    <string name="screen_capture_denied">Screen capture permission denied</string>
+    
+    <!-- Drawing Tools -->
+    <string name="tool_pen">Pen</string>
+    <string name="tool_eraser">Eraser</string>
+    <string name="tool_highlighter">Highlighter</string>
+    <string name="drawing_mode">Drawing Mode</string>
+    <string name="pan_mode">Pan Mode</string>
+    
+    <!-- Actions -->
+    <string name="undo">Undo</string>
+    <string name="redo">Redo</string>
+    <string name="clear_all">Clear All</string>
+    <string name="clear_confirm">Are you sure you want to clear the whiteboard?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    
+    <!-- Colors -->
+    <string name="color_black">Black</string>
+    <string name="color_red">Red</string>
+    <string name="color_blue">Blue</string>
+    <string name="color_green">Green</string>
+    <string name="color_yellow">Yellow</string>
+    <string name="color_purple">Purple</string>
+    <string name="color_orange">Orange</string>
+    
+    <!-- Stroke Width -->
+    <string name="stroke_thin">Thin</string>
+    <string name="stroke_medium">Medium</string>
+    <string name="stroke_thick">Thick</string>
+    
+    <!-- Gestures -->
+    <string name="double_tap_reset">Double tap to reset zoom</string>
+    <string name="pinch_to_zoom">Pinch to zoom</string>
+    <string name="pan_to_move">Pan to move canvas</string>
+    
+    <!-- Content Descriptions for Accessibility -->
+    <string name="desc_record_button">Record screen</string>
+    <string name="desc_pen_tool">Select pen tool</string>
+    <string name="desc_eraser_tool">Select eraser tool</string>
+    <string name="desc_highlighter_tool">Select highlighter tool</string>
+    <string name="desc_undo_button">Undo last action</string>
+    <string name="desc_redo_button">Redo last action</string>
+    <string name="desc_clear_button">Clear whiteboard</string>
+    <string name="desc_color_picker">Select color</string>
+    <string name="desc_stroke_width">Select stroke width</string>
+    <string name="desc_mode_toggle">Toggle between drawing and pan mode</string>
 </resources>
