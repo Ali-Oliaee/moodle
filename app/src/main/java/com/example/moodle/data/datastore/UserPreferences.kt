@@ -9,6 +9,7 @@ class UserPreferences(private val context: Context) {
         private const val PREFS_NAME = "user_prefs"
         private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_USERNAME = "username"
+        private const val KEY_FIXED_DRAWER = "fixed_drawer"
     }
 
     private val sharedPrefs: SharedPreferences by lazy {
@@ -43,6 +44,16 @@ class UserPreferences(private val context: Context) {
 
     fun isLoggedIn(): Boolean {
         return !getAuthToken().isNullOrBlank()
+    }
+
+    fun isFixedDrawerEnabled(): Boolean {
+        return sharedPrefs.getBoolean(KEY_FIXED_DRAWER, false)
+    }
+    
+    fun setFixedDrawerEnabled(enabled: Boolean) {
+        sharedPrefs.edit()
+            .putBoolean(KEY_FIXED_DRAWER, enabled)
+            .apply()
     }
 
     fun clearAllData() {

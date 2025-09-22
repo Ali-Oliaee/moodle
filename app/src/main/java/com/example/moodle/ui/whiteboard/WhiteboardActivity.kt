@@ -12,6 +12,7 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
 import android.support.v4.content.ContextCompat
+import android.support.v4.widget.DrawerLayout
 import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.view.ViewGroup
@@ -34,20 +35,40 @@ class WhiteboardActivity : AppCompatActivity() {
     }
 
     // UI Components
+    private var drawerLayout: DrawerLayout? = null
+    private var btnMenu: ImageButton? = null
     private lateinit var toggleRecordBtn: Button
-    private lateinit var btnLogout: Button
     private lateinit var tvWelcome: TextView
+    private lateinit var tvDrawerWelcome: TextView
     private lateinit var whiteboardView: WhiteboardView
     
-    // Tool buttons
-    private lateinit var btnPen: ImageButton
-    private lateinit var btnEraser: ImageButton
-    private lateinit var btnHighlighter: ImageButton
-    private lateinit var btnUndo: ImageButton
-    private lateinit var btnRedo: ImageButton
-    private lateinit var btnClear: ImageButton
-    private lateinit var btnModeToggle: ImageButton
-    private lateinit var btnPinchMode: ImageButton
+    // Drawer navigation items (for sliding drawer)
+    private var drawerPen: LinearLayout? = null
+    private var drawerEraser: LinearLayout? = null
+    private var drawerHighlighter: LinearLayout? = null
+    private var drawerUndo: LinearLayout? = null
+    private var drawerRedo: LinearLayout? = null
+    private var drawerClear: LinearLayout? = null
+    private var drawerModeToggle: LinearLayout? = null
+    private var drawerPinchMode: LinearLayout? = null
+    private var drawerRecord: LinearLayout? = null
+    private var drawerLogout: LinearLayout? = null
+    
+    // Tool buttons (for fixed drawer)
+    private var btnPen: ImageButton? = null
+    private var btnEraser: ImageButton? = null
+    private var btnHighlighter: ImageButton? = null
+    private var btnUndo: ImageButton? = null
+    private var btnRedo: ImageButton? = null
+    private var btnClear: ImageButton? = null
+    private var btnModeToggle: ImageButton? = null
+    private var btnPinchMode: ImageButton? = null
+    
+    // Drawer UI elements (for sliding drawer)
+    private var imgModeToggle: ImageView? = null
+    private var tvModeToggle: TextView? = null
+    private var tvPinchMode: TextView? = null
+    private var tvRecordStatus: TextView? = null
     
     // Color buttons
     private lateinit var colorButtons: List<Button>
@@ -57,6 +78,7 @@ class WhiteboardActivity : AppCompatActivity() {
     // State
     private var isRecording = false
     private var isDrawingMode = true
+    private var isFixedDrawer = false
     private var currentSelectedTool: ImageButton? = null
     private var currentSelectedColor: Button? = null
     private lateinit var userPreferences: UserPreferences
@@ -82,9 +104,19 @@ class WhiteboardActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_whiteboard)
-
+        
+        // Initialize UserPreferences first
         userPreferences = UserPreferences(this)
+        
+        // Check for saved drawer preference
+        isFixedDrawer = userPreferences.isFixedDrawerEnabled()
+        
+        // Set appropriate layout based on drawer mode
+        if (isFixedDrawer) {
+            setContentView(R.layout.activity_whiteboard_fixed_drawer)
+        } else {
+            setContentView(R.layout.activity_whiteboard)
+        }
         initializeViews()
         applyFonts()
         setupToolListeners()
@@ -98,20 +130,21 @@ class WhiteboardActivity : AppCompatActivity() {
 
     private fun initializeViews() {
         // Main UI components
-        toggleRecordBtn = findViewById(R.id.toggleRecordBtn)
-        btnLogout = findViewById(R.id.btnLogout)
         tvWelcome = findViewById(R.id.tvWelcome)
+        tvDrawerWelcome = findViewById(R.id.tvDrawerWelcome)
         whiteboardView = findViewById(R.id.whiteboardView)
+        toggleRecordBtn = findViewById(R.id.toggleRecordBtn)
         
-        // Tool buttons
-        btnPen = findViewById(R.id.btnPen)
-        btnEraser = findViewById(R.id.btnEraser)
-        btnHighlighter = findViewById(R.id.btnHighlighter)
-        btnUndo = findViewById(R.id.btnUndo)
-        btnRedo = findViewById(R.id.btnRedo)
-        btnClear = findViewById(R.id.btnClear)
-        btnModeToggle = findViewById(R.id.btnModeToggle)
-        btnPinchMode = findViewById(R.id.btnPinchMode)
+        if (isFixedDrawer) {
+            // Fixed drawer layout - using ImageButtons directly
+            // drawerLayout is a LinearLayout in this case, not DrawerLayout
+            initializeFixedDrawerViews()
+        } else {
+            // Sliding drawer layout - using LinearLayouts
+            drawerLayout = findViewById(R.id.drawerLayout)
+            btnMenu = findViewById(R.id.btnMenu)
+            initializeSlidingDrawerViews()
+        }
         
         // Color buttons
         colorButtons = listOf(
@@ -130,27 +163,84 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Set welcome message with username
         val username = userPreferences.getUsername()
-        tvWelcome.text = if (!username.isNullOrBlank()) {
+        val welcomeMessage = if (!username.isNullOrBlank()) {
             getString(R.string.welcome_user_message, username)
         } else {
             getString(R.string.welcome_default_message)
         }
+        tvWelcome.text = welcomeMessage
+        tvDrawerWelcome.text = welcomeMessage
         
         // Set initial selections
-        currentSelectedTool = btnPen
         currentSelectedColor = colorButtons[0] // Black
-        
-        // Set initial selected states programmatically
-        btnPen.isSelected = true
         colorButtons[0].isSelected = true
         
-        toggleRecordBtn.setOnClickListener {
-            if (isRecording) stopRecording()
-            else startRecording()
+        if (isFixedDrawer) {
+            btnPen?.isSelected = true
+        } else {
+            drawerPen?.isSelected = true
         }
         
-        btnLogout.setOnClickListener {
-            logout()
+        // Set up menu button (only for sliding drawer)
+        if (!isFixedDrawer) {
+            btnMenu?.setOnClickListener {
+                drawerLayout?.openDrawer(findViewById(R.id.navigationDrawer))
+            }
+        }
+        
+        setupDrawerListeners()
+    }
+    
+    private fun initializeFixedDrawerViews() {
+        // For fixed drawer, we use ImageButtons directly
+        try {
+            btnPen = findViewById(R.id.btnPen)
+            btnEraser = findViewById(R.id.btnEraser)
+            btnHighlighter = findViewById(R.id.btnHighlighter)
+            btnUndo = findViewById(R.id.btnUndo)
+            btnRedo = findViewById(R.id.btnRedo)
+            btnClear = findViewById(R.id.btnClear)
+            btnModeToggle = findViewById(R.id.btnModeToggle)
+            btnPinchMode = findViewById(R.id.btnPinchMode)
+            
+            // Record and logout
+            drawerRecord = findViewById(R.id.drawerRecord)
+            drawerLogout = findViewById(R.id.drawerLogout)
+            tvRecordStatus = findViewById(R.id.tvRecordStatus)
+            
+            // Drawer toggle button
+            val drawerToggle = findViewById<LinearLayout>(R.id.drawerToggle)
+            drawerToggle.setOnClickListener {
+                toggleDrawerMode()
+            }
+        } catch (e: Exception) {
+            // Handle missing IDs gracefully
+            e.printStackTrace()
+        }
+    }
+    
+    private fun initializeSlidingDrawerViews() {
+        // For sliding drawer, we use LinearLayouts
+        try {
+            drawerPen = findViewById(R.id.drawerPen)
+            drawerEraser = findViewById(R.id.drawerEraser)
+            drawerHighlighter = findViewById(R.id.drawerHighlighter)
+            drawerUndo = findViewById(R.id.drawerUndo)
+            drawerRedo = findViewById(R.id.drawerRedo)
+            drawerClear = findViewById(R.id.drawerClear)
+            drawerModeToggle = findViewById(R.id.drawerModeToggle)
+            drawerPinchMode = findViewById(R.id.drawerPinchMode)
+            drawerRecord = findViewById(R.id.drawerRecord)
+            drawerLogout = findViewById(R.id.drawerLogout)
+            
+            // Drawer UI elements
+            imgModeToggle = findViewById(R.id.imgModeToggle)
+            tvModeToggle = findViewById(R.id.tvModeToggle)
+            tvPinchMode = findViewById(R.id.tvPinchMode)
+            tvRecordStatus = findViewById(R.id.tvRecordStatus)
+        } catch (e: Exception) {
+            // Handle missing IDs gracefully
+            e.printStackTrace()
         }
     }
 
@@ -159,24 +249,118 @@ class WhiteboardActivity : AppCompatActivity() {
         FontHelper.applyFontToViewGroup(this, rootView)
     }
 
-    private fun setupToolListeners() {
-        btnPen.setOnClickListener { selectTool(WhiteboardView.DrawingTool.PEN, btnPen) }
-        btnEraser.setOnClickListener { selectTool(WhiteboardView.DrawingTool.ERASER, btnEraser) }
-        btnHighlighter.setOnClickListener { selectTool(WhiteboardView.DrawingTool.HIGHLIGHTER, btnHighlighter) }
+    private fun setupDrawerListeners() {
+        if (isFixedDrawer) {
+            setupFixedDrawerListeners()
+        } else {
+            setupSlidingDrawerListeners()
+        }
+    }
+    
+    private fun setupFixedDrawerListeners() {
+        // Tool selection listeners for ImageButtons
+        btnPen?.setOnClickListener { btnPen?.let { selectToolFixed(WhiteboardView.DrawingTool.PEN, it) } }
+        btnEraser?.setOnClickListener { btnEraser?.let { selectToolFixed(WhiteboardView.DrawingTool.ERASER, it) } }
+        btnHighlighter?.setOnClickListener { btnHighlighter?.let { selectToolFixed(WhiteboardView.DrawingTool.HIGHLIGHTER, it) } }
         
-        btnUndo.setOnClickListener { 
+        // Action listeners for ImageButtons
+        btnUndo?.setOnClickListener { whiteboardView.undo() }
+        btnRedo?.setOnClickListener { whiteboardView.redo() }
+        btnClear?.setOnClickListener { showClearConfirmDialog() }
+        btnModeToggle?.setOnClickListener { toggleMode() }
+        btnPinchMode?.setOnClickListener { togglePinchMode() }
+        
+        // Record and logout listeners
+        drawerRecord?.setOnClickListener {
+            if (isRecording) stopRecording()
+            else startRecording()
+        }
+        
+        drawerLogout?.setOnClickListener { logout() }
+    }
+    
+    private fun setupSlidingDrawerListeners() {
+        // Tool selection listeners for LinearLayouts
+        drawerPen?.setOnClickListener { drawerPen?.let { selectTool(WhiteboardView.DrawingTool.PEN, it) } }
+        drawerEraser?.setOnClickListener { drawerEraser?.let { selectTool(WhiteboardView.DrawingTool.ERASER, it) } }
+        drawerHighlighter?.setOnClickListener { drawerHighlighter?.let { selectTool(WhiteboardView.DrawingTool.HIGHLIGHTER, it) } }
+        
+        // Action listeners
+        drawerUndo?.setOnClickListener { 
             whiteboardView.undo()
+            closeDrawer()
         }
         
-        btnRedo.setOnClickListener { 
+        drawerRedo?.setOnClickListener { 
             whiteboardView.redo()
+            closeDrawer()
         }
         
-        btnClear.setOnClickListener { showClearConfirmDialog() }
+        drawerClear?.setOnClickListener { 
+            showClearConfirmDialog()
+            closeDrawer()
+        }
         
-        btnModeToggle.setOnClickListener { toggleMode() }
+        drawerModeToggle?.setOnClickListener { 
+            toggleMode()
+            closeDrawer()
+        }
         
-        btnPinchMode.setOnClickListener { togglePinchMode() }
+        drawerPinchMode?.setOnClickListener { 
+            togglePinchMode()
+            closeDrawer()
+        }
+        
+        // Record button listener
+        drawerRecord?.setOnClickListener {
+            if (isRecording) stopRecording()
+            else startRecording()
+            closeDrawer()
+        }
+        
+        // Logout listener
+        drawerLogout?.setOnClickListener {
+            logout()
+        }
+    }
+    
+    private fun closeDrawer() {
+        if (!isFixedDrawer && drawerLayout != null) {
+            drawerLayout?.closeDrawer(findViewById(R.id.navigationDrawer))
+        }
+    }
+    
+    private fun toggleDrawerMode() {
+        isFixedDrawer = !isFixedDrawer
+        userPreferences.setFixedDrawerEnabled(isFixedDrawer)
+        
+        Toast.makeText(this, getString(R.string.drawer_mode_changed), Toast.LENGTH_SHORT).show()
+        
+        // Recreate activity to apply new layout
+        recreate()
+    }
+    
+    private fun selectToolFixed(tool: WhiteboardView.DrawingTool, button: ImageButton) {
+        // Update tool selection for ImageButtons
+        btnPen?.isSelected = false
+        btnEraser?.isSelected = false
+        btnHighlighter?.isSelected = false
+        button.isSelected = true
+        
+        // Update whiteboard view
+        whiteboardView.setDrawingTool(tool)
+        
+        // Ensure drawing mode is enabled when selecting a tool
+        if (!isDrawingMode) {
+            toggleMode()
+        }
+        
+        // Update button states
+        updateToolButtons()
+    }
+    
+    private fun setupToolListeners() {
+        // This method is now replaced by setupDrawerListeners
     }
     
     private fun setupColorListeners() {
@@ -214,11 +398,12 @@ class WhiteboardActivity : AppCompatActivity() {
         })
     }
     
-    private fun selectTool(tool: WhiteboardView.DrawingTool, button: ImageButton) {
-        // Update tool selection
-        currentSelectedTool?.isSelected = false
-        currentSelectedTool = button
-        button.isSelected = true
+    private fun selectTool(tool: WhiteboardView.DrawingTool, drawerItem: LinearLayout) {
+        // Update tool selection in drawer
+        drawerPen?.isSelected = false
+        drawerEraser?.isSelected = false
+        drawerHighlighter?.isSelected = false
+        drawerItem.isSelected = true
         
         // Update whiteboard view
         whiteboardView.setDrawingTool(tool)
@@ -230,6 +415,7 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Update button states
         updateToolButtons()
+        closeDrawer()
     }
     
     private fun selectColor(color: Int, button: Button) {
@@ -246,11 +432,23 @@ class WhiteboardActivity : AppCompatActivity() {
         isDrawingMode = !isDrawingMode
         whiteboardView.setDrawingMode(isDrawingMode)
         
-        // Update button appearance
-        if (isDrawingMode) {
-            btnModeToggle.setImageResource(R.drawable.ic_pen)
+        // Update UI based on drawer type
+        if (isFixedDrawer) {
+            // Update ImageButton for fixed drawer
+            if (isDrawingMode) {
+                btnModeToggle?.setImageResource(R.drawable.ic_pen)
+            } else {
+                btnModeToggle?.setImageResource(R.drawable.ic_pan)
+            }
         } else {
-            btnModeToggle.setImageResource(R.drawable.ic_pan)
+            // Update LinearLayout for sliding drawer
+            if (isDrawingMode) {
+                imgModeToggle?.setImageResource(R.drawable.ic_pen)
+                tvModeToggle?.text = getString(R.string.drawing_mode)
+            } else {
+                imgModeToggle?.setImageResource(R.drawable.ic_pan)
+                tvModeToggle?.text = getString(R.string.pan_mode)
+            }
         }
         
         // Show toast to indicate mode
@@ -266,8 +464,19 @@ class WhiteboardActivity : AppCompatActivity() {
         val isPinchEnabled = whiteboardView.isPinchModeEnabled()
         whiteboardView.setPinchModeEnabled(!isPinchEnabled)
         
-        // Update button appearance
-        btnPinchMode.isSelected = !isPinchEnabled
+        // Update UI based on drawer type
+        if (isFixedDrawer) {
+            // Update ImageButton for fixed drawer
+            btnPinchMode?.isSelected = !isPinchEnabled
+        } else {
+            // Update LinearLayout for sliding drawer
+            drawerPinchMode?.isSelected = !isPinchEnabled
+            tvPinchMode?.text = if (!isPinchEnabled) {
+                getString(R.string.pinch_mode_enabled)
+            } else {
+                getString(R.string.pinch_mode_disabled)
+            }
+        }
         
         // Show toast to indicate mode
         val modeText = if (!isPinchEnabled) {
@@ -279,8 +488,19 @@ class WhiteboardActivity : AppCompatActivity() {
     }
     
     private fun updateToolButtons() {
-        btnUndo.isEnabled = whiteboardView.canUndo()
-        btnRedo.isEnabled = whiteboardView.canRedo()
+        if (isFixedDrawer) {
+            // Update ImageButtons for fixed drawer
+            btnUndo?.isEnabled = whiteboardView.canUndo()
+            btnRedo?.isEnabled = whiteboardView.canRedo()
+            btnUndo?.alpha = if (whiteboardView.canUndo()) 1.0f else 0.5f
+            btnRedo?.alpha = if (whiteboardView.canRedo()) 1.0f else 0.5f
+        } else {
+            // Update LinearLayouts for sliding drawer
+            drawerUndo?.isEnabled = whiteboardView.canUndo()
+            drawerRedo?.isEnabled = whiteboardView.canRedo()
+            drawerUndo?.alpha = if (whiteboardView.canUndo()) 1.0f else 0.5f
+            drawerRedo?.alpha = if (whiteboardView.canRedo()) 1.0f else 0.5f
+        }
     }
     
     private fun showClearConfirmDialog() {
@@ -371,8 +591,10 @@ class WhiteboardActivity : AppCompatActivity() {
     private fun updateButtonAppearance() {
         if (isRecording) {
             toggleRecordBtn.setBackgroundResource(R.drawable.square_button)
+            tvRecordStatus?.text = getString(R.string.stop_recording)
         } else {
             toggleRecordBtn.setBackgroundResource(R.drawable.circle_button)
+            tvRecordStatus?.text = getString(R.string.start_recording)
         }
     }
 

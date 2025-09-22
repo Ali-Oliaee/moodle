@@ -63,4 +63,25 @@
     <string name="desc_pinch_mode">فعال/غیرفعال کردن حالت زوم با انگشت</string>
     <string name="pinch_mode_enabled">حالت زوم فعال شد</string>
     <string name="pinch_mode_disabled">حالت زوم غیرفعال شد</string>
+    
+    <!-- Navigation Drawer -->
+    <string name="desc_menu_button">باز کردن منو</string>
+    <string name="drawing_tools">ابزار رسم</string>
+    <string name="actions">عملیات</string>
+    <string name="colors">رنگ ها</string>
+    <string name="stroke_width">عرض خط</string>
+    <string name="recording">ضبط</string>
+    <string name="account">حساب کاربری</string>
+    <string name="start_recording">شروع ضبط</string>
+    <string name="stop_recording">توقف ضبط</string>
+    
+    <!-- Tool names -->
+    <string name="tool_eraser_corrected">پاک کن</string>
+    <string name="tool_highlighter_corrected">هایلایتر</string>
+    
+    <!-- Drawer Toggle -->
+    <string name="tools">ابزارها</string>
+    <string name="sliding_drawer">کشویی</string>
+    <string name="fixed_drawer">ثابت</string>
+    <string name="drawer_mode_changed">حالت کشو تغییر کرد</string>
 </resources>
