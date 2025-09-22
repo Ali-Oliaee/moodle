@@ -47,6 +47,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnRedo: ImageButton
     private lateinit var btnClear: ImageButton
     private lateinit var btnModeToggle: ImageButton
+    private lateinit var btnPinchMode: ImageButton
     
     // Color buttons
     private lateinit var colorButtons: List<Button>
@@ -110,6 +111,7 @@ class WhiteboardActivity : AppCompatActivity() {
         btnRedo = findViewById(R.id.btnRedo)
         btnClear = findViewById(R.id.btnClear)
         btnModeToggle = findViewById(R.id.btnModeToggle)
+        btnPinchMode = findViewById(R.id.btnPinchMode)
         
         // Color buttons
         colorButtons = listOf(
@@ -173,6 +175,8 @@ class WhiteboardActivity : AppCompatActivity() {
         btnClear.setOnClickListener { showClearConfirmDialog() }
         
         btnModeToggle.setOnClickListener { toggleMode() }
+        
+        btnPinchMode.setOnClickListener { togglePinchMode() }
     }
     
     private fun setupColorListeners() {
@@ -254,6 +258,22 @@ class WhiteboardActivity : AppCompatActivity() {
             getString(R.string.drawing_mode)
         } else {
             getString(R.string.pan_mode)
+        }
+        Toast.makeText(this, modeText, Toast.LENGTH_SHORT).show()
+    }
+    
+    private fun togglePinchMode() {
+        val isPinchEnabled = whiteboardView.isPinchModeEnabled()
+        whiteboardView.setPinchModeEnabled(!isPinchEnabled)
+        
+        // Update button appearance
+        btnPinchMode.isSelected = !isPinchEnabled
+        
+        // Show toast to indicate mode
+        val modeText = if (!isPinchEnabled) {
+            getString(R.string.pinch_mode_enabled)
+        } else {
+            getString(R.string.pinch_mode_disabled)
         }
         Toast.makeText(this, modeText, Toast.LENGTH_SHORT).show()
     }
@@ -381,5 +401,8 @@ class WhiteboardActivity : AppCompatActivity() {
         } catch (e: Exception) {
             // Receiver might not be registered
         }
+        
+        // Clean up whiteboard resources
+        whiteboardView.cleanup()
     }
 }

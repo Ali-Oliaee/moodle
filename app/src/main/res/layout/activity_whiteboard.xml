@@ -163,6 +163,15 @@
                     android:background="@drawable/tool_button_background"
                     android:contentDescription="@string/desc_mode_toggle" />
 
+                <ImageButton
+                    android:id="@+id/btnPinchMode"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_margin="4dp"
+                    android:src="@drawable/ic_zoom"
+                    android:background="@drawable/tool_button_background"
+                    android:contentDescription="@string/desc_pinch_mode" />
+
             </LinearLayout>
 
             <LinearLayout

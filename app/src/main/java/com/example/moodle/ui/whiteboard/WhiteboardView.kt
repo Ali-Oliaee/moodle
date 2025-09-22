@@ -32,6 +32,7 @@ class WhiteboardView @JvmOverloads constructor(
     private var currentColor = Color.BLACK
     private var currentStrokeWidth = 8f
     private var isDrawingMode = true
+    private var isPinchModeEnabled = false
     
     // Listener for drawing changes
     private var drawingChangeListener: OnDrawingChangeListener? = null
@@ -68,9 +69,13 @@ class WhiteboardView @JvmOverloads constructor(
     }
 
     // Path tracking
-    private val currentPath = Path()
     private val paths = mutableListOf<DrawingPath>()
     private val undoStack = mutableListOf<DrawingPath>()
+
+    // Multi-touch path tracking
+    private val activePaths = mutableMapOf<Int, Path>()
+    private val activePathsLastX = mutableMapOf<Int, Float>()
+    private val activePathsLastY = mutableMapOf<Int, Float>()
 
     // Gesture detection
     private val gestureDetector = GestureDetector(context, GestureListener())
@@ -97,9 +102,31 @@ class WhiteboardView @JvmOverloads constructor(
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         
-        drawingBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        drawingCanvas = Canvas(drawingBitmap!!)
-        drawingCanvas?.drawColor(Color.WHITE)
+        if (w <= 0 || h <= 0) return
+        
+        try {
+            // Create a larger bitmap for extended canvas (3x screen size for better memory management)
+            val canvasWidth = w * 3
+            val canvasHeight = h * 3
+            
+            // Clean up previous bitmap
+            drawingBitmap?.recycle()
+            
+            drawingBitmap = Bitmap.createBitmap(canvasWidth, canvasHeight, Bitmap.Config.ARGB_8888)
+            drawingCanvas = Canvas(drawingBitmap!!)
+            drawingCanvas?.drawColor(Color.WHITE)
+            
+            // Center the initial view on the large canvas
+            focusX = (canvasWidth - w) / 2f
+            focusY = (canvasHeight - h) / 2f
+        } catch (e: OutOfMemoryError) {
+            // Fallback to screen size if memory is insufficient
+            drawingBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            drawingCanvas = Canvas(drawingBitmap!!)
+            drawingCanvas?.drawColor(Color.WHITE)
+            focusX = 0f
+            focusY = 0f
+        }
     }
 
     override fun onDraw(canvas: Canvas?) {
@@ -109,21 +136,20 @@ class WhiteboardView @JvmOverloads constructor(
             c.save()
             
             // Apply transformations
-            c.translate(focusX, focusY)
+            c.translate(-focusX, -focusY)
             c.scale(scaleFactor, scaleFactor)
             
-            // Draw background
-            c.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
-            
-            // Draw the bitmap with all previous strokes
+            // Draw the infinite bitmap with all previous strokes
             drawingBitmap?.let { bitmap ->
                 c.drawBitmap(bitmap, 0f, 0f, null)
             }
             
-            // Draw current path being drawn
-            if (!currentPath.isEmpty) {
-                val paint = getCurrentPaint()
-                c.drawPath(currentPath, paint)
+            // Draw current active paths being drawn
+            val paint = getCurrentPaint()
+            for (path in activePaths.values) {
+                if (!path.isEmpty) {
+                    c.drawPath(path, paint)
+                }
             }
             
             c.restore()
@@ -131,15 +157,17 @@ class WhiteboardView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        // Handle scale gesture first
-        scaleGestureDetector.onTouchEvent(event)
-        
-        // Don't process drawing if scaling
-        if (isScaling) {
-            return true
+        // Handle scale gesture only if pinch mode is enabled
+        if (isPinchModeEnabled) {
+            scaleGestureDetector.onTouchEvent(event)
+            
+            // Don't process drawing if scaling
+            if (isScaling) {
+                return true
+            }
         }
         
-        // Handle gesture detection
+        // Handle gesture detection for double tap (zoom reset)
         gestureDetector.onTouchEvent(event)
         
         // Handle drawing only if in drawing mode
@@ -153,47 +181,83 @@ class WhiteboardView @JvmOverloads constructor(
     }
 
     private fun handleDrawingTouch(event: MotionEvent) {
-        val x = (event.x - focusX) / scaleFactor
-        val y = (event.y - focusY) / scaleFactor
+        val action = event.actionMasked
+        val pointerIndex = event.actionIndex
+        val pointerId = event.getPointerId(pointerIndex)
         
-        when (event.action) {
-            MotionEvent.ACTION_DOWN -> {
-                currentPath.reset()
-                currentPath.moveTo(x, y)
-                lastTouchX = x
-                lastTouchY = y
+        when (action) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                val x = (event.getX(pointerIndex) + focusX) / scaleFactor
+                val y = (event.getY(pointerIndex) + focusY) / scaleFactor
+                
+                // Create new path for this pointer
+                val newPath = Path()
+                newPath.moveTo(x, y)
+                activePaths[pointerId] = newPath
+                activePathsLastX[pointerId] = x
+                activePathsLastY[pointerId] = y
             }
             
             MotionEvent.ACTION_MOVE -> {
-                val dx = abs(x - lastTouchX)
-                val dy = abs(y - lastTouchY)
-                
-                if (dx >= 4 || dy >= 4) {
-                    currentPath.quadTo(lastTouchX, lastTouchY, (x + lastTouchX) / 2, (y + lastTouchY) / 2)
-                    lastTouchX = x
-                    lastTouchY = y
+                // Handle all active pointers
+                for (i in 0 until event.pointerCount) {
+                    val id = event.getPointerId(i)
+                    val path = activePaths[id]
+                    val lastX = activePathsLastX[id]
+                    val lastY = activePathsLastY[id]
+                    
+                    if (path != null && lastX != null && lastY != null) {
+                        val x = (event.getX(i) + focusX) / scaleFactor
+                        val y = (event.getY(i) + focusY) / scaleFactor
+                        
+                        val dx = abs(x - lastX)
+                        val dy = abs(y - lastY)
+                        
+                        if (dx >= 4 || dy >= 4) {
+                            path.quadTo(lastX, lastY, (x + lastX) / 2, (y + lastY) / 2)
+                            activePathsLastX[id] = x
+                            activePathsLastY[id] = y
+                        }
+                    }
                 }
             }
             
-            MotionEvent.ACTION_UP -> {
-                currentPath.lineTo(lastTouchX, lastTouchY)
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
+                val path = activePaths[pointerId]
+                val lastX = activePathsLastX[pointerId]
+                val lastY = activePathsLastY[pointerId]
                 
-                // Save the path
-                val pathCopy = Path(currentPath)
-                val paintCopy = Paint(getCurrentPaint())
-                paths.add(DrawingPath(pathCopy, paintCopy, currentTool))
-                
-                // Draw to bitmap
-                drawingCanvas?.drawPath(pathCopy, paintCopy)
-                
-                // Clear current path
-                currentPath.reset()
-                
-                // Clear undo stack when new stroke is made
-                undoStack.clear()
-                
-                // Notify listener of drawing change
-                drawingChangeListener?.onDrawingChanged()
+                if (path != null && lastX != null && lastY != null) {
+                    // Finish the path
+                    path.lineTo(lastX, lastY)
+                    
+                    // Save the completed path
+                    val pathCopy = Path(path)
+                    val paintCopy = Paint(getCurrentPaint())
+                    paths.add(DrawingPath(pathCopy, paintCopy, currentTool))
+                    
+                    // Draw to bitmap
+                    drawingCanvas?.drawPath(pathCopy, paintCopy)
+                    
+                    // Remove from active paths
+                    activePaths.remove(pointerId)
+                    activePathsLastX.remove(pointerId)
+                    activePathsLastY.remove(pointerId)
+                    
+                    // Clear undo stack when new stroke is made (only for the last finger)
+                    if (activePaths.isEmpty()) {
+                        undoStack.clear()
+                        // Notify listener of drawing change
+                        drawingChangeListener?.onDrawingChanged()
+                    }
+                }
+            }
+            
+            MotionEvent.ACTION_CANCEL -> {
+                // Clear all active paths on cancel
+                activePaths.clear()
+                activePathsLastX.clear()
+                activePathsLastY.clear()
             }
         }
         
@@ -276,6 +340,14 @@ class WhiteboardView @JvmOverloads constructor(
         drawingChangeListener = listener
     }
 
+    fun setPinchModeEnabled(enabled: Boolean) {
+        isPinchModeEnabled = enabled
+    }
+
+    fun isPinchModeEnabled(): Boolean {
+        return isPinchModeEnabled
+    }
+
     fun undo() {
         if (canUndo()) {
             val lastPath = paths.removeAt(paths.size - 1)
@@ -297,7 +369,9 @@ class WhiteboardView @JvmOverloads constructor(
     fun clear() {
         paths.clear()
         undoStack.clear()
-        currentPath.reset()
+        activePaths.clear()
+        activePathsLastX.clear()
+        activePathsLastY.clear()
         redrawCanvas()
         drawingChangeListener?.onDrawingChanged()
     }
@@ -348,6 +422,13 @@ class WhiteboardView @JvmOverloads constructor(
         override fun onScaleEnd(detector: ScaleGestureDetector) {
             isScaling = false
         }
+    }
+
+    // Cleanup method
+    fun cleanup() {
+        drawingBitmap?.recycle()
+        drawingBitmap = null
+        drawingCanvas = null
     }
 
     // Getters for current state

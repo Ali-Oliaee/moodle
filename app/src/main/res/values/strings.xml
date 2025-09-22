@@ -60,4 +60,7 @@
     <string name="desc_color_picker">انتخاب رنگ</string>
     <string name="desc_stroke_width">انتخاب عرض خط</string>
     <string name="desc_mode_toggle">تغییر بین حالت رسم و حالت پان</string>
+    <string name="desc_pinch_mode">فعال/غیرفعال کردن حالت زوم با انگشت</string>
+    <string name="pinch_mode_enabled">حالت زوم فعال شد</string>
+    <string name="pinch_mode_disabled">حالت زوم غیرفعال شد</string>
 </resources>
