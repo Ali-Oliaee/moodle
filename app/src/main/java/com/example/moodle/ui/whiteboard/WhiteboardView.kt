@@ -17,6 +17,11 @@ class WhiteboardView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    // Interface for drawing events
+    interface OnDrawingChangeListener {
+        fun onDrawingChanged()
+    }
+
     // Drawing tools
     enum class DrawingTool {
         PEN, ERASER, HIGHLIGHTER
@@ -27,6 +32,9 @@ class WhiteboardView @JvmOverloads constructor(
     private var currentColor = Color.BLACK
     private var currentStrokeWidth = 8f
     private var isDrawingMode = true
+    
+    // Listener for drawing changes
+    private var drawingChangeListener: OnDrawingChangeListener? = null
 
     // Paint objects
     private val drawPaint = Paint().apply {
@@ -183,6 +191,9 @@ class WhiteboardView @JvmOverloads constructor(
                 
                 // Clear undo stack when new stroke is made
                 undoStack.clear()
+                
+                // Notify listener of drawing change
+                drawingChangeListener?.onDrawingChanged()
             }
         }
         
@@ -261,19 +272,25 @@ class WhiteboardView @JvmOverloads constructor(
         isDrawingMode = enabled
     }
 
+    fun setOnDrawingChangeListener(listener: OnDrawingChangeListener?) {
+        drawingChangeListener = listener
+    }
+
     fun undo() {
-        if (paths.isNotEmpty()) {
+        if (canUndo()) {
             val lastPath = paths.removeAt(paths.size - 1)
             undoStack.add(lastPath)
             redrawCanvas()
+            drawingChangeListener?.onDrawingChanged()
         }
     }
 
     fun redo() {
-        if (undoStack.isNotEmpty()) {
+        if (canRedo()) {
             val pathToRedo = undoStack.removeAt(undoStack.size - 1)
             paths.add(pathToRedo)
             redrawCanvas()
+            drawingChangeListener?.onDrawingChanged()
         }
     }
 
@@ -282,15 +299,19 @@ class WhiteboardView @JvmOverloads constructor(
         undoStack.clear()
         currentPath.reset()
         redrawCanvas()
+        drawingChangeListener?.onDrawingChanged()
     }
 
     private fun redrawCanvas() {
-        drawingCanvas?.drawColor(Color.WHITE)
+        // Clear the entire canvas
+        drawingCanvas?.drawColor(Color.WHITE, PorterDuff.Mode.SRC)
         
+        // Redraw all paths
         for (drawingPath in paths) {
             drawingCanvas?.drawPath(drawingPath.path, drawingPath.paint)
         }
         
+        // Force a redraw of the view
         invalidate()
     }
 

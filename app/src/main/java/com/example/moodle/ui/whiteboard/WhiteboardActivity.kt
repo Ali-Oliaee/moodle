@@ -89,6 +89,7 @@ class WhiteboardActivity : AppCompatActivity() {
         setupToolListeners()
         setupColorListeners()
         setupStrokeWidthListener()
+        setupWhiteboardListener()
         registerRecordingStateReceiver()
         updateButtonAppearance()
         updateToolButtons()
@@ -163,12 +164,10 @@ class WhiteboardActivity : AppCompatActivity() {
         
         btnUndo.setOnClickListener { 
             whiteboardView.undo()
-            updateToolButtons()
         }
         
         btnRedo.setOnClickListener { 
             whiteboardView.redo()
-            updateToolButtons()
         }
         
         btnClear.setOnClickListener { showClearConfirmDialog() }
@@ -203,6 +202,14 @@ class WhiteboardActivity : AppCompatActivity() {
         })
     }
     
+    private fun setupWhiteboardListener() {
+        whiteboardView.setOnDrawingChangeListener(object : WhiteboardView.OnDrawingChangeListener {
+            override fun onDrawingChanged() {
+                updateToolButtons()
+            }
+        })
+    }
+    
     private fun selectTool(tool: WhiteboardView.DrawingTool, button: ImageButton) {
         // Update tool selection
         currentSelectedTool?.isSelected = false
@@ -216,6 +223,9 @@ class WhiteboardActivity : AppCompatActivity() {
         if (!isDrawingMode) {
             toggleMode()
         }
+        
+        // Update button states
+        updateToolButtons()
     }
     
     private fun selectColor(color: Int, button: Button) {
@@ -259,7 +269,6 @@ class WhiteboardActivity : AppCompatActivity() {
             .setMessage(getString(R.string.clear_confirm))
             .setPositiveButton(getString(R.string.yes)) { _, _ ->
                 whiteboardView.clear()
-                updateToolButtons()
             }
             .setNegativeButton(getString(R.string.no), null)
             .show()
