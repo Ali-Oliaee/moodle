@@ -1,156 +1,80 @@
 package com.example.moodle.data.repository
 
-import android.content.Context
+import com.example.moodle.data.api.ApiClient
+import com.example.moodle.data.api.ApiService
+import com.example.moodle.data.datastore.UserPreferences
+import com.example.moodle.data.model.LoginResponse
 import android.util.Log
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.*
-import androidx.datastore.preferences.preferencesDataStore
-import com.example.moodle.data.network.ApiService
-import com.example.moodle.data.network.models.*
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import retrofit2.Response
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class AuthRepository(
-    private val apiService: ApiService,
-    private val context: Context
+    private val prefs: UserPreferences
 ) {
     
-    companion object {
-        private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "auth_prefs")
-        
-        private val KEY_AUTH_TOKEN = stringPreferencesKey("auth_token")
-        private val KEY_REFRESH_TOKEN = stringPreferencesKey("refresh_token")
-        private val KEY_USER_ID = stringPreferencesKey("user_id")
-        private val KEY_USER_EMAIL = stringPreferencesKey("user_email")
-        private val KEY_USER_NAME = stringPreferencesKey("user_name")
-        private val KEY_USER_ROLE = stringPreferencesKey("user_role")
-        private val KEY_IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
-    }
-    
-    /**
-     * Login user with email and password
-     */
-    suspend fun login(email: String, password: String): Result<LoginResponse> {
-        return try {
-            val response = apiService.login(email, password, "moodle_mobile_app")
-            
-            if (response.isSuccessful && response.body() != null) {
-                val loginResponse = response.body()!!
+    suspend fun login(
+        username: String, 
+        password: String, 
+        service: String = "moodle_mobile_app"
+    ): Result<LoginResponse> = withContext(Dispatchers.IO) {
+        try {
+            val apiService = ApiClient.createApiService()
 
-                // Consider login successful if token is present, regardless of success field
-                if (loginResponse.token != null) {
-                    // Save authentication data
-                    saveAuthData(loginResponse)
-                    Result.success(loginResponse)
-                } else {
-                    // If no token, use the message from response or provide a default error
-                    val errorMessage = loginResponse.message ?: "Login failed: No authentication token received"
-                    Result.failure(Exception(errorMessage))
+            val response = apiService.login(username, password, service).execute()
+        
+            if (response.isSuccessful) {
+                val body = response.body()
+                
+                when {
+                    body == null -> {
+                        Log.d("Moodle-Auth", "Login failed: Empty response body")
+                        Result.failure(Exception("Empty response from server"))
+                    }
+                    !body.token.isNullOrBlank() -> {
+                        prefs.saveAuthToken(body.token!!)
+                        prefs.saveUsername(username)
+                        
+                        Result.success(body)
+                    }
+                    else -> {
+                        Log.d("Moodle-Auth", "Login failed: No token received")
+                        Log.d("Moodle-Auth", "Success flag: ${body.success}")
+                        Log.d("Moodle-Auth", "Message: ${body.message}")
+                        
+                        val errorMsg = body.message ?: "Login failed - No authentication token received"
+                        Result.failure(Exception(errorMsg))
+                    }
                 }
             } else {
-                val errorMessage = "Login failed: ${response.code()}"
-                Result.failure(Exception(errorMessage))
+                val errorBody = response.errorBody()?.string()
+                val errorMsg = "HTTP ${response.code()}: ${response.message()}"
+                Result.failure(Exception(errorMsg))
             }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-    
-    /**
-     * Logout user
-     */
-    suspend fun logout() {
-        clearAuthData()
-    }
-    
-    /**
-     * Check if user is logged in
-     */
-    val isLoggedIn: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[KEY_IS_LOGGED_IN] ?: false
-    }
-    
-    /**
-     * Get current user ID
-     */
-    val userId: Flow<String?> = context.dataStore.data.map { preferences ->
-        preferences[KEY_USER_ID]
-    }
-    
-    /**
-     * Get current user email
-     */
-    val userEmail: Flow<String?> = context.dataStore.data.map { preferences ->
-        preferences[KEY_USER_EMAIL]
-    }
-    
-    /**
-     * Get current user name
-     */
-    val userName: Flow<String?> = context.dataStore.data.map { preferences ->
-        preferences[KEY_USER_NAME]
-    }
-    
-    /**
-     * Get current user role
-     */
-    val userRole: Flow<String?> = context.dataStore.data.map { preferences ->
-        preferences[KEY_USER_ROLE]
-    }
-    
-    /**
-     * Get authentication token
-     */
-    suspend fun getAuthToken(): String? {
-        return context.dataStore.data.first()[KEY_AUTH_TOKEN]
-    }
-    
-    /**
-     * Get refresh token
-     */
-    suspend fun getRefreshToken(): String? {
-        return context.dataStore.data.first()[KEY_REFRESH_TOKEN]
-    }
-    
-    /**
-     * Save authentication data after successful login
-     */
-    private suspend fun saveAuthData(loginResponse: LoginResponse) {
-        context.dataStore.edit { preferences ->
-            preferences[KEY_AUTH_TOKEN] = loginResponse.token!!
-            // Only save refresh token if it's not null
-            loginResponse.refreshToken?.let { refreshToken ->
-                preferences[KEY_REFRESH_TOKEN] = refreshToken
+        } catch (t: Throwable) {
+            Log.e("Moodle", "Login exception: ${t.message}", t)
+            val errorMsg = when (t) {
+                is java.net.UnknownHostException -> "Cannot connect to server. Check your internet connection and server URL."
+                is java.net.ConnectException -> "Connection failed. Please check the server URL."
+                is java.net.SocketTimeoutException -> "Connection timeout. Please try again."
+                else -> "Network error: ${t.message ?: "Unknown error"}"
             }
-            
-            preferences[KEY_IS_LOGGED_IN] = true
-            loginResponse.data?.let { userData ->
-                preferences[KEY_USER_ID] = userData.id
-                preferences[KEY_USER_EMAIL] = userData.username
-                preferences[KEY_USER_NAME] = userData.name
-                preferences[KEY_USER_ROLE] = userData.role
-            }
+            Result.failure(Exception(errorMsg))
         }
     }
     
-    /**
-     * Update tokens after refresh
-     */
-    private suspend fun updateTokens(newToken: String, newRefreshToken: String?) {
-        context.dataStore.edit { preferences ->
-            preferences[KEY_AUTH_TOKEN] = newToken
-            newRefreshToken?.let { preferences[KEY_REFRESH_TOKEN] = it }
-        }
+    fun isLoggedIn(): Boolean {
+        return prefs.isLoggedIn()
     }
     
-    /**
-     * Clear all authentication data
-     */
-    private suspend fun clearAuthData() {
-        context.dataStore.edit { preferences ->
-            preferences.clear()
-        }
+    fun logout() {
+        prefs.clearAllData()
+    }
+    
+    fun getAuthToken(): String? {
+        return prefs.getAuthToken()
+    }
+    
+    fun getUsername(): String? {
+        return prefs.getUsername()
     }
 }
