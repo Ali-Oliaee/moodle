@@ -49,6 +49,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnPen: ImageButton
     private lateinit var btnEraser: ImageButton
     private lateinit var btnHighlighter: ImageButton
+    private lateinit var btnText: ImageButton
     private lateinit var btnUndo: ImageButton
     private lateinit var btnRedo: ImageButton
     private lateinit var btnClear: ImageButton
@@ -119,6 +120,7 @@ class WhiteboardActivity : AppCompatActivity() {
         btnPen = findViewById(R.id.btnPen)
         btnEraser = findViewById(R.id.btnEraser)
         btnHighlighter = findViewById(R.id.btnHighlighter)
+        btnText = findViewById(R.id.btnText)
         btnUndo = findViewById(R.id.btnUndo)
         btnRedo = findViewById(R.id.btnRedo)
         btnClear = findViewById(R.id.btnClear)
@@ -175,6 +177,7 @@ class WhiteboardActivity : AppCompatActivity() {
         btnPen.setOnClickListener { selectTool(WhiteboardView.DrawingTool.PEN, btnPen) }
         btnEraser.setOnClickListener { selectTool(WhiteboardView.DrawingTool.ERASER, btnEraser) }
         btnHighlighter.setOnClickListener { selectTool(WhiteboardView.DrawingTool.HIGHLIGHTER, btnHighlighter) }
+        btnText.setOnClickListener { selectTool(WhiteboardView.DrawingTool.TEXT, btnText) }
         
         // Action listeners
         btnUndo.setOnClickListener { whiteboardView.undo() }
@@ -270,6 +273,37 @@ class WhiteboardActivity : AppCompatActivity() {
                 updateToolButtons()
             }
         })
+        
+        whiteboardView.setOnTextInputListener(object : WhiteboardView.OnTextInputListener {
+            override fun onTextInputRequested(x: Float, y: Float) {
+                showTextInputDialog(x, y)
+            }
+        })
+    }
+    
+    private fun showTextInputDialog(x: Float, y: Float) {
+        val editText = EditText(this)
+        editText.hint = "متن خود را وارد کنید"
+        editText.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+        
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("افزودن متن")
+            .setView(editText)
+            .setPositiveButton("تایید") { _, _ ->
+                val text = editText.text.toString().trim()
+                if (text.isNotEmpty()) {
+                    whiteboardView.addText(text, x, y)
+                }
+            }
+            .setNegativeButton("لغو", null)
+            .create()
+            
+        dialog.show()
+        
+        // Show keyboard automatically
+        editText.requestFocus()
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
     }
     
     private fun selectTool(tool: WhiteboardView.DrawingTool, button: ImageButton) {
@@ -277,6 +311,7 @@ class WhiteboardActivity : AppCompatActivity() {
         btnPen.isSelected = false
         btnEraser.isSelected = false
         btnHighlighter.isSelected = false
+        btnText.isSelected = false
         button.isSelected = true
         currentSelectedTool = button
         

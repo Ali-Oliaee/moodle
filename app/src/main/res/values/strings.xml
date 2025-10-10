@@ -19,6 +19,7 @@
     <string name="tool_pen">قلم</string>
     <string name="tool_eraser">روشن کننده</string>
     <string name="tool_highlighter">روشن کننده</string>
+    <string name="tool_text">متن</string>
     <string name="drawing_mode">حالت رسم</string>
     <string name="pan_mode">حالت پان</string>
     
@@ -55,6 +56,7 @@
     <string name="desc_pen_tool">انتخاب قلم</string>   
     <string name="desc_eraser_tool">انتخاب روشن کننده</string>
     <string name="desc_highlighter_tool">انتخاب روشن کننده</string>
+    <string name="desc_text_tool">انتخاب ابزار متن</string>
     <string name="desc_undo_button">برگشت از آخرین عمل</string>
     <string name="desc_redo_button">بازگردانی آخرین عمل</string>
     <string name="desc_clear_button">پاک کردن رویاگرانی</string>

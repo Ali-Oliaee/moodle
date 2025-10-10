@@ -24,7 +24,7 @@ class WhiteboardView @JvmOverloads constructor(
 
     // Drawing tools
     enum class DrawingTool {
-        PEN, ERASER, HIGHLIGHTER
+        PEN, ERASER, HIGHLIGHTER, TEXT
     }
 
     // Drawing state
@@ -61,6 +61,21 @@ class WhiteboardView @JvmOverloads constructor(
         alpha = 100 // Semi-transparent
     }
 
+    private val textPaint = Paint().apply {
+        isAntiAlias = true
+        style = Paint.Style.FILL
+        textAlign = Paint.Align.LEFT
+        textSize = 48f
+    }
+
+    // Text-related properties
+    private var textInputListener: OnTextInputListener? = null
+    
+    // Interface for text input events
+    interface OnTextInputListener {
+        fun onTextInputRequested(x: Float, y: Float)
+    }
+
     // Canvas and bitmap for drawing
     private var drawingBitmap: Bitmap? = null
     private var drawingCanvas: Canvas? = null
@@ -71,6 +86,17 @@ class WhiteboardView @JvmOverloads constructor(
     // Path tracking
     private val paths = mutableListOf<DrawingPath>()
     private val undoStack = mutableListOf<DrawingPath>()
+    
+    // Text objects tracking
+    private val textObjects = mutableListOf<TextObject>()
+    private var selectedTextObject: TextObject? = null
+    private var isDraggingText = false
+    private var isResizingText = false
+    private var isRotatingText = false
+    private var dragStartX = 0f
+    private var dragStartY = 0f
+    private var initialTextSize = 0f
+    private var initialRotation = 0f
 
     // Multi-touch path tracking
     private val activePaths = mutableMapOf<Int, Path>()
@@ -96,8 +122,141 @@ class WhiteboardView @JvmOverloads constructor(
     data class DrawingPath(
         val path: Path,
         val paint: Paint,
-        val tool: DrawingTool
+        val tool: DrawingTool,
+        val text: String? = null,
+        val textX: Float = 0f,
+        val textY: Float = 0f
     )
+
+    data class TextObject(
+        var text: String,
+        var x: Float,
+        var y: Float,
+        var textSize: Float,
+        var color: Int,
+        var rotation: Float = 0f,
+        var isSelected: Boolean = false
+    ) {
+        val paint = Paint().apply {
+            isAntiAlias = true
+            style = Paint.Style.FILL
+            textAlign = Paint.Align.LEFT
+        }
+        
+        private val selectionPaint = Paint().apply {
+            color = Color.BLUE
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+            pathEffect = DashPathEffect(floatArrayOf(10f, 5f), 0f)
+        }
+        
+        private val handlePaint = Paint().apply {
+            color = Color.BLUE
+            style = Paint.Style.FILL
+        }
+        
+        private val rotationHandlePaint = Paint().apply {
+            color = Color.GREEN
+            style = Paint.Style.FILL
+        }
+        
+        fun updatePaint() {
+            paint.color = color
+            paint.textSize = textSize
+        }
+        
+        fun draw(canvas: Canvas) {
+            updatePaint()
+            
+            canvas.save()
+            
+            // Apply rotation around text center
+            if (rotation != 0f) {
+                val bounds = Rect()
+                paint.getTextBounds(text, 0, text.length, bounds)
+                val centerX = x + bounds.width() / 2f
+                val centerY = y + bounds.height() / 2f
+                canvas.rotate(rotation, centerX, centerY)
+            }
+            
+            canvas.drawText(text, x, y, paint)
+            canvas.restore()
+            
+            if (isSelected) {
+                drawSelectionBounds(canvas)
+            }
+        }
+        
+        private fun drawSelectionBounds(canvas: Canvas) {
+            val bounds = Rect()
+            paint.getTextBounds(text, 0, text.length, bounds)
+            
+            val left = x - 10f
+            val top = y + bounds.top - 10f
+            val right = x + bounds.width() + 10f
+            val bottom = y + bounds.bottom + 10f
+            
+            canvas.save()
+            
+            // Apply rotation for selection bounds
+            if (rotation != 0f) {
+                val centerX = x + bounds.width() / 2f
+                val centerY = y + bounds.height() / 2f
+                canvas.rotate(rotation, centerX, centerY)
+            }
+            
+            // Draw selection rectangle
+            canvas.drawRect(left, top, right, bottom, selectionPaint)
+            
+            // Draw resize handle (blue square at bottom-right)
+            val handleSize = 20f
+            canvas.drawRect(right - handleSize/2, bottom - handleSize/2, 
+                          right + handleSize/2, bottom + handleSize/2, handlePaint)
+            
+            canvas.restore()
+            
+            // Draw rotation handle (green circle at top-center, outside rotation)
+            val rotationHandleX = x + bounds.width() / 2f
+            val rotationHandleY = top - 30f
+            canvas.drawCircle(rotationHandleX, rotationHandleY, 10f, rotationHandlePaint)
+        }
+        
+        fun contains(touchX: Float, touchY: Float): Boolean {
+            val bounds = Rect()
+            paint.getTextBounds(text, 0, text.length, bounds)
+            
+            return touchX >= x - 10f && touchX <= x + bounds.width() + 10f &&
+                   touchY >= y + bounds.top - 10f && touchY <= y + bounds.bottom + 10f
+        }
+        
+        fun isResizeHandleTouched(touchX: Float, touchY: Float): Boolean {
+            if (!isSelected) return false
+            
+            val bounds = Rect()
+            paint.getTextBounds(text, 0, text.length, bounds)
+            
+            val handleX = x + bounds.width() + 10f
+            val handleY = y + bounds.bottom + 10f
+            val handleSize = 20f
+            
+            return touchX >= handleX - handleSize/2 && touchX <= handleX + handleSize/2 &&
+                   touchY >= handleY - handleSize/2 && touchY <= handleY + handleSize/2
+        }
+        
+        fun isRotationHandleTouched(touchX: Float, touchY: Float): Boolean {
+            if (!isSelected) return false
+            
+            val bounds = Rect()
+            paint.getTextBounds(text, 0, text.length, bounds)
+            
+            val handleX = x + bounds.width() / 2f
+            val handleY = y + bounds.top - 40f // 30f offset + 10f radius
+            val handleRadius = 15f // Slightly larger touch area
+            
+            val distance = kotlin.math.sqrt((touchX - handleX) * (touchX - handleX) + (touchY - handleY) * (touchY - handleY))
+            return distance <= handleRadius
+        }
+    }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -152,6 +311,11 @@ class WhiteboardView @JvmOverloads constructor(
                 }
             }
             
+            // Draw text objects
+            for (textObject in textObjects) {
+                textObject.draw(c)
+            }
+            
             c.restore()
         }
     }
@@ -190,65 +354,82 @@ class WhiteboardView @JvmOverloads constructor(
                 val x = (event.getX(pointerIndex) + focusX) / scaleFactor
                 val y = (event.getY(pointerIndex) + focusY) / scaleFactor
                 
-                // Create new path for this pointer
-                val newPath = Path()
-                newPath.moveTo(x, y)
-                activePaths[pointerId] = newPath
-                activePathsLastX[pointerId] = x
-                activePathsLastY[pointerId] = y
+                // Handle text tool differently
+                if (currentTool == DrawingTool.TEXT) {
+                    handleTextTouch(x, y, action)
+                } else {
+                    // Create new path for this pointer
+                    val newPath = Path()
+                    newPath.moveTo(x, y)
+                    activePaths[pointerId] = newPath
+                    activePathsLastX[pointerId] = x
+                    activePathsLastY[pointerId] = y
+                }
             }
             
             MotionEvent.ACTION_MOVE -> {
-                // Handle all active pointers
-                for (i in 0 until event.pointerCount) {
-                    val id = event.getPointerId(i)
-                    val path = activePaths[id]
-                    val lastX = activePathsLastX[id]
-                    val lastY = activePathsLastY[id]
-                    
-                    if (path != null && lastX != null && lastY != null) {
-                        val x = (event.getX(i) + focusX) / scaleFactor
-                        val y = (event.getY(i) + focusY) / scaleFactor
+                if (currentTool == DrawingTool.TEXT) {
+                    val x = (event.x + focusX) / scaleFactor
+                    val y = (event.y + focusY) / scaleFactor
+                    handleTextTouch(x, y, action)
+                } else {
+                    // Handle all active pointers
+                    for (i in 0 until event.pointerCount) {
+                        val id = event.getPointerId(i)
+                        val path = activePaths[id]
+                        val lastX = activePathsLastX[id]
+                        val lastY = activePathsLastY[id]
                         
-                        val dx = abs(x - lastX)
-                        val dy = abs(y - lastY)
-                        
-                        if (dx >= 4 || dy >= 4) {
-                            path.quadTo(lastX, lastY, (x + lastX) / 2, (y + lastY) / 2)
-                            activePathsLastX[id] = x
-                            activePathsLastY[id] = y
+                        if (path != null && lastX != null && lastY != null) {
+                            val x = (event.getX(i) + focusX) / scaleFactor
+                            val y = (event.getY(i) + focusY) / scaleFactor
+                            
+                            val dx = abs(x - lastX)
+                            val dy = abs(y - lastY)
+                            
+                            if (dx >= 4 || dy >= 4) {
+                                path.quadTo(lastX, lastY, (x + lastX) / 2, (y + lastY) / 2)
+                                activePathsLastX[id] = x
+                                activePathsLastY[id] = y
+                            }
                         }
                     }
                 }
             }
             
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
-                val path = activePaths[pointerId]
-                val lastX = activePathsLastX[pointerId]
-                val lastY = activePathsLastY[pointerId]
-                
-                if (path != null && lastX != null && lastY != null) {
-                    // Finish the path
-                    path.lineTo(lastX, lastY)
+                if (currentTool == DrawingTool.TEXT) {
+                    val x = (event.getX(pointerIndex) + focusX) / scaleFactor
+                    val y = (event.getY(pointerIndex) + focusY) / scaleFactor
+                    handleTextTouch(x, y, action)
+                } else {
+                    val path = activePaths[pointerId]
+                    val lastX = activePathsLastX[pointerId]
+                    val lastY = activePathsLastY[pointerId]
                     
-                    // Save the completed path
-                    val pathCopy = Path(path)
-                    val paintCopy = Paint(getCurrentPaint())
-                    paths.add(DrawingPath(pathCopy, paintCopy, currentTool))
-                    
-                    // Draw to bitmap
-                    drawingCanvas?.drawPath(pathCopy, paintCopy)
-                    
-                    // Remove from active paths
-                    activePaths.remove(pointerId)
-                    activePathsLastX.remove(pointerId)
-                    activePathsLastY.remove(pointerId)
-                    
-                    // Clear undo stack when new stroke is made (only for the last finger)
-                    if (activePaths.isEmpty()) {
-                        undoStack.clear()
-                        // Notify listener of drawing change
-                        drawingChangeListener?.onDrawingChanged()
+                    if (path != null && lastX != null && lastY != null) {
+                        // Finish the path
+                        path.lineTo(lastX, lastY)
+                        
+                        // Save the completed path
+                        val pathCopy = Path(path)
+                        val paintCopy = Paint(getCurrentPaint())
+                        paths.add(DrawingPath(pathCopy, paintCopy, currentTool))
+                        
+                        // Draw to bitmap
+                        drawingCanvas?.drawPath(pathCopy, paintCopy)
+                        
+                        // Remove from active paths
+                        activePaths.remove(pointerId)
+                        activePathsLastX.remove(pointerId)
+                        activePathsLastY.remove(pointerId)
+                        
+                        // Clear undo stack when new stroke is made (only for the last finger)
+                        if (activePaths.isEmpty()) {
+                            undoStack.clear()
+                            // Notify listener of drawing change
+                            drawingChangeListener?.onDrawingChanged()
+                        }
                     }
                 }
             }
@@ -262,6 +443,101 @@ class WhiteboardView @JvmOverloads constructor(
         }
         
         invalidate()
+    }
+
+    private fun handleTextTouch(x: Float, y: Float, action: Int) {
+        when (action) {
+            MotionEvent.ACTION_DOWN -> {
+                // Check if touching a rotation handle first
+                selectedTextObject?.let { textObj ->
+                    if (textObj.isRotationHandleTouched(x, y)) {
+                        isRotatingText = true
+                        dragStartX = x
+                        dragStartY = y
+                        initialRotation = textObj.rotation
+                        return
+                    }
+                    
+                    // Check if touching a resize handle
+                    if (textObj.isResizeHandleTouched(x, y)) {
+                        isResizingText = true
+                        dragStartX = x
+                        dragStartY = y
+                        initialTextSize = textObj.textSize
+                        return
+                    }
+                }
+                
+                // Check if touching any text object
+                var touchedText: TextObject? = null
+                for (textObj in textObjects.reversed()) { // Check from top to bottom
+                    if (textObj.contains(x, y)) {
+                        touchedText = textObj
+                        break
+                    }
+                }
+                
+                if (touchedText != null) {
+                    // Deselect previous selection
+                    selectedTextObject?.isSelected = false
+                    
+                    // Select touched text
+                    selectedTextObject = touchedText
+                    touchedText.isSelected = true
+                    isDraggingText = true
+                    dragStartX = x
+                    dragStartY = y
+                } else {
+                    // Deselect any selected text
+                    selectedTextObject?.isSelected = false
+                    selectedTextObject = null
+                    
+                    // Request new text input at this position
+                    textInputListener?.onTextInputRequested(x, y)
+                }
+            }
+            
+            MotionEvent.ACTION_MOVE -> {
+                selectedTextObject?.let { textObj ->
+                    if (isRotatingText) {
+                        // Calculate rotation based on angle from text center
+                        val bounds = Rect()
+                        textObj.updatePaint()
+                        textObj.paint.getTextBounds(textObj.text, 0, textObj.text.length, bounds)
+                        val centerX = textObj.x + bounds.width() / 2f
+                        val centerY = textObj.y + bounds.height() / 2f
+                        
+                        val startAngle = kotlin.math.atan2((dragStartY - centerY).toDouble(), (dragStartX - centerX).toDouble())
+                        val currentAngle = kotlin.math.atan2((y - centerY).toDouble(), (x - centerX).toDouble())
+                        val deltaAngle = Math.toDegrees(currentAngle - startAngle).toFloat()
+                        
+                        textObj.rotation = (initialRotation + deltaAngle) % 360f
+                    } else if (isResizingText) {
+                        // Calculate resize based on distance from start point
+                        val distance = kotlin.math.sqrt((x - dragStartX) * (x - dragStartX) + (y - dragStartY) * (y - dragStartY))
+                        val scaleFactor = max(0.5f, min(3.0f, distance / 100f))
+                        textObj.textSize = initialTextSize * scaleFactor
+                    } else if (isDraggingText) {
+                        // Move text object
+                        val deltaX = x - dragStartX
+                        val deltaY = y - dragStartY
+                        textObj.x += deltaX
+                        textObj.y += deltaY
+                        dragStartX = x
+                        dragStartY = y
+                    }
+                }
+            }
+            
+            MotionEvent.ACTION_UP -> {
+                isDraggingText = false
+                isResizingText = false
+                isRotatingText = false
+                if (selectedTextObject != null) {
+                    drawingChangeListener?.onDrawingChanged()
+                }
+            }
+        }
     }
 
     private fun handlePanningTouch(event: MotionEvent) {
@@ -316,6 +592,10 @@ class WhiteboardView @JvmOverloads constructor(
                 strokeWidth = currentStrokeWidth * 3
                 xfermode = null
             }
+            DrawingTool.TEXT -> textPaint.apply {
+                color = currentColor
+                textSize = currentStrokeWidth * 6 // Scale text size with stroke width
+            }
         }
     }
 
@@ -338,6 +618,35 @@ class WhiteboardView @JvmOverloads constructor(
 
     fun setOnDrawingChangeListener(listener: OnDrawingChangeListener?) {
         drawingChangeListener = listener
+    }
+
+    fun setOnTextInputListener(listener: OnTextInputListener?) {
+        textInputListener = listener
+    }
+
+    fun addText(text: String, x: Float, y: Float) {
+        if (text.isNotEmpty()) {
+            // Create new text object
+            val textObject = TextObject(
+                text = text,
+                x = x,
+                y = y,
+                textSize = currentStrokeWidth * 6, // Scale with stroke width
+                color = currentColor
+            )
+            
+            // Add to text objects list
+            textObjects.add(textObject)
+            
+            // Select the new text object
+            selectedTextObject?.isSelected = false
+            selectedTextObject = textObject
+            textObject.isSelected = true
+            
+            // Notify listener and redraw
+            drawingChangeListener?.onDrawingChanged()
+            invalidate()
+        }
     }
 
     fun setPinchModeEnabled(enabled: Boolean) {
@@ -372,6 +681,8 @@ class WhiteboardView @JvmOverloads constructor(
         activePaths.clear()
         activePathsLastX.clear()
         activePathsLastY.clear()
+        textObjects.clear()
+        selectedTextObject = null
         redrawCanvas()
         drawingChangeListener?.onDrawingChanged()
     }
@@ -380,9 +691,15 @@ class WhiteboardView @JvmOverloads constructor(
         // Clear the entire canvas
         drawingCanvas?.drawColor(Color.WHITE, PorterDuff.Mode.SRC)
         
-        // Redraw all paths
+        // Redraw all paths and text
         for (drawingPath in paths) {
-            drawingCanvas?.drawPath(drawingPath.path, drawingPath.paint)
+            if (drawingPath.tool == DrawingTool.TEXT && drawingPath.text != null) {
+                // Draw text
+                drawingCanvas?.drawText(drawingPath.text, drawingPath.textX, drawingPath.textY, drawingPath.paint)
+            } else {
+                // Draw path
+                drawingCanvas?.drawPath(drawingPath.path, drawingPath.paint)
+            }
         }
         
         // Force a redraw of the view
