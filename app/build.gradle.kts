@@ -61,6 +61,7 @@ dependencies {
 
     // Fragments, v4 support (if you need it)
     implementation("com.android.support:support-v4:26.1.0")
+    implementation("com.android.support:recyclerview-v7:26.1.0")
 
     // Architecture Components (pre-AndroidX)
     implementation("android.arch.lifecycle:runtime:1.1.1")

@@ -84,4 +84,20 @@
     <string name="sliding_drawer">کشویی</string>
     <string name="fixed_drawer">ثابت</string>
     <string name="drawer_mode_changed">حالت کشو تغییر کرد</string>
+
+    <!-- Attendance -->
+    <string name="attendance_title">حضور و غیاب</string>
+    <string name="attendance_present">حاضر</string>
+    <string name="attendance_absent">غایب</string>
+    <string name="attendance_submit">ثبت حضور و غیاب</string>
+    <string name="attendance_submitting">در حال ارسال...</string>
+    <string name="attendance_generic_error">دریافت لیست دانشجویان با خطا مواجه شد</string>
+    <string name="attendance_retry">تلاش مجدد</string>
+    <string name="attendance_empty_state">دانشجویی برای نمایش وجود ندارد</string>
+    <string name="attendance_student_id_format">شماره دانشجویی: %1$s</string>
+    <string name="attendance_empty_submit">ابتدا لیست دانشجویان بارگذاری شود.</string>
+    <string name="attendance_incomplete">%1$d دانشجو هنوز تعیین وضعیت نشده‌اند.</string>
+    <string name="attendance_submit_success">حضور و غیاب با موفقیت ثبت شد.</string>
+    <string name="attendance_submit_failure">ارسال حضور و غیاب با خطا مواجه شد.</string>
+    <string name="desc_back_button">بازگشت</string>
 </resources>

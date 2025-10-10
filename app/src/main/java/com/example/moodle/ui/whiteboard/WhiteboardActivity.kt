@@ -18,9 +18,10 @@ import android.support.v7.app.AppCompatActivity
 import android.view.ViewGroup
 import android.widget.*
 import com.example.moodle.R
-import com.example.moodle.ui.whiteboard.ScreenRecordService
+import com.example.moodle.ui.attendance.AttendanceActivity
 import com.example.moodle.data.datastore.UserPreferences
 import com.example.moodle.ui.login.LoginActivity
+import com.example.moodle.ui.whiteboard.ScreenRecordService
 import com.example.moodle.utils.FontHelper
 
 class WhiteboardActivity : AppCompatActivity() {
@@ -52,6 +53,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private var drawerModeToggle: LinearLayout? = null
     private var drawerPinchMode: LinearLayout? = null
     private var drawerRecord: LinearLayout? = null
+    private var drawerAttendance: LinearLayout? = null
     private var drawerLogout: LinearLayout? = null
     
     // Tool buttons (for fixed drawer)
@@ -203,8 +205,9 @@ class WhiteboardActivity : AppCompatActivity() {
             btnModeToggle = findViewById(R.id.btnModeToggle)
             btnPinchMode = findViewById(R.id.btnPinchMode)
             
-            // Record and logout
+            // Record, attendance and logout
             drawerRecord = findViewById(R.id.drawerRecord)
+            drawerAttendance = findViewById(R.id.drawerAttendance)
             drawerLogout = findViewById(R.id.drawerLogout)
             tvRecordStatus = findViewById(R.id.tvRecordStatus)
             
@@ -231,6 +234,7 @@ class WhiteboardActivity : AppCompatActivity() {
             drawerModeToggle = findViewById(R.id.drawerModeToggle)
             drawerPinchMode = findViewById(R.id.drawerPinchMode)
             drawerRecord = findViewById(R.id.drawerRecord)
+            drawerAttendance = findViewById(R.id.drawerAttendance)
             drawerLogout = findViewById(R.id.drawerLogout)
             
             // Drawer UI elements
@@ -275,7 +279,11 @@ class WhiteboardActivity : AppCompatActivity() {
             if (isRecording) stopRecording()
             else startRecording()
         }
-        
+
+        drawerAttendance?.setOnClickListener {
+            openAttendanceScreen()
+        }
+
         drawerLogout?.setOnClickListener { logout() }
     }
     
@@ -317,7 +325,12 @@ class WhiteboardActivity : AppCompatActivity() {
             else startRecording()
             closeDrawer()
         }
-        
+
+        drawerAttendance?.setOnClickListener {
+            openAttendanceScreen()
+            closeDrawer()
+        }
+
         // Logout listener
         drawerLogout?.setOnClickListener {
             logout()
@@ -328,6 +341,11 @@ class WhiteboardActivity : AppCompatActivity() {
         if (!isFixedDrawer && drawerLayout != null) {
             drawerLayout?.closeDrawer(findViewById(R.id.navigationDrawer))
         }
+    }
+
+    private fun openAttendanceScreen() {
+        val intent = Intent(this, AttendanceActivity::class.java)
+        startActivity(intent)
     }
     
     private fun toggleDrawerMode() {
