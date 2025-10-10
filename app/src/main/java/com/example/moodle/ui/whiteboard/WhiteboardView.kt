@@ -24,7 +24,7 @@ class WhiteboardView @JvmOverloads constructor(
 
     // Drawing tools
     enum class DrawingTool {
-        PEN, ERASER, HIGHLIGHTER, TEXT
+        PEN, ERASER, HIGHLIGHTER, TEXT, SELECTIVE_ERASER
     }
 
     // Drawing state
@@ -97,6 +97,17 @@ class WhiteboardView @JvmOverloads constructor(
     private var dragStartY = 0f
     private var initialTextSize = 0f
     private var initialRotation = 0f
+    
+    // Selective eraser tracking
+    private var selectionPath: Path? = null
+    private var isDrawingSelection = false
+    private val selectionPaint = Paint().apply {
+        color = Color.RED
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        pathEffect = DashPathEffect(floatArrayOf(10f, 5f), 0f)
+        alpha = 150
+    }
 
     // Multi-touch path tracking
     private val activePaths = mutableMapOf<Int, Path>()
@@ -316,6 +327,11 @@ class WhiteboardView @JvmOverloads constructor(
                 textObject.draw(c)
             }
             
+            // Draw selection area for selective eraser
+            selectionPath?.let { path ->
+                c.drawPath(path, selectionPaint)
+            }
+            
             c.restore()
         }
     }
@@ -354,43 +370,57 @@ class WhiteboardView @JvmOverloads constructor(
                 val x = (event.getX(pointerIndex) + focusX) / scaleFactor
                 val y = (event.getY(pointerIndex) + focusY) / scaleFactor
                 
-                // Handle text tool differently
-                if (currentTool == DrawingTool.TEXT) {
-                    handleTextTouch(x, y, action)
-                } else {
-                    // Create new path for this pointer
-                    val newPath = Path()
-                    newPath.moveTo(x, y)
-                    activePaths[pointerId] = newPath
-                    activePathsLastX[pointerId] = x
-                    activePathsLastY[pointerId] = y
+                // Handle special tools differently
+                when (currentTool) {
+                    DrawingTool.TEXT -> {
+                        handleTextTouch(x, y, action)
+                    }
+                    DrawingTool.SELECTIVE_ERASER -> {
+                        handleSelectiveEraserTouch(x, y, action)
+                    }
+                    else -> {
+                        // Create new path for this pointer
+                        val newPath = Path()
+                        newPath.moveTo(x, y)
+                        activePaths[pointerId] = newPath
+                        activePathsLastX[pointerId] = x
+                        activePathsLastY[pointerId] = y
+                    }
                 }
             }
             
             MotionEvent.ACTION_MOVE -> {
-                if (currentTool == DrawingTool.TEXT) {
-                    val x = (event.x + focusX) / scaleFactor
-                    val y = (event.y + focusY) / scaleFactor
-                    handleTextTouch(x, y, action)
-                } else {
-                    // Handle all active pointers
-                    for (i in 0 until event.pointerCount) {
-                        val id = event.getPointerId(i)
-                        val path = activePaths[id]
-                        val lastX = activePathsLastX[id]
-                        val lastY = activePathsLastY[id]
-                        
-                        if (path != null && lastX != null && lastY != null) {
-                            val x = (event.getX(i) + focusX) / scaleFactor
-                            val y = (event.getY(i) + focusY) / scaleFactor
+                when (currentTool) {
+                    DrawingTool.TEXT -> {
+                        val x = (event.x + focusX) / scaleFactor
+                        val y = (event.y + focusY) / scaleFactor
+                        handleTextTouch(x, y, action)
+                    }
+                    DrawingTool.SELECTIVE_ERASER -> {
+                        val x = (event.x + focusX) / scaleFactor
+                        val y = (event.y + focusY) / scaleFactor
+                        handleSelectiveEraserTouch(x, y, action)
+                    }
+                    else -> {
+                        // Handle all active pointers
+                        for (i in 0 until event.pointerCount) {
+                            val id = event.getPointerId(i)
+                            val path = activePaths[id]
+                            val lastX = activePathsLastX[id]
+                            val lastY = activePathsLastY[id]
                             
-                            val dx = abs(x - lastX)
-                            val dy = abs(y - lastY)
-                            
-                            if (dx >= 4 || dy >= 4) {
-                                path.quadTo(lastX, lastY, (x + lastX) / 2, (y + lastY) / 2)
-                                activePathsLastX[id] = x
-                                activePathsLastY[id] = y
+                            if (path != null && lastX != null && lastY != null) {
+                                val x = (event.getX(i) + focusX) / scaleFactor
+                                val y = (event.getY(i) + focusY) / scaleFactor
+                                
+                                val dx = abs(x - lastX)
+                                val dy = abs(y - lastY)
+                                
+                                if (dx >= 4 || dy >= 4) {
+                                    path.quadTo(lastX, lastY, (x + lastX) / 2, (y + lastY) / 2)
+                                    activePathsLastX[id] = x
+                                    activePathsLastY[id] = y
+                                }
                             }
                         }
                     }
@@ -398,37 +428,45 @@ class WhiteboardView @JvmOverloads constructor(
             }
             
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
-                if (currentTool == DrawingTool.TEXT) {
-                    val x = (event.getX(pointerIndex) + focusX) / scaleFactor
-                    val y = (event.getY(pointerIndex) + focusY) / scaleFactor
-                    handleTextTouch(x, y, action)
-                } else {
-                    val path = activePaths[pointerId]
-                    val lastX = activePathsLastX[pointerId]
-                    val lastY = activePathsLastY[pointerId]
-                    
-                    if (path != null && lastX != null && lastY != null) {
-                        // Finish the path
-                        path.lineTo(lastX, lastY)
+                when (currentTool) {
+                    DrawingTool.TEXT -> {
+                        val x = (event.getX(pointerIndex) + focusX) / scaleFactor
+                        val y = (event.getY(pointerIndex) + focusY) / scaleFactor
+                        handleTextTouch(x, y, action)
+                    }
+                    DrawingTool.SELECTIVE_ERASER -> {
+                        val x = (event.getX(pointerIndex) + focusX) / scaleFactor
+                        val y = (event.getY(pointerIndex) + focusY) / scaleFactor
+                        handleSelectiveEraserTouch(x, y, action)
+                    }
+                    else -> {
+                        val path = activePaths[pointerId]
+                        val lastX = activePathsLastX[pointerId]
+                        val lastY = activePathsLastY[pointerId]
                         
-                        // Save the completed path
-                        val pathCopy = Path(path)
-                        val paintCopy = Paint(getCurrentPaint())
-                        paths.add(DrawingPath(pathCopy, paintCopy, currentTool))
-                        
-                        // Draw to bitmap
-                        drawingCanvas?.drawPath(pathCopy, paintCopy)
-                        
-                        // Remove from active paths
-                        activePaths.remove(pointerId)
-                        activePathsLastX.remove(pointerId)
-                        activePathsLastY.remove(pointerId)
-                        
-                        // Clear undo stack when new stroke is made (only for the last finger)
-                        if (activePaths.isEmpty()) {
-                            undoStack.clear()
-                            // Notify listener of drawing change
-                            drawingChangeListener?.onDrawingChanged()
+                        if (path != null && lastX != null && lastY != null) {
+                            // Finish the path
+                            path.lineTo(lastX, lastY)
+                            
+                            // Save the completed path
+                            val pathCopy = Path(path)
+                            val paintCopy = Paint(getCurrentPaint())
+                            paths.add(DrawingPath(pathCopy, paintCopy, currentTool))
+                            
+                            // Draw to bitmap
+                            drawingCanvas?.drawPath(pathCopy, paintCopy)
+                            
+                            // Remove from active paths
+                            activePaths.remove(pointerId)
+                            activePathsLastX.remove(pointerId)
+                            activePathsLastY.remove(pointerId)
+                            
+                            // Clear undo stack when new stroke is made (only for the last finger)
+                            if (activePaths.isEmpty()) {
+                                undoStack.clear()
+                                // Notify listener of drawing change
+                                drawingChangeListener?.onDrawingChanged()
+                            }
                         }
                     }
                 }
@@ -540,6 +578,130 @@ class WhiteboardView @JvmOverloads constructor(
         }
     }
 
+    private fun handleSelectiveEraserTouch(x: Float, y: Float, action: Int) {
+        when (action) {
+            MotionEvent.ACTION_DOWN -> {
+                // Start drawing selection area
+                selectionPath = Path().apply {
+                    moveTo(x, y)
+                }
+                isDrawingSelection = true
+                invalidate() // Force redraw to show selection path
+            }
+            
+            MotionEvent.ACTION_MOVE -> {
+                if (isDrawingSelection) {
+                    selectionPath?.lineTo(x, y)
+                    invalidate() // Force redraw to show selection path
+                }
+            }
+            
+            MotionEvent.ACTION_UP -> {
+                if (isDrawingSelection) {
+                    selectionPath?.close() // Close the selection area
+                    eraseElementsInSelection()
+                    
+                    // Clear selection path after erasing
+                    selectionPath = null
+                    isDrawingSelection = false
+                    
+                    drawingChangeListener?.onDrawingChanged()
+                    invalidate() // Force redraw after erasing
+                }
+            }
+        }
+    }
+
+    private fun eraseElementsInSelection() {
+        selectionPath?.let { selectionPath ->
+            // Create a region from the selection path for hit testing
+            val region = Region()
+            val rectF = RectF()
+            selectionPath.computeBounds(rectF, true)
+            region.setPath(selectionPath, Region(rectF.left.toInt(), rectF.top.toInt(), 
+                                               rectF.right.toInt(), rectF.bottom.toInt()))
+            
+            // Debug: Log selection area
+            android.util.Log.d("SelectiveEraser", "Selection bounds: ${rectF.left}, ${rectF.top}, ${rectF.right}, ${rectF.bottom}")
+            android.util.Log.d("SelectiveEraser", "Total paths to check: ${paths.size}")
+            android.util.Log.d("SelectiveEraser", "Total text objects to check: ${textObjects.size}")
+            
+            // Remove drawing paths that are completely within selection
+            val pathsToRemove = mutableListOf<DrawingPath>()
+            for (drawingPath in paths) {
+                if (isPathCompletelyWithinRegion(drawingPath.path, region)) {
+                    pathsToRemove.add(drawingPath)
+                }
+            }
+            android.util.Log.d("SelectiveEraser", "Paths to remove: ${pathsToRemove.size}")
+            paths.removeAll(pathsToRemove)
+            
+            // Remove text objects that are completely within selection
+            val textObjectsToRemove = mutableListOf<TextObject>()
+            for (textObject in textObjects) {
+                if (isTextObjectCompletelyWithinRegion(textObject, region)) {
+                    textObjectsToRemove.add(textObject)
+                }
+            }
+            android.util.Log.d("SelectiveEraser", "Text objects to remove: ${textObjectsToRemove.size}")
+            textObjects.removeAll(textObjectsToRemove)
+            
+            // Clear selected text if it was removed
+            if (selectedTextObject in textObjectsToRemove) {
+                selectedTextObject = null
+            }
+            
+            // Redraw canvas without removed elements
+            redrawCanvas()
+        }
+    }
+
+    private fun isPathCompletelyWithinRegion(path: Path, region: Region): Boolean {
+        val pathMeasure = PathMeasure(path, false)
+        val length = pathMeasure.length
+        
+        if (length <= 0) return false
+        
+        val coords = FloatArray(2)
+        
+        // Sample points along the path and check if ALL are in the region
+        val sampleCount = max(10, (length / 10).toInt()) // Reasonable sampling
+        var pointsInside = 0
+        var totalPoints = 0
+        
+        for (i in 0..sampleCount) {
+            val distance = (i.toFloat() / sampleCount) * length
+            pathMeasure.getPosTan(distance, coords, null)
+            totalPoints++
+            if (region.contains(coords[0].toInt(), coords[1].toInt())) {
+                pointsInside++
+            }
+        }
+        
+        // Path is completely within if at least 80% of points are inside
+        // This allows for some edge cases while still being selective
+        return totalPoints > 0 && (pointsInside.toFloat() / totalPoints) >= 0.8f
+    }
+
+    private fun isTextObjectCompletelyWithinRegion(textObject: TextObject, region: Region): Boolean {
+        // Get text bounds
+        val bounds = Rect()
+        textObject.updatePaint()
+        textObject.paint.getTextBounds(textObject.text, 0, textObject.text.length, bounds)
+        
+        // Check all corners of the text bounding box
+        val left = textObject.x.toInt()
+        val top = (textObject.y + bounds.top).toInt()
+        val right = (textObject.x + bounds.width()).toInt()
+        val bottom = (textObject.y + bounds.bottom).toInt()
+        
+        // Text is completely within region only if all corners are inside
+        return region.contains(left, top) && 
+               region.contains(right, top) && 
+               region.contains(left, bottom) && 
+               region.contains(right, bottom)
+    }
+
     private fun handlePanningTouch(event: MotionEvent) {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
@@ -596,6 +758,7 @@ class WhiteboardView @JvmOverloads constructor(
                 color = currentColor
                 textSize = currentStrokeWidth * 6 // Scale text size with stroke width
             }
+            DrawingTool.SELECTIVE_ERASER -> selectionPaint // Use selection paint for drawing selection area
         }
     }
 
@@ -683,6 +846,8 @@ class WhiteboardView @JvmOverloads constructor(
         activePathsLastY.clear()
         textObjects.clear()
         selectedTextObject = null
+        selectionPath = null
+        isDrawingSelection = false
         redrawCanvas()
         drawingChangeListener?.onDrawingChanged()
     }

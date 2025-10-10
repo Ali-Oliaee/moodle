@@ -61,6 +61,7 @@ class WhiteboardActivity : AppCompatActivity() {
     // Popup views
     private var colorPopupWindow: PopupWindow? = null
     private var strokePopupWindow: PopupWindow? = null
+    private var eraserModePopupWindow: PopupWindow? = null
     private var currentStrokeWidth: Float = 8f
     
     // State
@@ -68,6 +69,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private var isDrawingMode = true
     private var currentSelectedTool: ImageButton? = null
     private var currentSelectedColor: Int = Color.BLACK
+    private var isSelectiveEraserMode = false
     private lateinit var userPreferences: UserPreferences
     
     private val mediaProjectionManager by lazy {
@@ -175,7 +177,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private fun setupToolListeners() {
         // Tool selection listeners
         btnPen.setOnClickListener { selectTool(WhiteboardView.DrawingTool.PEN, btnPen) }
-        btnEraser.setOnClickListener { selectTool(WhiteboardView.DrawingTool.ERASER, btnEraser) }
+        btnEraser.setOnClickListener { showEraserModePopup() }
         btnHighlighter.setOnClickListener { selectTool(WhiteboardView.DrawingTool.HIGHLIGHTER, btnHighlighter) }
         btnText.setOnClickListener { selectTool(WhiteboardView.DrawingTool.TEXT, btnText) }
         
@@ -304,6 +306,39 @@ class WhiteboardActivity : AppCompatActivity() {
         editText.requestFocus()
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+    }
+    
+    private fun showEraserModePopup() {
+        val inflater = LayoutInflater.from(this)
+        val popupView = inflater.inflate(R.layout.popup_eraser_mode, null)
+        
+        eraserModePopupWindow = PopupWindow(
+            popupView,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            true
+        )
+        
+        // Normal eraser option
+        val normalEraserOption = popupView.findViewById<ImageButton>(R.id.normalEraserOption)
+        normalEraserOption.setOnClickListener {
+            selectTool(WhiteboardView.DrawingTool.ERASER, btnEraser)
+            isSelectiveEraserMode = false
+            eraserModePopupWindow?.dismiss()
+            Toast.makeText(this, "پاک کن معمولی انتخاب شد", Toast.LENGTH_SHORT).show()
+        }
+        
+        // Selective eraser option
+        val selectiveEraserOption = popupView.findViewById<ImageButton>(R.id.selectiveEraserOption)
+        selectiveEraserOption.setOnClickListener {
+            selectTool(WhiteboardView.DrawingTool.SELECTIVE_ERASER, btnEraser)
+            isSelectiveEraserMode = true
+            eraserModePopupWindow?.dismiss()
+            Toast.makeText(this, "پاک کن انتخابی انتخاب شد", Toast.LENGTH_SHORT).show()
+        }
+        
+        // Show popup above the eraser button
+        eraserModePopupWindow?.showAsDropDown(btnEraser, 0, -btnEraser.height - 200, Gravity.CENTER)
     }
     
     private fun selectTool(tool: WhiteboardView.DrawingTool, button: ImageButton) {

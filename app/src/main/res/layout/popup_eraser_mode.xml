@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@drawable/popup_background"
+    android:padding="8dp">
+
+    <!-- Normal Eraser Button -->
+    <ImageButton
+        android:id="@+id/normalEraserOption"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_margin="4dp"
+        android:src="@drawable/ic_eraser"
+        android:background="@drawable/tool_button_background"
+        android:contentDescription="پاک کن معمولی"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <!-- Selective Eraser Button -->
+    <ImageButton
+        android:id="@+id/selectiveEraserOption"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_margin="4dp"
+        android:src="@drawable/ic_clear"
+        android:background="@drawable/tool_button_background"
+        android:contentDescription="پاک کن انتخابی"
+        android:clickable="true"
+        android:focusable="true" />
+
+</LinearLayout>
