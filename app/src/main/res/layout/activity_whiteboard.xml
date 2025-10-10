@@ -125,6 +125,15 @@
             android:background="@drawable/tool_button_background"
             android:contentDescription="@string/desc_text_tool" />
 
+        <ImageButton
+            android:id="@+id/btnFormula"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_formula"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_formula_tool" />
+
         <!-- Separator -->
         <View
             android:layout_width="1dp"

@@ -57,6 +57,7 @@
     <string name="desc_eraser_tool">انتخاب روشن کننده</string>
     <string name="desc_highlighter_tool">انتخاب روشن کننده</string>
     <string name="desc_text_tool">انتخاب ابزار متن</string>
+    <string name="desc_formula_tool">انتخاب فرمول ریاضی</string>
     <string name="desc_undo_button">برگشت از آخرین عمل</string>
     <string name="desc_redo_button">بازگردانی آخرین عمل</string>
     <string name="desc_clear_button">پاک کردن رویاگرانی</string>

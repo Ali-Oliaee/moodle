@@ -50,6 +50,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnEraser: ImageButton
     private lateinit var btnHighlighter: ImageButton
     private lateinit var btnText: ImageButton
+    private lateinit var btnFormula: ImageButton
     private lateinit var btnUndo: ImageButton
     private lateinit var btnRedo: ImageButton
     private lateinit var btnClear: ImageButton
@@ -62,6 +63,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private var colorPopupWindow: PopupWindow? = null
     private var strokePopupWindow: PopupWindow? = null
     private var eraserModePopupWindow: PopupWindow? = null
+    private var formulaPopupWindow: PopupWindow? = null
     private var currentStrokeWidth: Float = 8f
     
     // State
@@ -123,6 +125,7 @@ class WhiteboardActivity : AppCompatActivity() {
         btnEraser = findViewById(R.id.btnEraser)
         btnHighlighter = findViewById(R.id.btnHighlighter)
         btnText = findViewById(R.id.btnText)
+        btnFormula = findViewById(R.id.btnFormula)
         btnUndo = findViewById(R.id.btnUndo)
         btnRedo = findViewById(R.id.btnRedo)
         btnClear = findViewById(R.id.btnClear)
@@ -180,6 +183,7 @@ class WhiteboardActivity : AppCompatActivity() {
         btnEraser.setOnClickListener { showEraserModePopup() }
         btnHighlighter.setOnClickListener { selectTool(WhiteboardView.DrawingTool.HIGHLIGHTER, btnHighlighter) }
         btnText.setOnClickListener { selectTool(WhiteboardView.DrawingTool.TEXT, btnText) }
+        btnFormula.setOnClickListener { showFormulaPopup() }
         
         // Action listeners
         btnUndo.setOnClickListener { whiteboardView.undo() }
@@ -339,6 +343,209 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Show popup above the eraser button
         eraserModePopupWindow?.showAsDropDown(btnEraser, 0, -btnEraser.height - 200, Gravity.CENTER)
+    }
+
+    // Data class for formula templates
+    data class FormulaTemplate(
+        val name: String,
+        val template: String,
+        val variables: List<String>,
+        val descriptions: List<String>
+    )
+
+    private fun getFormulaTemplates(): List<FormulaTemplate> {
+        return listOf(
+            FormulaTemplate(
+                "Quadratic Formula",
+                "x = (-{b} ± √({b}²-4{a}{c})) / 2{a}",
+                listOf("a", "b", "c"),
+                listOf("ضریب x²", "ضریب x", "عدد ثابت")
+            ),
+            FormulaTemplate(
+                "Pythagorean Theorem",
+                "{a}² + {b}² = {c}²",
+                listOf("a", "b", "c"),
+                listOf("ضلع اول", "ضلع دوم", "وتر")
+            ),
+            FormulaTemplate(
+                "Circle Area",
+                "A = π{r}²",
+                listOf("r"),
+                listOf("شعاع")
+            ),
+            FormulaTemplate(
+                "Distance Formula",
+                "d = √(({x2}-{x1})² + ({y2}-{y1})²)",
+                listOf("x1", "y1", "x2", "y2"),
+                listOf("x نقطه اول", "y نقطه اول", "x نقطه دوم", "y نقطه دوم")
+            ),
+            FormulaTemplate(
+                "Slope Formula",
+                "m = ({y2}-{y1}) / ({x2}-{x1})",
+                listOf("x1", "y1", "x2", "y2"),
+                listOf("x نقطه اول", "y نقطه اول", "x نقطه دوم", "y نقطه دوم")
+            ),
+            FormulaTemplate(
+                "Sphere Volume",
+                "V = (4/3)π{r}³",
+                listOf("r"),
+                listOf("شعاع")
+            ),
+            FormulaTemplate(
+                "Compound Interest",
+                "A = {P}(1 + {r}/{n})^({n}{t})",
+                listOf("P", "r", "n", "t"),
+                listOf("سرمایه اولیه", "نرخ بهره", "تعداد دفعات", "زمان")
+            ),
+            FormulaTemplate(
+                "Law of Cosines",
+                "{c}² = {a}² + {b}² - 2{a}{b} cos({C})",
+                listOf("a", "b", "c", "C"),
+                listOf("ضلع اول", "ضلع دوم", "ضلع سوم", "زاویه")
+            )
+        )
+    }
+
+    private fun showFormulaPopup() {
+        val inflater = LayoutInflater.from(this)
+        val popupView = inflater.inflate(R.layout.popup_math_formulas, null)
+        
+        formulaPopupWindow = PopupWindow(
+            popupView,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            true
+        )
+        
+        val formulas = getFormulaTemplates()
+        
+        // Set up formula option listeners
+        popupView.findViewById<LinearLayout>(R.id.formulaQuadratic).setOnClickListener {
+            formulaPopupWindow?.dismiss()
+            showFormulaInputDialog(formulas[0])
+        }
+        
+        popupView.findViewById<LinearLayout>(R.id.formulaPythagorean).setOnClickListener {
+            formulaPopupWindow?.dismiss()
+            showFormulaInputDialog(formulas[1])
+        }
+        
+        popupView.findViewById<LinearLayout>(R.id.formulaCircleArea).setOnClickListener {
+            formulaPopupWindow?.dismiss()
+            showFormulaInputDialog(formulas[2])
+        }
+        
+        popupView.findViewById<LinearLayout>(R.id.formulaDistance).setOnClickListener {
+            formulaPopupWindow?.dismiss()
+            showFormulaInputDialog(formulas[3])
+        }
+        
+        popupView.findViewById<LinearLayout>(R.id.formulaSlope).setOnClickListener {
+            formulaPopupWindow?.dismiss()
+            showFormulaInputDialog(formulas[4])
+        }
+        
+        popupView.findViewById<LinearLayout>(R.id.formulaSphereVolume).setOnClickListener {
+            formulaPopupWindow?.dismiss()
+            showFormulaInputDialog(formulas[5])
+        }
+        
+        popupView.findViewById<LinearLayout>(R.id.formulaCompoundInterest).setOnClickListener {
+            formulaPopupWindow?.dismiss()
+            showFormulaInputDialog(formulas[6])
+        }
+        
+        popupView.findViewById<LinearLayout>(R.id.formulaCosines).setOnClickListener {
+            formulaPopupWindow?.dismiss()
+            showFormulaInputDialog(formulas[7])
+        }
+        
+        // Show popup above the formula button
+        formulaPopupWindow?.showAsDropDown(btnFormula, 0, -btnFormula.height - 450, Gravity.CENTER)
+    }
+
+    private fun showFormulaInputDialog(formula: FormulaTemplate) {
+        val inflater = LayoutInflater.from(this)
+        val dialogView = inflater.inflate(R.layout.dialog_formula_input, null)
+        
+        val formulaDisplay = dialogView.findViewById<TextView>(R.id.formulaDisplay)
+        val inputContainer = dialogView.findViewById<LinearLayout>(R.id.inputFieldsContainer)
+        val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
+        val btnApply = dialogView.findViewById<Button>(R.id.btnApply)
+        
+        // Display the formula template
+        formulaDisplay.text = formula.template.replace(Regex("\\{[^}]+\\}"), "_")
+        
+        // Create input fields for each variable
+        val inputFields = mutableMapOf<String, EditText>()
+        
+        for (i in formula.variables.indices) {
+            val variable = formula.variables[i]
+            val description = formula.descriptions[i]
+            
+            // Create label
+            val label = TextView(this)
+            label.text = "$description ($variable):"
+            label.textSize = 14f
+            label.setTextColor(android.graphics.Color.parseColor("#333333"))
+            label.setPadding(0, 16, 0, 8)
+            
+            // Create input field
+            val editText = EditText(this)
+            editText.hint = "مقدار $variable را وارد کنید"
+            editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL or android.text.InputType.TYPE_NUMBER_FLAG_SIGNED
+            editText.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            
+            inputContainer.addView(label)
+            inputContainer.addView(editText)
+            inputFields[variable] = editText
+        }
+        
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+        
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+        
+        btnApply.setOnClickListener {
+            // Get values from input fields
+            val values = mutableMapOf<String, String>()
+            var allFieldsFilled = true
+            
+            for ((variable, editText) in inputFields) {
+                val value = editText.text.toString().trim()
+                if (value.isEmpty()) {
+                    allFieldsFilled = false
+                    editText.error = "این فیلد الزامی است"
+                } else {
+                    values[variable] = value
+                }
+            }
+            
+            if (allFieldsFilled) {
+                // Replace placeholders with actual values
+                var finalFormula = formula.template
+                for ((variable, value) in values) {
+                    finalFormula = finalFormula.replace("{$variable}", value)
+                }
+                
+                // Add the formula as text to the whiteboard
+                // Position it at the center of the screen
+                val centerX = whiteboardView.width / 2f
+                val centerY = whiteboardView.height / 2f
+                whiteboardView.addText(finalFormula, centerX, centerY)
+                
+                dialog.dismiss()
+                Toast.makeText(this, "فرمول به تخته اضافه شد", Toast.LENGTH_SHORT).show()
+            }
+        }
+        
+        dialog.show()
     }
     
     private fun selectTool(tool: WhiteboardView.DrawingTool, button: ImageButton) {
