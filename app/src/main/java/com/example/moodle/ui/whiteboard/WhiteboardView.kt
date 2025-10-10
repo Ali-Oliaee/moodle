@@ -129,6 +129,13 @@ class WhiteboardView @JvmOverloads constructor(
     // Multi-touch tracking
     private var isScaling = false
     private var isPanning = false
+    
+    // Section management for split mode
+    private val sectionManager = SectionManager()
+    private var currentActiveSection: SectionManager.Section? = null
+    
+    // Multi-section drawing support - track which section each pointer is drawing in
+    private val pointerSectionMap = mutableMapOf<Int, SectionManager.Section>()
 
     data class DrawingPath(
         val path: Path,
@@ -297,6 +304,9 @@ class WhiteboardView @JvmOverloads constructor(
             focusX = 0f
             focusY = 0f
         }
+        
+        // Update section manager with new dimensions
+        sectionManager.setBoardDimensions(w.toFloat(), h.toFloat())
     }
 
     override fun onDraw(canvas: Canvas?) {
@@ -315,9 +325,18 @@ class WhiteboardView @JvmOverloads constructor(
             }
             
             // Draw current active paths being drawn
-            val paint = getCurrentPaint()
-            for (path in activePaths.values) {
+            for ((pointerId, path) in activePaths) {
                 if (!path.isEmpty) {
+                    val paint = if (sectionManager.isSplitModeEnabled()) {
+                        val section = pointerSectionMap[pointerId]
+                        if (section != null) {
+                            getCurrentPaintForSection(section)
+                        } else {
+                            getCurrentPaint()
+                        }
+                    } else {
+                        getCurrentPaint()
+                    }
                     c.drawPath(path, paint)
                 }
             }
@@ -330,6 +349,36 @@ class WhiteboardView @JvmOverloads constructor(
             // Draw selection area for selective eraser
             selectionPath?.let { path ->
                 c.drawPath(path, selectionPaint)
+            }
+            
+            // Draw section divisions if in split mode
+            if (sectionManager.isSplitModeEnabled()) {
+                // Draw sections for each section's content
+                for (section in sectionManager.getAllSections()) {
+                    c.save()
+                    
+                    // Clip to section bounds
+                    c.clipRect(section.bounds)
+                    
+                    // Draw section's paths
+                    for (drawingPath in section.paths) {
+                        if (drawingPath.tool == DrawingTool.TEXT && drawingPath.text != null) {
+                            c.drawText(drawingPath.text, drawingPath.textX, drawingPath.textY, drawingPath.paint)
+                        } else {
+                            c.drawPath(drawingPath.path, drawingPath.paint)
+                        }
+                    }
+                    
+                    // Draw section's text objects
+                    for (textObject in section.textObjects) {
+                        textObject.draw(c)
+                    }
+                    
+                    c.restore()
+                }
+                
+                // Draw section borders and labels
+                sectionManager.drawSections(c)
             }
             
             c.restore()
@@ -369,6 +418,22 @@ class WhiteboardView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
                 val x = (event.getX(pointerIndex) + focusX) / scaleFactor
                 val y = (event.getY(pointerIndex) + focusY) / scaleFactor
+                
+                // In split mode, determine which section this pointer is drawing in
+                if (sectionManager.isSplitModeEnabled()) {
+                    val touchedSection = sectionManager.getSectionForDrawing(x, y)
+                    if (touchedSection != null) {
+                        // Map this pointer to the touched section
+                        pointerSectionMap[pointerId] = touchedSection
+                        
+                        // Set as active section for UI feedback
+                        currentActiveSection = touchedSection
+                        sectionManager.setActiveSection(touchedSection)
+                    } else {
+                        // Touch outside any section, ignore
+                        return
+                    }
+                }
                 
                 // Handle special tools differently
                 when (currentTool) {
@@ -413,6 +478,15 @@ class WhiteboardView @JvmOverloads constructor(
                                 val x = (event.getX(i) + focusX) / scaleFactor
                                 val y = (event.getY(i) + focusY) / scaleFactor
                                 
+                                // In split mode, check if still within the same section
+                                if (sectionManager.isSplitModeEnabled()) {
+                                    val pointerSection = pointerSectionMap[id]
+                                    if (pointerSection != null && !pointerSection.contains(x, y)) {
+                                        // Pointer moved outside its section, stop drawing
+                                        continue
+                                    }
+                                }
+                                
                                 val dx = abs(x - lastX)
                                 val dy = abs(y - lastY)
                                 
@@ -451,10 +525,30 @@ class WhiteboardView @JvmOverloads constructor(
                             // Save the completed path
                             val pathCopy = Path(path)
                             val paintCopy = Paint(getCurrentPaint())
-                            paths.add(DrawingPath(pathCopy, paintCopy, currentTool))
+                            val drawingPath = DrawingPath(pathCopy, paintCopy, currentTool)
                             
-                            // Draw to bitmap
-                            drawingCanvas?.drawPath(pathCopy, paintCopy)
+                            // In split mode, add to the section this pointer was drawing in
+                            if (sectionManager.isSplitModeEnabled()) {
+                                val pointerSection = pointerSectionMap[pointerId]
+                                if (pointerSection != null) {
+                                    // Use section's tool settings for this path
+                                    val sectionPaint = Paint(getCurrentPaintForSection(pointerSection))
+                                    val sectionDrawingPath = DrawingPath(pathCopy, sectionPaint, pointerSection.currentTool)
+                                    
+                                    // Clip path to section bounds
+                                    val clippedPath = sectionManager.clipPathToSection(pointerSection, pathCopy)
+                                    val clippedDrawingPath = DrawingPath(clippedPath, sectionPaint, pointerSection.currentTool)
+                                    
+                                    pointerSection.paths.add(clippedDrawingPath)
+                                    pointerSection.undoStack.clear() // Clear undo stack when new stroke is made
+                                }
+                                // Remove pointer from section map
+                                pointerSectionMap.remove(pointerId)
+                            } else {
+                                paths.add(drawingPath)
+                                // Draw to bitmap
+                                drawingCanvas?.drawPath(pathCopy, paintCopy)
+                            }
                             
                             // Remove from active paths
                             activePaths.remove(pointerId)
@@ -477,6 +571,7 @@ class WhiteboardView @JvmOverloads constructor(
                 activePaths.clear()
                 activePathsLastX.clear()
                 activePathsLastY.clear()
+                pointerSectionMap.clear()
             }
         }
         
@@ -761,6 +856,29 @@ class WhiteboardView @JvmOverloads constructor(
             DrawingTool.SELECTIVE_ERASER -> selectionPaint // Use selection paint for drawing selection area
         }
     }
+    
+    private fun getCurrentPaintForSection(section: SectionManager.Section): Paint {
+        return when (section.currentTool) {
+            DrawingTool.PEN -> Paint(drawPaint).apply {
+                color = section.currentColor
+                strokeWidth = section.currentStrokeWidth
+                xfermode = null
+            }
+            DrawingTool.ERASER -> Paint(eraserPaint).apply {
+                strokeWidth = section.currentStrokeWidth * 2
+            }
+            DrawingTool.HIGHLIGHTER -> Paint(highlighterPaint).apply {
+                color = section.currentColor
+                strokeWidth = section.currentStrokeWidth * 3
+                xfermode = null
+            }
+            DrawingTool.TEXT -> Paint(textPaint).apply {
+                color = section.currentColor
+                textSize = section.currentStrokeWidth * 6
+            }
+            DrawingTool.SELECTIVE_ERASER -> Paint(selectionPaint)
+        }
+    }
 
     // Public methods for tool management
     fun setDrawingTool(tool: DrawingTool) {
@@ -798,13 +916,24 @@ class WhiteboardView @JvmOverloads constructor(
                 color = currentColor
             )
             
-            // Add to text objects list
-            textObjects.add(textObject)
-            
-            // Select the new text object
-            selectedTextObject?.isSelected = false
-            selectedTextObject = textObject
-            textObject.isSelected = true
+            // In split mode, add to the section containing the text position
+            if (sectionManager.isSplitModeEnabled()) {
+                val targetSection = sectionManager.getSectionAt(x, y)
+                if (targetSection != null) {
+                    targetSection.textObjects.add(textObject)
+                    targetSection.selectedTextObject?.isSelected = false
+                    targetSection.selectedTextObject = textObject
+                    textObject.isSelected = true
+                }
+            } else {
+                // Add to global text objects list
+                textObjects.add(textObject)
+                
+                // Select the new text object
+                selectedTextObject?.isSelected = false
+                selectedTextObject = textObject
+                textObject.isSelected = true
+            }
             
             // Notify listener and redraw
             drawingChangeListener?.onDrawingChanged()
@@ -821,7 +950,11 @@ class WhiteboardView @JvmOverloads constructor(
     }
 
     fun undo() {
-        if (canUndo()) {
+        if (sectionManager.isSplitModeEnabled() && currentActiveSection != null) {
+            currentActiveSection!!.undo()
+            drawingChangeListener?.onDrawingChanged()
+            invalidate()
+        } else if (canUndo()) {
             val lastPath = paths.removeAt(paths.size - 1)
             undoStack.add(lastPath)
             redrawCanvas()
@@ -830,7 +963,11 @@ class WhiteboardView @JvmOverloads constructor(
     }
 
     fun redo() {
-        if (canRedo()) {
+        if (sectionManager.isSplitModeEnabled() && currentActiveSection != null) {
+            currentActiveSection!!.redo()
+            drawingChangeListener?.onDrawingChanged()
+            invalidate()
+        } else if (canRedo()) {
             val pathToRedo = undoStack.removeAt(undoStack.size - 1)
             paths.add(pathToRedo)
             redrawCanvas()
@@ -839,17 +976,23 @@ class WhiteboardView @JvmOverloads constructor(
     }
 
     fun clear() {
-        paths.clear()
-        undoStack.clear()
-        activePaths.clear()
-        activePathsLastX.clear()
-        activePathsLastY.clear()
-        textObjects.clear()
-        selectedTextObject = null
-        selectionPath = null
-        isDrawingSelection = false
-        redrawCanvas()
-        drawingChangeListener?.onDrawingChanged()
+        if (sectionManager.isSplitModeEnabled() && currentActiveSection != null) {
+            currentActiveSection!!.clear()
+            drawingChangeListener?.onDrawingChanged()
+            invalidate()
+        } else {
+            paths.clear()
+            undoStack.clear()
+            activePaths.clear()
+            activePathsLastX.clear()
+            activePathsLastY.clear()
+            textObjects.clear()
+            selectedTextObject = null
+            selectionPath = null
+            isDrawingSelection = false
+            redrawCanvas()
+            drawingChangeListener?.onDrawingChanged()
+        }
     }
 
     private fun redrawCanvas() {
@@ -913,10 +1056,101 @@ class WhiteboardView @JvmOverloads constructor(
         drawingCanvas = null
     }
 
+    // Section management methods
+    fun enableSplitMode(numberOfSections: Int) {
+        sectionManager.enableSplitMode(numberOfSections)
+        invalidate()
+    }
+    
+    fun disableSplitMode() {
+        sectionManager.disableSplitMode()
+        currentActiveSection = null
+        invalidate()
+    }
+    
+    fun isSplitModeEnabled(): Boolean = sectionManager.isSplitModeEnabled()
+    
+    fun getAllSections(): List<SectionManager.Section> = sectionManager.getAllSections()
+    
+    fun setActiveSection(sectionId: Int) {
+        val section = sectionManager.getAllSections().find { it.id == sectionId }
+        currentActiveSection = section
+        sectionManager.setActiveSection(section)
+        
+        // Update current tool settings from the section
+        section?.let {
+            currentTool = it.currentTool
+            currentColor = it.currentColor
+            currentStrokeWidth = it.currentStrokeWidth
+        }
+        invalidate()
+    }
+    
+    fun getActiveSection(): SectionManager.Section? = currentActiveSection
+    
+    fun updateSectionTool(sectionId: Int, tool: DrawingTool) {
+        val section = sectionManager.getAllSections().find { it.id == sectionId }
+        section?.currentTool = tool
+        if (section == currentActiveSection) {
+            currentTool = tool
+        }
+    }
+    
+    fun updateSectionColor(sectionId: Int, color: Int) {
+        val section = sectionManager.getAllSections().find { it.id == sectionId }
+        section?.currentColor = color
+        if (section == currentActiveSection) {
+            currentColor = color
+        }
+    }
+    
+    fun updateSectionStrokeWidth(sectionId: Int, width: Float) {
+        val section = sectionManager.getAllSections().find { it.id == sectionId }
+        section?.currentStrokeWidth = width
+        if (section == currentActiveSection) {
+            currentStrokeWidth = width
+        }
+    }
+    
+    fun undoSection(sectionId: Int) {
+        val section = sectionManager.getAllSections().find { it.id == sectionId }
+        section?.undo()
+        drawingChangeListener?.onDrawingChanged()
+        invalidate()
+    }
+    
+    fun redoSection(sectionId: Int) {
+        val section = sectionManager.getAllSections().find { it.id == sectionId }
+        section?.redo()
+        drawingChangeListener?.onDrawingChanged()
+        invalidate()
+    }
+    
+    fun clearSection(sectionId: Int) {
+        val section = sectionManager.getAllSections().find { it.id == sectionId }
+        section?.clear()
+        drawingChangeListener?.onDrawingChanged()
+        invalidate()
+    }
+    
+    fun clearAllSections() {
+        sectionManager.clearAllSections()
+        drawingChangeListener?.onDrawingChanged()
+        invalidate()
+    }
+
     // Getters for current state
     fun getCurrentTool(): DrawingTool = currentTool
     fun getCurrentColor(): Int = currentColor
     fun getCurrentStrokeWidth(): Float = currentStrokeWidth
-    fun canUndo(): Boolean = paths.isNotEmpty()
-    fun canRedo(): Boolean = undoStack.isNotEmpty()
+    fun canUndo(): Boolean = if (sectionManager.isSplitModeEnabled() && currentActiveSection != null) {
+        currentActiveSection!!.canUndo()
+    } else {
+        paths.isNotEmpty()
+    }
+    fun canRedo(): Boolean = if (sectionManager.isSplitModeEnabled() && currentActiveSection != null) {
+        currentActiveSection!!.canRedo()
+    } else {
+        undoStack.isNotEmpty()
+    }
 }

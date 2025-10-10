@@ -105,4 +105,18 @@
     <string name="attendance_submit_success">حضور و غیاب با موفقیت ثبت شد.</string>
     <string name="attendance_submit_failure">ارسال حضور و غیاب با خطا مواجه شد.</string>
     <string name="desc_back_button">بازگشت</string>
+    
+    <!-- Split Mode -->
+    <string name="enable_split">تقسیم تخته</string>
+    <string name="disable_split">حالت عادی</string>
+    <string name="split_mode_enabled">تخته تقسیم شد</string>
+    <string name="split_mode_disabled">تخته به حالت عادی برگشت</string>
+    <string name="section_count_2">2 بخش</string>
+    <string name="section_count_3">3 بخش</string>
+    <string name="section_count_4">4 بخش</string>
+    <string name="section_count_6">6 بخش</string>
+    <string name="student_section">بخش دانشجو %1$d</string>
+    <string name="clear_section_confirm">آیا مطمئن هستید که می خواهید این بخش را پاک کنید؟</string>
+    <string name="clear_all_sections_confirm">آیا مطمئن هستید که می خواهید همه بخش ها را پاک کنید؟</string>
+    <string name="section_active">بخش فعال: %1$s</string>
 </resources>
