@@ -40,7 +40,6 @@ class WhiteboardActivity : AppCompatActivity() {
 
     // UI Components
     private lateinit var toggleRecordBtn: Button
-    private lateinit var tvWelcome: TextView
     private lateinit var whiteboardView: WhiteboardView
     private lateinit var recordContainer: LinearLayout
     private lateinit var btnAttendance: ImageButton
@@ -110,7 +109,6 @@ class WhiteboardActivity : AppCompatActivity() {
 
     private fun initializeViews() {
         // Main UI components
-        tvWelcome = findViewById(R.id.tvWelcome)
         whiteboardView = findViewById(R.id.whiteboardView)
         toggleRecordBtn = findViewById(R.id.toggleRecordBtn)
         recordContainer = findViewById(R.id.recordContainer)
@@ -136,7 +134,6 @@ class WhiteboardActivity : AppCompatActivity() {
         } else {
             getString(R.string.welcome_default_message)
         }
-        tvWelcome.text = welcomeMessage
         
         // Set initial selections
         currentSelectedColor = Color.BLACK
