@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/popup_background"
+    android:padding="12dp"
+    android:elevation="8dp">
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/colors"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:layout_gravity="center"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Color Grid Row 1 -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="4dp">
+
+        <Button
+            android:id="@+id/colorBlack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_margin="3dp"
+            android:background="@drawable/color_button_background"
+            android:backgroundTint="#000000"
+            android:contentDescription="@string/color_black" />
+
+        <Button
+            android:id="@+id/colorRed"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_margin="3dp"
+            android:background="@drawable/color_button_background"
+            android:backgroundTint="#F44336"
+            android:contentDescription="@string/color_red" />
+
+        <Button
+            android:id="@+id/colorBlue"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_margin="3dp"
+            android:background="@drawable/color_button_background"
+            android:backgroundTint="#2196F3"
+            android:contentDescription="@string/color_blue" />
+
+        <Button
+            android:id="@+id/colorGreen"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_margin="3dp"
+            android:background="@drawable/color_button_background"
+            android:backgroundTint="#4CAF50"
+            android:contentDescription="@string/color_green" />
+
+    </LinearLayout>
+
+    <!-- Color Grid Row 2 -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/colorYellow"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_margin="3dp"
+            android:background="@drawable/color_button_background"
+            android:backgroundTint="#FFEB3B"
+            android:contentDescription="@string/color_yellow" />
+
+        <Button
+            android:id="@+id/colorPurple"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_margin="3dp"
+            android:background="@drawable/color_button_background"
+            android:backgroundTint="#9C27B0"
+            android:contentDescription="@string/color_purple" />
+
+        <Button
+            android:id="@+id/colorOrange"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_margin="3dp"
+            android:background="@drawable/color_button_background"
+            android:backgroundTint="#FF9800"
+            android:contentDescription="@string/color_orange" />
+
+        <Button
+            android:id="@+id/colorWhite"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_margin="3dp"
+            android:background="@drawable/color_button_background"
+            android:backgroundTint="#FFFFFF"
+            android:contentDescription="@string/color_white" />
+
+    </LinearLayout>
+
+</LinearLayout>

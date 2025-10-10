@@ -12,11 +12,14 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
 import android.support.v4.content.ContextCompat
-import android.support.v4.widget.DrawerLayout
 import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import android.widget.PopupWindow
 import com.example.moodle.R
 import com.example.moodle.ui.attendance.AttendanceActivity
 import com.example.moodle.data.datastore.UserPreferences
@@ -36,53 +39,35 @@ class WhiteboardActivity : AppCompatActivity() {
     }
 
     // UI Components
-    private var drawerLayout: DrawerLayout? = null
-    private var btnMenu: ImageButton? = null
     private lateinit var toggleRecordBtn: Button
     private lateinit var tvWelcome: TextView
-    private lateinit var tvDrawerWelcome: TextView
     private lateinit var whiteboardView: WhiteboardView
+    private lateinit var recordContainer: LinearLayout
+    private lateinit var btnAttendance: ImageButton
+    private lateinit var btnLogout: ImageButton
     
-    // Drawer navigation items (for sliding drawer)
-    private var drawerPen: LinearLayout? = null
-    private var drawerEraser: LinearLayout? = null
-    private var drawerHighlighter: LinearLayout? = null
-    private var drawerUndo: LinearLayout? = null
-    private var drawerRedo: LinearLayout? = null
-    private var drawerClear: LinearLayout? = null
-    private var drawerModeToggle: LinearLayout? = null
-    private var drawerPinchMode: LinearLayout? = null
-    private var drawerRecord: LinearLayout? = null
-    private var drawerAttendance: LinearLayout? = null
-    private var drawerLogout: LinearLayout? = null
+    // Tool buttons
+    private lateinit var btnPen: ImageButton
+    private lateinit var btnEraser: ImageButton
+    private lateinit var btnHighlighter: ImageButton
+    private lateinit var btnUndo: ImageButton
+    private lateinit var btnRedo: ImageButton
+    private lateinit var btnClear: ImageButton
+    private lateinit var btnModeToggle: ImageButton
+    private lateinit var btnPinchMode: ImageButton
+    private lateinit var btnColorPicker: Button
+    private lateinit var btnStrokeWidth: ImageButton
     
-    // Tool buttons (for fixed drawer)
-    private var btnPen: ImageButton? = null
-    private var btnEraser: ImageButton? = null
-    private var btnHighlighter: ImageButton? = null
-    private var btnUndo: ImageButton? = null
-    private var btnRedo: ImageButton? = null
-    private var btnClear: ImageButton? = null
-    private var btnModeToggle: ImageButton? = null
-    private var btnPinchMode: ImageButton? = null
-    
-    // Drawer UI elements (for sliding drawer)
-    private var imgModeToggle: ImageView? = null
-    private var tvModeToggle: TextView? = null
-    private var tvPinchMode: TextView? = null
-    private var tvRecordStatus: TextView? = null
-    
-    // Color buttons
-    private lateinit var colorButtons: List<Button>
-    private lateinit var strokeWidthSeekBar: SeekBar
-    private lateinit var strokeWidthValue: TextView
+    // Popup views
+    private var colorPopupWindow: PopupWindow? = null
+    private var strokePopupWindow: PopupWindow? = null
+    private var currentStrokeWidth: Float = 8f
     
     // State
     private var isRecording = false
     private var isDrawingMode = true
-    private var isFixedDrawer = false
     private var currentSelectedTool: ImageButton? = null
-    private var currentSelectedColor: Button? = null
+    private var currentSelectedColor: Int = Color.BLACK
     private lateinit var userPreferences: UserPreferences
     
     private val mediaProjectionManager by lazy {
@@ -107,23 +92,16 @@ class WhiteboardActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Initialize UserPreferences first
+        // Initialize UserPreferences
         userPreferences = UserPreferences(this)
         
-        // Check for saved drawer preference
-        isFixedDrawer = userPreferences.isFixedDrawerEnabled()
+        // Set the new simplified layout
+        setContentView(R.layout.activity_whiteboard)
         
-        // Set appropriate layout based on drawer mode
-        if (isFixedDrawer) {
-            setContentView(R.layout.activity_whiteboard_fixed_drawer)
-        } else {
-            setContentView(R.layout.activity_whiteboard)
-        }
         initializeViews()
         applyFonts()
         setupToolListeners()
-        setupColorListeners()
-        setupStrokeWidthListener()
+        setupPopupListeners()
         setupWhiteboardListener()
         registerRecordingStateReceiver()
         updateButtonAppearance()
@@ -133,35 +111,23 @@ class WhiteboardActivity : AppCompatActivity() {
     private fun initializeViews() {
         // Main UI components
         tvWelcome = findViewById(R.id.tvWelcome)
-        tvDrawerWelcome = findViewById(R.id.tvDrawerWelcome)
         whiteboardView = findViewById(R.id.whiteboardView)
         toggleRecordBtn = findViewById(R.id.toggleRecordBtn)
+        recordContainer = findViewById(R.id.recordContainer)
+        btnAttendance = findViewById(R.id.btnAttendance)
+        btnLogout = findViewById(R.id.btnLogout)
         
-        if (isFixedDrawer) {
-            // Fixed drawer layout - using ImageButtons directly
-            // drawerLayout is a LinearLayout in this case, not DrawerLayout
-            initializeFixedDrawerViews()
-        } else {
-            // Sliding drawer layout - using LinearLayouts
-            drawerLayout = findViewById(R.id.drawerLayout)
-            btnMenu = findViewById(R.id.btnMenu)
-            initializeSlidingDrawerViews()
-        }
-        
-        // Color buttons
-        colorButtons = listOf(
-            findViewById(R.id.colorBlack),
-            findViewById(R.id.colorRed),
-            findViewById(R.id.colorBlue),
-            findViewById(R.id.colorGreen),
-            findViewById(R.id.colorYellow),
-            findViewById(R.id.colorPurple),
-            findViewById(R.id.colorOrange)
-        )
-        
-        // Stroke width controls
-        strokeWidthSeekBar = findViewById(R.id.strokeWidthSeekBar)
-        strokeWidthValue = findViewById(R.id.strokeWidthValue)
+        // Tool buttons
+        btnPen = findViewById(R.id.btnPen)
+        btnEraser = findViewById(R.id.btnEraser)
+        btnHighlighter = findViewById(R.id.btnHighlighter)
+        btnUndo = findViewById(R.id.btnUndo)
+        btnRedo = findViewById(R.id.btnRedo)
+        btnClear = findViewById(R.id.btnClear)
+        btnModeToggle = findViewById(R.id.btnModeToggle)
+        btnPinchMode = findViewById(R.id.btnPinchMode)
+        btnColorPicker = findViewById(R.id.btnColorPicker)
+        btnStrokeWidth = findViewById(R.id.btnStrokeWidth)
         
         // Set welcome message with username
         val username = userPreferences.getUsername()
@@ -171,80 +137,34 @@ class WhiteboardActivity : AppCompatActivity() {
             getString(R.string.welcome_default_message)
         }
         tvWelcome.text = welcomeMessage
-        tvDrawerWelcome.text = welcomeMessage
         
         // Set initial selections
-        currentSelectedColor = colorButtons[0] // Black
-        colorButtons[0].isSelected = true
+        currentSelectedColor = Color.BLACK
+        btnColorPicker.backgroundTintList = android.content.res.ColorStateList.valueOf(currentSelectedColor)
+        currentSelectedTool = btnPen
+        btnPen.isSelected = true
         
-        if (isFixedDrawer) {
-            btnPen?.isSelected = true
-        } else {
-            drawerPen?.isSelected = true
-        }
+        // Set initial stroke width
+        whiteboardView.setStrokeWidth(currentStrokeWidth)
         
-        // Set up menu button (only for sliding drawer)
-        if (!isFixedDrawer) {
-            btnMenu?.setOnClickListener {
-                drawerLayout?.openDrawer(findViewById(R.id.navigationDrawer))
-            }
-        }
-        
-        setupDrawerListeners()
+        setupTopBarListeners()
     }
     
-    private fun initializeFixedDrawerViews() {
-        // For fixed drawer, we use ImageButtons directly
-        try {
-            btnPen = findViewById(R.id.btnPen)
-            btnEraser = findViewById(R.id.btnEraser)
-            btnHighlighter = findViewById(R.id.btnHighlighter)
-            btnUndo = findViewById(R.id.btnUndo)
-            btnRedo = findViewById(R.id.btnRedo)
-            btnClear = findViewById(R.id.btnClear)
-            btnModeToggle = findViewById(R.id.btnModeToggle)
-            btnPinchMode = findViewById(R.id.btnPinchMode)
-            
-            // Record, attendance and logout
-            drawerRecord = findViewById(R.id.drawerRecord)
-            drawerAttendance = findViewById(R.id.drawerAttendance)
-            drawerLogout = findViewById(R.id.drawerLogout)
-            tvRecordStatus = findViewById(R.id.tvRecordStatus)
-            
-            // Drawer toggle button
-            val drawerToggle = findViewById<LinearLayout>(R.id.drawerToggle)
-            drawerToggle.setOnClickListener {
-                toggleDrawerMode()
-            }
-        } catch (e: Exception) {
-            // Handle missing IDs gracefully
-            e.printStackTrace()
+    private fun setupTopBarListeners() {
+        // Record button listener
+        recordContainer.setOnClickListener {
+            if (isRecording) stopRecording()
+            else startRecording()
         }
-    }
-    
-    private fun initializeSlidingDrawerViews() {
-        // For sliding drawer, we use LinearLayouts
-        try {
-            drawerPen = findViewById(R.id.drawerPen)
-            drawerEraser = findViewById(R.id.drawerEraser)
-            drawerHighlighter = findViewById(R.id.drawerHighlighter)
-            drawerUndo = findViewById(R.id.drawerUndo)
-            drawerRedo = findViewById(R.id.drawerRedo)
-            drawerClear = findViewById(R.id.drawerClear)
-            drawerModeToggle = findViewById(R.id.drawerModeToggle)
-            drawerPinchMode = findViewById(R.id.drawerPinchMode)
-            drawerRecord = findViewById(R.id.drawerRecord)
-            drawerAttendance = findViewById(R.id.drawerAttendance)
-            drawerLogout = findViewById(R.id.drawerLogout)
-            
-            // Drawer UI elements
-            imgModeToggle = findViewById(R.id.imgModeToggle)
-            tvModeToggle = findViewById(R.id.tvModeToggle)
-            tvPinchMode = findViewById(R.id.tvPinchMode)
-            tvRecordStatus = findViewById(R.id.tvRecordStatus)
-        } catch (e: Exception) {
-            // Handle missing IDs gracefully
-            e.printStackTrace()
+
+        // Attendance button listener
+        btnAttendance.setOnClickListener {
+            openAttendanceScreen()
+        }
+
+        // Logout button listener
+        btnLogout.setOnClickListener {
+            logout()
         }
     }
 
@@ -252,160 +172,99 @@ class WhiteboardActivity : AppCompatActivity() {
         val rootView = findViewById<ViewGroup>(android.R.id.content)
         FontHelper.applyFontToViewGroup(this, rootView)
     }
-
-    private fun setupDrawerListeners() {
-        if (isFixedDrawer) {
-            setupFixedDrawerListeners()
-        } else {
-            setupSlidingDrawerListeners()
-        }
-    }
-    
-    private fun setupFixedDrawerListeners() {
-        // Tool selection listeners for ImageButtons
-        btnPen?.setOnClickListener { btnPen?.let { selectToolFixed(WhiteboardView.DrawingTool.PEN, it) } }
-        btnEraser?.setOnClickListener { btnEraser?.let { selectToolFixed(WhiteboardView.DrawingTool.ERASER, it) } }
-        btnHighlighter?.setOnClickListener { btnHighlighter?.let { selectToolFixed(WhiteboardView.DrawingTool.HIGHLIGHTER, it) } }
-        
-        // Action listeners for ImageButtons
-        btnUndo?.setOnClickListener { whiteboardView.undo() }
-        btnRedo?.setOnClickListener { whiteboardView.redo() }
-        btnClear?.setOnClickListener { showClearConfirmDialog() }
-        btnModeToggle?.setOnClickListener { toggleMode() }
-        btnPinchMode?.setOnClickListener { togglePinchMode() }
-        
-        // Record and logout listeners
-        drawerRecord?.setOnClickListener {
-            if (isRecording) stopRecording()
-            else startRecording()
-        }
-
-        drawerAttendance?.setOnClickListener {
-            openAttendanceScreen()
-        }
-
-        drawerLogout?.setOnClickListener { logout() }
-    }
-    
-    private fun setupSlidingDrawerListeners() {
-        // Tool selection listeners for LinearLayouts
-        drawerPen?.setOnClickListener { drawerPen?.let { selectTool(WhiteboardView.DrawingTool.PEN, it) } }
-        drawerEraser?.setOnClickListener { drawerEraser?.let { selectTool(WhiteboardView.DrawingTool.ERASER, it) } }
-        drawerHighlighter?.setOnClickListener { drawerHighlighter?.let { selectTool(WhiteboardView.DrawingTool.HIGHLIGHTER, it) } }
-        
-        // Action listeners
-        drawerUndo?.setOnClickListener { 
-            whiteboardView.undo()
-            closeDrawer()
-        }
-        
-        drawerRedo?.setOnClickListener { 
-            whiteboardView.redo()
-            closeDrawer()
-        }
-        
-        drawerClear?.setOnClickListener { 
-            showClearConfirmDialog()
-            closeDrawer()
-        }
-        
-        drawerModeToggle?.setOnClickListener { 
-            toggleMode()
-            closeDrawer()
-        }
-        
-        drawerPinchMode?.setOnClickListener { 
-            togglePinchMode()
-            closeDrawer()
-        }
-        
-        // Record button listener
-        drawerRecord?.setOnClickListener {
-            if (isRecording) stopRecording()
-            else startRecording()
-            closeDrawer()
-        }
-
-        drawerAttendance?.setOnClickListener {
-            openAttendanceScreen()
-            closeDrawer()
-        }
-
-        // Logout listener
-        drawerLogout?.setOnClickListener {
-            logout()
-        }
-    }
-    
-    private fun closeDrawer() {
-        if (!isFixedDrawer && drawerLayout != null) {
-            drawerLayout?.closeDrawer(findViewById(R.id.navigationDrawer))
-        }
-    }
-
-    private fun openAttendanceScreen() {
-        val intent = Intent(this, AttendanceActivity::class.java)
-        startActivity(intent)
-    }
-    
-    private fun toggleDrawerMode() {
-        isFixedDrawer = !isFixedDrawer
-        userPreferences.setFixedDrawerEnabled(isFixedDrawer)
-        
-        Toast.makeText(this, getString(R.string.drawer_mode_changed), Toast.LENGTH_SHORT).show()
-        
-        // Recreate activity to apply new layout
-        recreate()
-    }
-    
-    private fun selectToolFixed(tool: WhiteboardView.DrawingTool, button: ImageButton) {
-        // Update tool selection for ImageButtons
-        btnPen?.isSelected = false
-        btnEraser?.isSelected = false
-        btnHighlighter?.isSelected = false
-        button.isSelected = true
-        
-        // Update whiteboard view
-        whiteboardView.setDrawingTool(tool)
-        
-        // Ensure drawing mode is enabled when selecting a tool
-        if (!isDrawingMode) {
-            toggleMode()
-        }
-        
-        // Update button states
-        updateToolButtons()
-    }
     
     private fun setupToolListeners() {
-        // This method is now replaced by setupDrawerListeners
+        // Tool selection listeners
+        btnPen.setOnClickListener { selectTool(WhiteboardView.DrawingTool.PEN, btnPen) }
+        btnEraser.setOnClickListener { selectTool(WhiteboardView.DrawingTool.ERASER, btnEraser) }
+        btnHighlighter.setOnClickListener { selectTool(WhiteboardView.DrawingTool.HIGHLIGHTER, btnHighlighter) }
+        
+        // Action listeners
+        btnUndo.setOnClickListener { whiteboardView.undo() }
+        btnRedo.setOnClickListener { whiteboardView.redo() }
+        btnClear.setOnClickListener { showClearConfirmDialog() }
+        btnModeToggle.setOnClickListener { toggleMode() }
+        btnPinchMode.setOnClickListener { togglePinchMode() }
     }
     
-    private fun setupColorListeners() {
-        val colors = listOf(
-            Color.BLACK, Color.parseColor("#F44336"), Color.parseColor("#2196F3"),
-            Color.parseColor("#4CAF50"), Color.parseColor("#FFEB3B"),
-            Color.parseColor("#9C27B0"), Color.parseColor("#FF9800")
-        )
+    private fun setupPopupListeners() {
+        // Color picker popup
+        btnColorPicker.setOnClickListener {
+            showColorPickerPopup()
+        }
         
-        colorButtons.forEachIndexed { index, button ->
-            button.setOnClickListener {
-                selectColor(colors[index], button)
-            }
+        // Stroke width popup
+        btnStrokeWidth.setOnClickListener {
+            showStrokeWidthPopup()
         }
     }
     
-    private fun setupStrokeWidthListener() {
-        strokeWidthSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+    private fun showColorPickerPopup() {
+        val inflater = LayoutInflater.from(this)
+        val popupView = inflater.inflate(R.layout.popup_color_picker, null)
+        
+        colorPopupWindow = PopupWindow(
+            popupView,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            true
+        )
+        
+        // Set up color buttons in popup
+        val colors = mapOf(
+            R.id.colorBlack to Color.BLACK,
+            R.id.colorRed to Color.parseColor("#F44336"),
+            R.id.colorBlue to Color.parseColor("#2196F3"),
+            R.id.colorGreen to Color.parseColor("#4CAF50"),
+            R.id.colorYellow to Color.parseColor("#FFEB3B"),
+            R.id.colorPurple to Color.parseColor("#9C27B0"),
+            R.id.colorOrange to Color.parseColor("#FF9800"),
+            R.id.colorWhite to Color.WHITE
+        )
+        
+        colors.forEach { (buttonId, color) ->
+            popupView.findViewById<Button>(buttonId)?.setOnClickListener {
+                selectColor(color)
+                colorPopupWindow?.dismiss()
+            }
+        }
+        
+        // Show popup above the color picker button
+        colorPopupWindow?.showAsDropDown(btnColorPicker, 0, -btnColorPicker.height - 200, Gravity.CENTER)
+    }
+    
+    private fun showStrokeWidthPopup() {
+        val inflater = LayoutInflater.from(this)
+        val popupView = inflater.inflate(R.layout.popup_stroke_width, null)
+        
+        strokePopupWindow = PopupWindow(
+            popupView,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            true
+        )
+        
+        val seekBar = popupView.findViewById<SeekBar>(R.id.strokeWidthSeekBar)
+        
+        // Set current values
+        seekBar.progress = (currentStrokeWidth - 1).toInt()
+        
+        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val strokeWidth = (progress + 1).toFloat() // Min 1, Max 21
-                strokeWidthValue.text = strokeWidth.toInt().toString()
-                whiteboardView.setStrokeWidth(strokeWidth)
+                
+                if (fromUser) {
+                    currentStrokeWidth = strokeWidth
+                    whiteboardView.setStrokeWidth(strokeWidth)
+                }
             }
             
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
+        
+        // Show popup above the stroke width button
+        strokePopupWindow?.showAsDropDown(btnStrokeWidth, 0, -btnStrokeWidth.height - 150, Gravity.CENTER)
     }
     
     private fun setupWhiteboardListener() {
@@ -416,12 +275,13 @@ class WhiteboardActivity : AppCompatActivity() {
         })
     }
     
-    private fun selectTool(tool: WhiteboardView.DrawingTool, drawerItem: LinearLayout) {
-        // Update tool selection in drawer
-        drawerPen?.isSelected = false
-        drawerEraser?.isSelected = false
-        drawerHighlighter?.isSelected = false
-        drawerItem.isSelected = true
+    private fun selectTool(tool: WhiteboardView.DrawingTool, button: ImageButton) {
+        // Update tool selection
+        btnPen.isSelected = false
+        btnEraser.isSelected = false
+        btnHighlighter.isSelected = false
+        button.isSelected = true
+        currentSelectedTool = button
         
         // Update whiteboard view
         whiteboardView.setDrawingTool(tool)
@@ -433,14 +293,12 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Update button states
         updateToolButtons()
-        closeDrawer()
     }
     
-    private fun selectColor(color: Int, button: Button) {
+    private fun selectColor(color: Int) {
         // Update color selection
-        currentSelectedColor?.isSelected = false
-        currentSelectedColor = button
-        button.isSelected = true
+        currentSelectedColor = color
+        btnColorPicker.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
         
         // Update whiteboard view
         whiteboardView.setColor(color)
@@ -450,23 +308,11 @@ class WhiteboardActivity : AppCompatActivity() {
         isDrawingMode = !isDrawingMode
         whiteboardView.setDrawingMode(isDrawingMode)
         
-        // Update UI based on drawer type
-        if (isFixedDrawer) {
-            // Update ImageButton for fixed drawer
-            if (isDrawingMode) {
-                btnModeToggle?.setImageResource(R.drawable.ic_pen)
-            } else {
-                btnModeToggle?.setImageResource(R.drawable.ic_pan)
-            }
+        // Update button icon
+        if (isDrawingMode) {
+            btnModeToggle.setImageResource(R.drawable.ic_pen)
         } else {
-            // Update LinearLayout for sliding drawer
-            if (isDrawingMode) {
-                imgModeToggle?.setImageResource(R.drawable.ic_pen)
-                tvModeToggle?.text = getString(R.string.drawing_mode)
-            } else {
-                imgModeToggle?.setImageResource(R.drawable.ic_pan)
-                tvModeToggle?.text = getString(R.string.pan_mode)
-            }
+            btnModeToggle.setImageResource(R.drawable.ic_pan)
         }
         
         // Show toast to indicate mode
@@ -482,19 +328,8 @@ class WhiteboardActivity : AppCompatActivity() {
         val isPinchEnabled = whiteboardView.isPinchModeEnabled()
         whiteboardView.setPinchModeEnabled(!isPinchEnabled)
         
-        // Update UI based on drawer type
-        if (isFixedDrawer) {
-            // Update ImageButton for fixed drawer
-            btnPinchMode?.isSelected = !isPinchEnabled
-        } else {
-            // Update LinearLayout for sliding drawer
-            drawerPinchMode?.isSelected = !isPinchEnabled
-            tvPinchMode?.text = if (!isPinchEnabled) {
-                getString(R.string.pinch_mode_enabled)
-            } else {
-                getString(R.string.pinch_mode_disabled)
-            }
-        }
+        // Update button state
+        btnPinchMode.isSelected = !isPinchEnabled
         
         // Show toast to indicate mode
         val modeText = if (!isPinchEnabled) {
@@ -506,19 +341,11 @@ class WhiteboardActivity : AppCompatActivity() {
     }
     
     private fun updateToolButtons() {
-        if (isFixedDrawer) {
-            // Update ImageButtons for fixed drawer
-            btnUndo?.isEnabled = whiteboardView.canUndo()
-            btnRedo?.isEnabled = whiteboardView.canRedo()
-            btnUndo?.alpha = if (whiteboardView.canUndo()) 1.0f else 0.5f
-            btnRedo?.alpha = if (whiteboardView.canRedo()) 1.0f else 0.5f
-        } else {
-            // Update LinearLayouts for sliding drawer
-            drawerUndo?.isEnabled = whiteboardView.canUndo()
-            drawerRedo?.isEnabled = whiteboardView.canRedo()
-            drawerUndo?.alpha = if (whiteboardView.canUndo()) 1.0f else 0.5f
-            drawerRedo?.alpha = if (whiteboardView.canRedo()) 1.0f else 0.5f
-        }
+        // Update undo/redo button states
+        btnUndo.isEnabled = whiteboardView.canUndo()
+        btnRedo.isEnabled = whiteboardView.canRedo()
+        btnUndo.alpha = if (whiteboardView.canUndo()) 1.0f else 0.5f
+        btnRedo.alpha = if (whiteboardView.canRedo()) 1.0f else 0.5f
     }
     
     private fun showClearConfirmDialog() {
@@ -530,6 +357,11 @@ class WhiteboardActivity : AppCompatActivity() {
             }
             .setNegativeButton(getString(R.string.no), null)
             .show()
+    }
+
+    private fun openAttendanceScreen() {
+        val intent = Intent(this, AttendanceActivity::class.java)
+        startActivity(intent)
     }
 
     private fun startRecording() {
@@ -599,21 +431,14 @@ class WhiteboardActivity : AppCompatActivity() {
             putExtra(ScreenRecordService.EXTRA_DATA_INTENT, data)
         }
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) 
             startForegroundService(intent)
-        } else {
-            startService(intent)
-        }
+        else startService(intent)
     }
 
     private fun updateButtonAppearance() {
-        if (isRecording) {
-            toggleRecordBtn.setBackgroundResource(R.drawable.square_button)
-            tvRecordStatus?.text = getString(R.string.stop_recording)
-        } else {
-            toggleRecordBtn.setBackgroundResource(R.drawable.circle_button)
-            tvRecordStatus?.text = getString(R.string.start_recording)
-        }
+        if (isRecording) toggleRecordBtn.setBackgroundResource(R.drawable.square_button)
+        else toggleRecordBtn.setBackgroundResource(R.drawable.circle_button)
     }
 
     private fun registerRecordingStateReceiver() {
@@ -641,6 +466,10 @@ class WhiteboardActivity : AppCompatActivity() {
         } catch (e: Exception) {
             // Receiver might not be registered
         }
+        
+        // Clean up popup windows
+        colorPopupWindow?.dismiss()
+        strokePopupWindow?.dismiss()
         
         // Clean up whiteboard resources
         whiteboardView.cleanup()

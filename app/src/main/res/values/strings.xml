@@ -38,6 +38,7 @@
     <string name="color_yellow">زرد</string>
     <string name="color_purple">بنفش</string>
     <string name="color_orange">نارنجی</string>
+    <string name="color_white">سفید</string>
     
     <!-- Stroke Width -->
     <string name="stroke_thin">ریز</string>
@@ -70,6 +71,7 @@
     <string name="actions">عملیات</string>
     <string name="colors">رنگ ها</string>
     <string name="stroke_width">عرض خط</string>
+    <string name="current_width">عرض فعلی:</string>
     <string name="recording">ضبط</string>
     <string name="account">حساب کاربری</string>
     <string name="start_recording">شروع ضبط</string>

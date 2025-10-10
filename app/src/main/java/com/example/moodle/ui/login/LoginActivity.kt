@@ -10,6 +10,7 @@ import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import com.example.moodle.BuildConfig
 import com.example.moodle.R
 import com.example.moodle.ui.whiteboard.WhiteboardActivity
 import com.example.moodle.data.repository.AuthRepository
@@ -54,6 +55,12 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun checkLoginStatus() {
+        // Skip login in debug builds for development
+        if (BuildConfig.SKIP_LOGIN) {
+            navigateToWhiteboard()
+            return
+        }
+        
         if (authRepository.isLoggedIn()) {
             navigateToWhiteboard()
         }
