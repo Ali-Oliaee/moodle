@@ -406,8 +406,7 @@ class WhiteboardActivity : AppCompatActivity() {
             backgroundPopupWindow?.dismiss()
         }
         
-        // Show popup above the background button
-        backgroundPopupWindow?.showAsDropDown(btnBackground, 0, -btnBackground.height - 200, Gravity.CENTER)
+        backgroundPopupWindow?.showAtLocation(whiteboardView, Gravity.CENTER, 0, 0)
     }
     
     private fun selectBackgroundPattern(pattern: BackgroundPattern) {

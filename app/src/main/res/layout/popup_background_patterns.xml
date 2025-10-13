@@ -1,35 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="320dp"
-    android:layout_height="wrap_content"
+    android:layout_height="320dp"
     android:orientation="vertical"
     android:background="@drawable/popup_background"
-    android:padding="16dp">
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/background_patterns"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="#333333"
-        android:gravity="center"
-        android:layout_marginBottom="12dp" />
-
+    android:padding="10dp">
+  
     <!-- Grid Layout for Background Patterns -->
     <GridLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:columnCount="3"
-        android:rowCount="3"
+        android:columnCount="4"
+        android:rowCount="4"
         android:alignmentMode="alignBounds"
         android:useDefaultMargins="true">
 
         <!-- Plain Background -->
         <FrameLayout
             android:id="@+id/backgroundPlain"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
@@ -48,8 +38,8 @@
         <!-- Grid Small -->
         <FrameLayout
             android:id="@+id/backgroundGridSmall"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
@@ -68,8 +58,8 @@
         <!-- Grid Large -->
         <FrameLayout
             android:id="@+id/backgroundGridLarge"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
@@ -88,8 +78,8 @@
         <!-- Lines Horizontal -->
         <FrameLayout
             android:id="@+id/backgroundLinesHorizontal"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
@@ -108,8 +98,8 @@
         <!-- Lines Vertical -->
         <FrameLayout
             android:id="@+id/backgroundLinesVertical"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
@@ -128,8 +118,8 @@
         <!-- Lines Both -->
         <FrameLayout
             android:id="@+id/backgroundLinesBoth"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
@@ -148,8 +138,8 @@
         <!-- Dot Grid -->
         <FrameLayout
             android:id="@+id/backgroundDotGrid"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
@@ -168,8 +158,8 @@
         <!-- Ruled Paper -->
         <FrameLayout
             android:id="@+id/backgroundRuledPaper"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
@@ -188,8 +178,8 @@
         <!-- Graph Paper -->
         <FrameLayout
             android:id="@+id/backgroundGraphPaper"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
