@@ -290,6 +290,16 @@
             android:background="@drawable/tool_button_background"
             android:contentDescription="@string/stroke_width" />
 
+        <!-- Background Pattern Button -->
+        <ImageButton
+            android:id="@+id/btnBackground"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_background"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_background_button" />
+
     </LinearLayout>
 
 </android.support.constraint.ConstraintLayout>

@@ -119,4 +119,17 @@
     <string name="clear_section_confirm">آیا مطمئن هستید که می خواهید این بخش را پاک کنید؟</string>
     <string name="clear_all_sections_confirm">آیا مطمئن هستید که می خواهید همه بخش ها را پاک کنید؟</string>
     <string name="section_active">بخش فعال: %1$s</string>
+    
+    <!-- Background Patterns -->
+    <string name="background_patterns">الگوهای پس‌زمینه</string>
+    <string name="background_plain">ساده</string>
+    <string name="background_grid_small">شبکه کوچک</string>
+    <string name="background_grid_large">شبکه بزرگ</string>
+    <string name="background_lines_horizontal">خطوط افقی</string>
+    <string name="background_lines_vertical">خطوط عمودی</string>
+    <string name="background_lines_both">خطوط متقاطع</string>
+    <string name="background_dot_grid">شبکه نقطه‌ای</string>
+    <string name="background_ruled_paper">کاغذ خط‌دار</string>
+    <string name="background_graph_paper">کاغذ نموداری</string>
+    <string name="desc_background_button">تغییر پس‌زمینه</string>
 </resources>

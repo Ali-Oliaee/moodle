@@ -70,12 +70,14 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnPinchMode: ImageButton
     private lateinit var btnColorPicker: Button
     private lateinit var btnStrokeWidth: ImageButton
+    private lateinit var btnBackground: ImageButton
     
     // Popup views
     private var colorPopupWindow: PopupWindow? = null
     private var strokePopupWindow: PopupWindow? = null
     private var eraserModePopupWindow: PopupWindow? = null
     private var formulaPopupWindow: PopupWindow? = null
+    private var backgroundPopupWindow: PopupWindow? = null
     private var currentStrokeWidth: Float = 8f
     
     // State
@@ -122,6 +124,7 @@ class WhiteboardActivity : AppCompatActivity() {
         registerRecordingStateReceiver()
         updateButtonAppearance()
         updateToolButtons()
+        loadSavedBackgroundPattern()
     }
 
     private fun initializeViews() {
@@ -145,6 +148,7 @@ class WhiteboardActivity : AppCompatActivity() {
         btnPinchMode = findViewById(R.id.btnPinchMode)
         btnColorPicker = findViewById(R.id.btnColorPicker)
         btnStrokeWidth = findViewById(R.id.btnStrokeWidth)
+        btnBackground = findViewById(R.id.btnBackground)
         
         // Split mode components
         btnEnableSplit = findViewById(R.id.btnEnableSplit)
@@ -248,6 +252,11 @@ class WhiteboardActivity : AppCompatActivity() {
         btnStrokeWidth.setOnClickListener {
             showStrokeWidthPopup()
         }
+        
+        // Background pattern popup
+        btnBackground.setOnClickListener {
+            showBackgroundPatternPopup()
+        }
     }
     
     private fun showColorPickerPopup() {
@@ -316,6 +325,98 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Show popup above the stroke width button
         strokePopupWindow?.showAsDropDown(btnStrokeWidth, 0, -btnStrokeWidth.height - 150, Gravity.CENTER)
+    }
+    
+    private fun showBackgroundPatternPopup() {
+        val inflater = LayoutInflater.from(this)
+        val popupView = inflater.inflate(R.layout.popup_background_patterns, null)
+        
+        backgroundPopupWindow = PopupWindow(
+            popupView,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            true
+        )
+        
+        // Set up preview views
+        val previewGridSmall = popupView.findViewById<BackgroundPreviewView>(R.id.previewGridSmall)
+        val previewGridLarge = popupView.findViewById<BackgroundPreviewView>(R.id.previewGridLarge)
+        val previewLinesHorizontal = popupView.findViewById<BackgroundPreviewView>(R.id.previewLinesHorizontal)
+        val previewLinesVertical = popupView.findViewById<BackgroundPreviewView>(R.id.previewLinesVertical)
+        val previewLinesBoth = popupView.findViewById<BackgroundPreviewView>(R.id.previewLinesBoth)
+        val previewDotGrid = popupView.findViewById<BackgroundPreviewView>(R.id.previewDotGrid)
+        val previewRuledPaper = popupView.findViewById<BackgroundPreviewView>(R.id.previewRuledPaper)
+        val previewGraphPaper = popupView.findViewById<BackgroundPreviewView>(R.id.previewGraphPaper)
+        
+        // Set patterns for preview views
+        previewGridSmall.setBackgroundPattern(BackgroundPattern.GRID_SMALL)
+        previewGridLarge.setBackgroundPattern(BackgroundPattern.GRID_LARGE)
+        previewLinesHorizontal.setBackgroundPattern(BackgroundPattern.LINES_HORIZONTAL)
+        previewLinesVertical.setBackgroundPattern(BackgroundPattern.LINES_VERTICAL)
+        previewLinesBoth.setBackgroundPattern(BackgroundPattern.LINES_BOTH)
+        previewDotGrid.setBackgroundPattern(BackgroundPattern.DOT_GRID)
+        previewRuledPaper.setBackgroundPattern(BackgroundPattern.RULED_PAPER)
+        previewGraphPaper.setBackgroundPattern(BackgroundPattern.GRAPH_PAPER)
+        
+        // Set up click listeners
+        popupView.findViewById<FrameLayout>(R.id.backgroundPlain).setOnClickListener {
+            selectBackgroundPattern(BackgroundPattern.PLAIN)
+            backgroundPopupWindow?.dismiss()
+        }
+        
+        popupView.findViewById<FrameLayout>(R.id.backgroundGridSmall).setOnClickListener {
+            selectBackgroundPattern(BackgroundPattern.GRID_SMALL)
+            backgroundPopupWindow?.dismiss()
+        }
+        
+        popupView.findViewById<FrameLayout>(R.id.backgroundGridLarge).setOnClickListener {
+            selectBackgroundPattern(BackgroundPattern.GRID_LARGE)
+            backgroundPopupWindow?.dismiss()
+        }
+        
+        popupView.findViewById<FrameLayout>(R.id.backgroundLinesHorizontal).setOnClickListener {
+            selectBackgroundPattern(BackgroundPattern.LINES_HORIZONTAL)
+            backgroundPopupWindow?.dismiss()
+        }
+        
+        popupView.findViewById<FrameLayout>(R.id.backgroundLinesVertical).setOnClickListener {
+            selectBackgroundPattern(BackgroundPattern.LINES_VERTICAL)
+            backgroundPopupWindow?.dismiss()
+        }
+        
+        popupView.findViewById<FrameLayout>(R.id.backgroundLinesBoth).setOnClickListener {
+            selectBackgroundPattern(BackgroundPattern.LINES_BOTH)
+            backgroundPopupWindow?.dismiss()
+        }
+        
+        popupView.findViewById<FrameLayout>(R.id.backgroundDotGrid).setOnClickListener {
+            selectBackgroundPattern(BackgroundPattern.DOT_GRID)
+            backgroundPopupWindow?.dismiss()
+        }
+        
+        popupView.findViewById<FrameLayout>(R.id.backgroundRuledPaper).setOnClickListener {
+            selectBackgroundPattern(BackgroundPattern.RULED_PAPER)
+            backgroundPopupWindow?.dismiss()
+        }
+        
+        popupView.findViewById<FrameLayout>(R.id.backgroundGraphPaper).setOnClickListener {
+            selectBackgroundPattern(BackgroundPattern.GRAPH_PAPER)
+            backgroundPopupWindow?.dismiss()
+        }
+        
+        // Show popup above the background button
+        backgroundPopupWindow?.showAsDropDown(btnBackground, 0, -btnBackground.height - 200, Gravity.CENTER)
+    }
+    
+    private fun selectBackgroundPattern(pattern: BackgroundPattern) {
+        whiteboardView.setBackgroundPattern(pattern)
+        userPreferences.saveBackgroundPattern(pattern.id)
+    }
+    
+    private fun loadSavedBackgroundPattern() {
+        val savedPatternId = userPreferences.getBackgroundPattern()
+        val pattern = BackgroundPattern.fromId(savedPatternId)
+        whiteboardView.setBackgroundPattern(pattern)
     }
     
     private fun setupWhiteboardListener() {
@@ -929,6 +1030,7 @@ class WhiteboardActivity : AppCompatActivity() {
         // Clean up popup windows
         colorPopupWindow?.dismiss()
         strokePopupWindow?.dismiss()
+        backgroundPopupWindow?.dismiss()
         
         // Clean up whiteboard resources
         whiteboardView.cleanup()

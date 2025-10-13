@@ -9,6 +9,7 @@ class UserPreferences(private val context: Context) {
         private const val PREFS_NAME = "user_prefs"
         private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_USERNAME = "username"
+        private const val KEY_BACKGROUND_PATTERN = "background_pattern"
     }
 
     private val sharedPrefs: SharedPreferences by lazy {
@@ -45,6 +46,16 @@ class UserPreferences(private val context: Context) {
         return !getAuthToken().isNullOrBlank()
     }
 
+
+    fun getBackgroundPattern(): Int {
+        return sharedPrefs.getInt(KEY_BACKGROUND_PATTERN, 0) // Default to PLAIN (id = 0)
+    }
+
+    fun saveBackgroundPattern(patternId: Int) {
+        sharedPrefs.edit()
+            .putInt(KEY_BACKGROUND_PATTERN, patternId)
+            .apply()
+    }
 
     fun clearAllData() {
         sharedPrefs.edit().clear().apply()
