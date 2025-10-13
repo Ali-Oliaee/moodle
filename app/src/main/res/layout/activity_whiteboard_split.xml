@@ -177,6 +177,16 @@
             android:background="@drawable/tool_button_background"
             android:contentDescription="@string/desc_formula_tool" />
 
+        <!-- Shape Tools Popup Button -->
+        <ImageButton
+            android:id="@+id/btnShapes"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_shapes"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_shapes_tool" />
+
         <!-- Separator -->
         <View
             android:layout_width="1dp"

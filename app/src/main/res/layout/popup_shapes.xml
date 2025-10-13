@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@drawable/popup_background"
+    android:padding="8dp"
+    android:elevation="8dp">
+
+    <ImageButton
+        android:id="@+id/btnLinePopup"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="4dp"
+        android:src="@drawable/ic_line"
+        android:background="@drawable/tool_button_background"
+        android:contentDescription="@string/desc_line_tool" />
+
+    <ImageButton
+        android:id="@+id/btnCirclePopup"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="4dp"
+        android:src="@drawable/ic_circle"
+        android:background="@drawable/tool_button_background"
+        android:contentDescription="@string/desc_circle_tool" />
+
+    <ImageButton
+        android:id="@+id/btnTrianglePopup"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="4dp"
+        android:src="@drawable/ic_triangle"
+        android:background="@drawable/tool_button_background"
+        android:contentDescription="@string/desc_triangle_tool" />
+
+    <ImageButton
+        android:id="@+id/btnRectanglePopup"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="4dp"
+        android:src="@drawable/ic_rectangle"
+        android:background="@drawable/tool_button_background"
+        android:contentDescription="@string/desc_rectangle_tool" />
+
+</LinearLayout>

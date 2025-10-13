@@ -58,6 +58,12 @@
     <string name="desc_highlighter_tool">انتخاب روشن کننده</string>
     <string name="desc_text_tool">انتخاب ابزار متن</string>
     <string name="desc_formula_tool">انتخاب فرمول ریاضی</string>
+    <string name="desc_line_tool">انتخاب ابزار خط</string>
+    <string name="desc_circle_tool">انتخاب ابزار دایره</string>
+    <string name="desc_triangle_tool">انتخاب ابزار مثلث</string>
+    <string name="desc_rectangle_tool">انتخاب ابزار مستطیل</string>
+    <string name="desc_shapes_tool">انتخاب ابزار اشکال</string>
+    <string name="shapes">اشکال</string>
     <string name="desc_undo_button">برگشت از آخرین عمل</string>
     <string name="desc_redo_button">بازگردانی آخرین عمل</string>
     <string name="desc_clear_button">پاک کردن رویاگرانی</string>

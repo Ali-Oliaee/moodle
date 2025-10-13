@@ -58,6 +58,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnHighlighter: ImageButton
     private lateinit var btnText: ImageButton
     private lateinit var btnFormula: ImageButton
+    private lateinit var btnShapes: ImageButton
     private lateinit var btnUndo: ImageButton
     private lateinit var btnRedo: ImageButton
     private lateinit var btnClear: ImageButton
@@ -136,6 +137,7 @@ class WhiteboardActivity : AppCompatActivity() {
         btnHighlighter = findViewById(R.id.btnHighlighter)
         btnText = findViewById(R.id.btnText)
         btnFormula = findViewById(R.id.btnFormula)
+        btnShapes = findViewById(R.id.btnShapes)
         btnUndo = findViewById(R.id.btnUndo)
         btnRedo = findViewById(R.id.btnRedo)
         btnClear = findViewById(R.id.btnClear)
@@ -235,6 +237,7 @@ class WhiteboardActivity : AppCompatActivity() {
         btnHighlighter.setOnClickListener { selectTool(WhiteboardView.DrawingTool.HIGHLIGHTER, btnHighlighter) }
         btnText.setOnClickListener { selectTool(WhiteboardView.DrawingTool.TEXT, btnText) }
         btnFormula.setOnClickListener { showFormulaPopup() }
+        btnShapes.setOnClickListener { showShapesPopup() }
         
         // Action listeners
         btnUndo.setOnClickListener { whiteboardView.undo() }
@@ -688,12 +691,55 @@ class WhiteboardActivity : AppCompatActivity() {
         dialog.show()
     }
     
+    private fun showShapesPopup() {
+        val inflater = LayoutInflater.from(this)
+        val popupView = inflater.inflate(R.layout.popup_shapes, null)
+        
+        val popupWindow = PopupWindow(
+            popupView,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        )
+        
+        // Shape buttons in popup
+        val btnLinePopup = popupView.findViewById<ImageButton>(R.id.btnLinePopup)
+        val btnCirclePopup = popupView.findViewById<ImageButton>(R.id.btnCirclePopup)
+        val btnTrianglePopup = popupView.findViewById<ImageButton>(R.id.btnTrianglePopup)
+        val btnRectanglePopup = popupView.findViewById<ImageButton>(R.id.btnRectanglePopup)
+        
+        // Set click listeners
+        btnLinePopup.setOnClickListener {
+            selectTool(WhiteboardView.DrawingTool.LINE, btnShapes)
+            popupWindow.dismiss()
+        }
+        
+        btnCirclePopup.setOnClickListener {
+            selectTool(WhiteboardView.DrawingTool.CIRCLE, btnShapes)
+            popupWindow.dismiss()
+        }
+        
+        btnTrianglePopup.setOnClickListener {
+            selectTool(WhiteboardView.DrawingTool.TRIANGLE, btnShapes)
+            popupWindow.dismiss()
+        }
+        
+        btnRectanglePopup.setOnClickListener {
+            selectTool(WhiteboardView.DrawingTool.RECTANGLE, btnShapes)
+            popupWindow.dismiss()
+        }
+        
+        // Show popup at center of screen
+        popupWindow.showAtLocation(btnShapes, Gravity.CENTER, 0, 0)
+    }
+    
     private fun selectTool(tool: WhiteboardView.DrawingTool, button: ImageButton) {
         // Update tool selection
         btnPen.isSelected = false
         btnEraser.isSelected = false
         btnHighlighter.isSelected = false
         btnText.isSelected = false
+        btnShapes.isSelected = false
         button.isSelected = true
         currentSelectedTool = button
         
