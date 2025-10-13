@@ -62,12 +62,6 @@
                 android:background="@drawable/tool_button_background"
                 android:layout_marginEnd="4dp" />
 
-            <Spinner
-                android:id="@+id/spinnerSectionCount"
-                android:layout_width="wrap_content"
-                android:layout_height="32dp"
-                android:layout_marginEnd="4dp" />
-
             <Button
                 android:id="@+id/btnDisableSplit"
                 android:layout_width="wrap_content"
@@ -119,28 +113,9 @@
         <!-- Whiteboard View -->
         <com.example.moodle.ui.whiteboard.WhiteboardView
             android:id="@+id/whiteboardView"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_weight="1"
             android:background="#FFFFFF" />
-
-        <!-- Section Controllers Container -->
-        <ScrollView
-            android:id="@+id/sectionControllersContainer"
-            android:layout_width="200dp"
-            android:layout_height="match_parent"
-            android:background="#F8F8F8"
-            android:elevation="2dp"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:id="@+id/sectionControllersList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="8dp" />
-
-        </ScrollView>
 
     </LinearLayout>
 

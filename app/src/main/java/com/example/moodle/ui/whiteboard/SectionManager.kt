@@ -9,9 +9,16 @@ import android.util.Log
  */
 class SectionManager {
     
+    companion object {
+        // Height reserved for control area at bottom of each section
+        const val CONTROL_AREA_HEIGHT = 120f
+    }
+    
     data class Section(
         val id: Int,
         val bounds: RectF,
+        val drawingBounds: RectF, // Area for actual drawing (excluding controls)
+        val controlBounds: RectF, // Area for controls at bottom
         val studentName: String = "Student $id",
         var currentTool: WhiteboardView.DrawingTool = WhiteboardView.DrawingTool.PEN,
         var currentColor: Int = Color.BLACK,
@@ -47,6 +54,14 @@ class SectionManager {
         
         fun contains(x: Float, y: Float): Boolean {
             return bounds.contains(x, y)
+        }
+        
+        fun containsInDrawingArea(x: Float, y: Float): Boolean {
+            return drawingBounds.contains(x, y)
+        }
+        
+        fun containsInControlArea(x: Float, y: Float): Boolean {
+            return controlBounds.contains(x, y)
         }
     }
     
@@ -97,13 +112,18 @@ class SectionManager {
     }
     
     fun enableSplitMode(numberOfSections: Int) {
-        if (numberOfSections < 2 || numberOfSections > 6) {
-            Log.w("SectionManager", "Invalid number of sections: $numberOfSections. Must be between 2 and 6.")
+        if (numberOfSections < 2 || numberOfSections > 4) {
+            Log.w("SectionManager", "Invalid number of sections: $numberOfSections. Must be between 2 and 4.")
             return
         }
         
         isSplitMode = true
         createSections(numberOfSections)
+        
+        // Log section bounds for debugging
+        sections.forEach { section ->
+            Log.d("SectionManager", "Section ${section.id}: bounds=${section.bounds}, drawing=${section.drawingBounds}, control=${section.controlBounds}")
+        }
     }
     
     fun disableSplitMode() {
@@ -119,7 +139,6 @@ class SectionManager {
             2 -> create2Sections()
             3 -> create3Sections()
             4 -> create4Sections()
-            6 -> create6Sections()
             else -> create2Sections() // Default fallback
         }
         
@@ -132,12 +151,16 @@ class SectionManager {
         sections.add(Section(
             id = 1,
             bounds = RectF(0f, 0f, halfWidth, boardHeight),
+            drawingBounds = RectF(0f, 0f, halfWidth, boardHeight - CONTROL_AREA_HEIGHT),
+            controlBounds = RectF(0f, boardHeight - CONTROL_AREA_HEIGHT, halfWidth, boardHeight),
             studentName = "Student 1"
         ))
         
         sections.add(Section(
             id = 2,
             bounds = RectF(halfWidth, 0f, boardWidth, boardHeight),
+            drawingBounds = RectF(halfWidth, 0f, boardWidth, boardHeight - CONTROL_AREA_HEIGHT),
+            controlBounds = RectF(halfWidth, boardHeight - CONTROL_AREA_HEIGHT, boardWidth, boardHeight),
             studentName = "Student 2"
         ))
     }
@@ -148,18 +171,24 @@ class SectionManager {
         sections.add(Section(
             id = 1,
             bounds = RectF(0f, 0f, thirdWidth, boardHeight),
+            drawingBounds = RectF(0f, 0f, thirdWidth, boardHeight - CONTROL_AREA_HEIGHT),
+            controlBounds = RectF(0f, boardHeight - CONTROL_AREA_HEIGHT, thirdWidth, boardHeight),
             studentName = "Student 1"
         ))
         
         sections.add(Section(
             id = 2,
             bounds = RectF(thirdWidth, 0f, thirdWidth * 2f, boardHeight),
+            drawingBounds = RectF(thirdWidth, 0f, thirdWidth * 2f, boardHeight - CONTROL_AREA_HEIGHT),
+            controlBounds = RectF(thirdWidth, boardHeight - CONTROL_AREA_HEIGHT, thirdWidth * 2f, boardHeight),
             studentName = "Student 2"
         ))
         
         sections.add(Section(
             id = 3,
             bounds = RectF(thirdWidth * 2f, 0f, boardWidth, boardHeight),
+            drawingBounds = RectF(thirdWidth * 2f, 0f, boardWidth, boardHeight - CONTROL_AREA_HEIGHT),
+            controlBounds = RectF(thirdWidth * 2f, boardHeight - CONTROL_AREA_HEIGHT, boardWidth, boardHeight),
             studentName = "Student 3"
         ))
     }
@@ -171,24 +200,32 @@ class SectionManager {
         sections.add(Section(
             id = 1,
             bounds = RectF(0f, 0f, halfWidth, halfHeight),
+            drawingBounds = RectF(0f, 0f, halfWidth, halfHeight - CONTROL_AREA_HEIGHT),
+            controlBounds = RectF(0f, halfHeight - CONTROL_AREA_HEIGHT, halfWidth, halfHeight),
             studentName = "Student 1"
         ))
         
         sections.add(Section(
             id = 2,
             bounds = RectF(halfWidth, 0f, boardWidth, halfHeight),
+            drawingBounds = RectF(halfWidth, 0f, boardWidth, halfHeight - CONTROL_AREA_HEIGHT),
+            controlBounds = RectF(halfWidth, halfHeight - CONTROL_AREA_HEIGHT, boardWidth, halfHeight),
             studentName = "Student 2"
         ))
         
         sections.add(Section(
             id = 3,
             bounds = RectF(0f, halfHeight, halfWidth, boardHeight),
+            drawingBounds = RectF(0f, halfHeight, halfWidth, boardHeight - CONTROL_AREA_HEIGHT),
+            controlBounds = RectF(0f, boardHeight - CONTROL_AREA_HEIGHT, halfWidth, boardHeight),
             studentName = "Student 3"
         ))
         
         sections.add(Section(
             id = 4,
             bounds = RectF(halfWidth, halfHeight, boardWidth, boardHeight),
+            drawingBounds = RectF(halfWidth, halfHeight, boardWidth, boardHeight - CONTROL_AREA_HEIGHT),
+            controlBounds = RectF(halfWidth, boardHeight - CONTROL_AREA_HEIGHT, boardWidth, boardHeight),
             studentName = "Student 4"
         ))
     }
@@ -200,36 +237,48 @@ class SectionManager {
         sections.add(Section(
             id = 1,
             bounds = RectF(0f, 0f, thirdWidth, halfHeight),
+            drawingBounds = RectF(0f, 0f, thirdWidth, halfHeight - CONTROL_AREA_HEIGHT),
+            controlBounds = RectF(0f, halfHeight - CONTROL_AREA_HEIGHT, thirdWidth, halfHeight),
             studentName = "Student 1"
         ))
         
         sections.add(Section(
             id = 2,
             bounds = RectF(thirdWidth, 0f, thirdWidth * 2f, halfHeight),
+            drawingBounds = RectF(thirdWidth, 0f, thirdWidth * 2f, halfHeight - CONTROL_AREA_HEIGHT),
+            controlBounds = RectF(thirdWidth, halfHeight - CONTROL_AREA_HEIGHT, thirdWidth * 2f, halfHeight),
             studentName = "Student 2"
         ))
         
         sections.add(Section(
             id = 3,
             bounds = RectF(thirdWidth * 2f, 0f, boardWidth, halfHeight),
+            drawingBounds = RectF(thirdWidth * 2f, 0f, boardWidth, halfHeight - CONTROL_AREA_HEIGHT),
+            controlBounds = RectF(thirdWidth * 2f, halfHeight - CONTROL_AREA_HEIGHT, boardWidth, halfHeight),
             studentName = "Student 3"
         ))
         
         sections.add(Section(
             id = 4,
             bounds = RectF(0f, halfHeight, thirdWidth, boardHeight),
+            drawingBounds = RectF(0f, halfHeight, thirdWidth, boardHeight - CONTROL_AREA_HEIGHT),
+            controlBounds = RectF(0f, boardHeight - CONTROL_AREA_HEIGHT, thirdWidth, boardHeight),
             studentName = "Student 4"
         ))
         
         sections.add(Section(
             id = 5,
             bounds = RectF(thirdWidth, halfHeight, thirdWidth * 2f, boardHeight),
+            drawingBounds = RectF(thirdWidth, halfHeight, thirdWidth * 2f, boardHeight - CONTROL_AREA_HEIGHT),
+            controlBounds = RectF(thirdWidth, boardHeight - CONTROL_AREA_HEIGHT, thirdWidth * 2f, boardHeight),
             studentName = "Student 5"
         ))
         
         sections.add(Section(
             id = 6,
             bounds = RectF(thirdWidth * 2f, halfHeight, boardWidth, boardHeight),
+            drawingBounds = RectF(thirdWidth * 2f, halfHeight, boardWidth, boardHeight - CONTROL_AREA_HEIGHT),
+            controlBounds = RectF(thirdWidth * 2f, boardHeight - CONTROL_AREA_HEIGHT, boardWidth, boardHeight),
             studentName = "Student 6"
         ))
     }
@@ -266,16 +315,34 @@ class SectionManager {
         if (!isSplitMode) return
         
         for ((index, section) in sections.withIndex()) {
-            // Draw light background for each section
+            // Draw light background for drawing area
             sectionBackgroundPaint.color = sectionColors[index % sectionColors.size]
-            canvas.drawRect(section.bounds, sectionBackgroundPaint)
+            canvas.drawRect(section.drawingBounds, sectionBackgroundPaint)
             
-            // Draw section border (divider lines)
+            // Draw control area background (slightly darker)
+            sectionBackgroundPaint.color = Color.parseColor("#E0E0E0")
+            canvas.drawRect(section.controlBounds, sectionBackgroundPaint)
+            
+            // Draw divider line between drawing area and control area
+            val dividerPaint = Paint().apply {
+                color = Color.parseColor("#666666")
+                style = Paint.Style.STROKE
+                strokeWidth = 2f
+            }
+            canvas.drawLine(
+                section.bounds.left,
+                section.controlBounds.top,
+                section.bounds.right,
+                section.controlBounds.top,
+                dividerPaint
+            )
+            
+            // Draw section border (outer divider lines)
             canvas.drawRect(section.bounds, sectionBorderPaint)
             
-            // Draw section label
+            // Draw section label in control area
             val centerX = section.bounds.centerX()
-            val labelY = section.bounds.top + 35f
+            val labelY = section.controlBounds.top + 25f
             canvas.drawText(section.studentName, centerX, labelY, sectionLabelPaint)
         }
     }

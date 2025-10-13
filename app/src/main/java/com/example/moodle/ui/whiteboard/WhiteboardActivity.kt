@@ -48,13 +48,8 @@ class WhiteboardActivity : AppCompatActivity() {
     // Split mode components
     private lateinit var btnEnableSplit: Button
     private lateinit var btnDisableSplit: Button
-    private lateinit var spinnerSectionCount: Spinner
-    private lateinit var sectionControllersContainer: ScrollView
-    private lateinit var sectionControllersList: LinearLayout
     private lateinit var bottomToolbar: LinearLayout
     
-    // Section controllers
-    private val sectionControllers = mutableListOf<SectionControllerView>()
     private var isSplitMode = false
     
     // Tool buttons
@@ -153,9 +148,6 @@ class WhiteboardActivity : AppCompatActivity() {
         // Split mode components
         btnEnableSplit = findViewById(R.id.btnEnableSplit)
         btnDisableSplit = findViewById(R.id.btnDisableSplit)
-        spinnerSectionCount = findViewById(R.id.spinnerSectionCount)
-        sectionControllersContainer = findViewById(R.id.sectionControllersContainer)
-        sectionControllersList = findViewById(R.id.sectionControllersList)
         bottomToolbar = findViewById(R.id.bottomToolbar)
         
         setupSplitModeControls()
@@ -181,26 +173,36 @@ class WhiteboardActivity : AppCompatActivity() {
     }
     
     private fun setupSplitModeControls() {
-        // Setup spinner for section count
-        val sectionCounts = arrayOf(
-            getString(R.string.section_count_2),
-            getString(R.string.section_count_3),
-            getString(R.string.section_count_4),
-            getString(R.string.section_count_6)
-        )
-        
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, sectionCounts)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerSectionCount.adapter = adapter
-        
         // Setup split mode listeners
         btnEnableSplit.setOnClickListener {
-            enableSplitMode()
+            showSplitModeDialog()
         }
         
         btnDisableSplit.setOnClickListener {
             disableSplitMode()
         }
+    }
+    
+    private fun showSplitModeDialog() {
+        val sectionCounts = arrayOf(
+            getString(R.string.section_count_2),
+            getString(R.string.section_count_3),
+            getString(R.string.section_count_4)
+        )
+        
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.choose_section_count))
+            .setItems(sectionCounts) { _, which ->
+                val sectionCount = when (which) {
+                    0 -> 2
+                    1 -> 3
+                    2 -> 4
+                    else -> 2
+                }
+                enableSplitMode(sectionCount)
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
     }
     
     private fun setupTopBarListeners() {
@@ -879,29 +881,15 @@ class WhiteboardActivity : AppCompatActivity() {
         finish()
     }
     
-    private fun enableSplitMode() {
-        val selectedPosition = spinnerSectionCount.selectedItemPosition
-        val sectionCount = when (selectedPosition) {
-            0 -> 2
-            1 -> 3
-            2 -> 4
-            3 -> 6
-            else -> 2
-        }
-        
+    private fun enableSplitMode(sectionCount: Int) {
         // Enable split mode in whiteboard
         whiteboardView.enableSplitMode(sectionCount)
         isSplitMode = true
         
         // Update UI
         btnEnableSplit.visibility = View.GONE
-        spinnerSectionCount.visibility = View.GONE
         btnDisableSplit.visibility = View.VISIBLE
-        sectionControllersContainer.visibility = View.VISIBLE
         bottomToolbar.visibility = View.GONE
-        
-        // Create section controllers
-        createSectionControllers(sectionCount)
         
         Toast.makeText(this, getString(R.string.split_mode_enabled), Toast.LENGTH_SHORT).show()
     }
@@ -913,112 +901,12 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Update UI
         btnEnableSplit.visibility = View.VISIBLE
-        spinnerSectionCount.visibility = View.VISIBLE
         btnDisableSplit.visibility = View.GONE
-        sectionControllersContainer.visibility = View.GONE
         bottomToolbar.visibility = View.VISIBLE
-        
-        // Clear section controllers
-        clearSectionControllers()
         
         Toast.makeText(this, getString(R.string.split_mode_disabled), Toast.LENGTH_SHORT).show()
     }
     
-    private fun createSectionControllers(sectionCount: Int) {
-        clearSectionControllers()
-        
-        val sections = whiteboardView.getAllSections()
-        for (section in sections) {
-            val controller = SectionControllerView(this)
-            controller.setSectionInfo(section.id, section.studentName)
-            controller.setListener(sectionControllerListener)
-            controller.updateFromSection(section)
-            
-            sectionControllers.add(controller)
-            sectionControllersList.addView(controller)
-        }
-        
-        // All sections are now active simultaneously - no need to set one as active
-        // Update all controllers to show they're ready for use
-        for (controller in sectionControllers) {
-            controller.setActive(true) // All sections are active
-        }
-    }
-    
-    private fun clearSectionControllers() {
-        sectionControllers.clear()
-        sectionControllersList.removeAllViews()
-    }
-    
-    private val sectionControllerListener = object : SectionControllerView.OnSectionToolChangeListener {
-        override fun onToolChanged(sectionId: Int, tool: WhiteboardView.DrawingTool) {
-            whiteboardView.updateSectionTool(sectionId, tool)
-        }
-        
-        override fun onColorChanged(sectionId: Int, color: Int) {
-            whiteboardView.updateSectionColor(sectionId, color)
-        }
-        
-        override fun onStrokeWidthChanged(sectionId: Int, width: Float) {
-            whiteboardView.updateSectionStrokeWidth(sectionId, width)
-        }
-        
-        override fun onUndoClicked(sectionId: Int) {
-            whiteboardView.undoSection(sectionId)
-            updateSectionControllerButtons(sectionId)
-        }
-        
-        override fun onRedoClicked(sectionId: Int) {
-            whiteboardView.redoSection(sectionId)
-            updateSectionControllerButtons(sectionId)
-        }
-        
-        override fun onClearClicked(sectionId: Int) {
-            showClearSectionConfirmDialog(sectionId)
-        }
-        
-        override fun onSectionSelected(sectionId: Int) {
-            // In concurrent mode, just provide feedback about which section was touched
-            val section = whiteboardView.getAllSections().find { it.id == sectionId }
-            section?.let {
-                Toast.makeText(this@WhiteboardActivity, 
-                    "تنظیمات ${it.studentName}", // "Settings for Student X"
-                    Toast.LENGTH_SHORT).show()
-            }
-            
-            // Optionally highlight the selected section's controller briefly
-            val controller = sectionControllers.find { 
-                it.getSectionInfo().first == sectionId 
-            }
-            controller?.let {
-                // Brief highlight animation could be added here
-            }
-        }
-    }
-    
-    private fun updateSectionControllerButtons(sectionId: Int) {
-        val section = whiteboardView.getAllSections().find { it.id == sectionId }
-        val controller = sectionControllers.find { 
-            it.getSectionInfo().first == sectionId 
-        }
-        
-        section?.let { s ->
-            controller?.updateUndoRedoButtons(s.canUndo(), s.canRedo())
-        }
-    }
-    
-    private fun showClearSectionConfirmDialog(sectionId: Int) {
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.clear_section_confirm))
-            .setMessage(getString(R.string.clear_section_confirm))
-            .setPositiveButton(getString(R.string.yes)) { _, _ ->
-                whiteboardView.clearSection(sectionId)
-                updateSectionControllerButtons(sectionId)
-            }
-            .setNegativeButton(getString(R.string.no), null)
-            .show()
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         try {
