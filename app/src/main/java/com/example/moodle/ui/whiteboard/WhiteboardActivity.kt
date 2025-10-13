@@ -347,7 +347,6 @@ class WhiteboardActivity : AppCompatActivity() {
         val previewLinesVertical = popupView.findViewById<BackgroundPreviewView>(R.id.previewLinesVertical)
         val previewLinesBoth = popupView.findViewById<BackgroundPreviewView>(R.id.previewLinesBoth)
         val previewDotGrid = popupView.findViewById<BackgroundPreviewView>(R.id.previewDotGrid)
-        val previewRuledPaper = popupView.findViewById<BackgroundPreviewView>(R.id.previewRuledPaper)
         val previewGraphPaper = popupView.findViewById<BackgroundPreviewView>(R.id.previewGraphPaper)
         
         // Set patterns for preview views
@@ -357,7 +356,6 @@ class WhiteboardActivity : AppCompatActivity() {
         previewLinesVertical.setBackgroundPattern(BackgroundPattern.LINES_VERTICAL)
         previewLinesBoth.setBackgroundPattern(BackgroundPattern.LINES_BOTH)
         previewDotGrid.setBackgroundPattern(BackgroundPattern.DOT_GRID)
-        previewRuledPaper.setBackgroundPattern(BackgroundPattern.RULED_PAPER)
         previewGraphPaper.setBackgroundPattern(BackgroundPattern.GRAPH_PAPER)
         
         // Set up click listeners
@@ -393,11 +391,6 @@ class WhiteboardActivity : AppCompatActivity() {
         
         popupView.findViewById<FrameLayout>(R.id.backgroundDotGrid).setOnClickListener {
             selectBackgroundPattern(BackgroundPattern.DOT_GRID)
-            backgroundPopupWindow?.dismiss()
-        }
-        
-        popupView.findViewById<FrameLayout>(R.id.backgroundRuledPaper).setOnClickListener {
-            selectBackgroundPattern(BackgroundPattern.RULED_PAPER)
             backgroundPopupWindow?.dismiss()
         }
         

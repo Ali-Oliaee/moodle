@@ -18,8 +18,8 @@
         <!-- Plain Background -->
         <FrameLayout
             android:id="@+id/backgroundPlain"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
@@ -38,8 +38,8 @@
         <!-- Grid Small -->
         <FrameLayout
             android:id="@+id/backgroundGridSmall"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
@@ -58,8 +58,8 @@
         <!-- Grid Large -->
         <FrameLayout
             android:id="@+id/backgroundGridLarge"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
@@ -78,8 +78,8 @@
         <!-- Lines Horizontal -->
         <FrameLayout
             android:id="@+id/backgroundLinesHorizontal"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
@@ -98,8 +98,8 @@
         <!-- Lines Vertical -->
         <FrameLayout
             android:id="@+id/backgroundLinesVertical"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
@@ -118,8 +118,8 @@
         <!-- Lines Both -->
         <FrameLayout
             android:id="@+id/backgroundLinesBoth"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
@@ -138,8 +138,8 @@
         <!-- Dot Grid -->
         <FrameLayout
             android:id="@+id/backgroundDotGrid"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
@@ -155,31 +155,11 @@
 
         </FrameLayout>
 
-        <!-- Ruled Paper -->
-        <FrameLayout
-            android:id="@+id/backgroundRuledPaper"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_columnWeight="1"
-            android:layout_rowWeight="1"
-            android:background="@drawable/drawer_item_background"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_margin="4dp">
-
-            <com.example.moodle.ui.whiteboard.BackgroundPreviewView
-                android:id="@+id/previewRuledPaper"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_gravity="center" />
-
-        </FrameLayout>
-
         <!-- Graph Paper -->
         <FrameLayout
             android:id="@+id/backgroundGraphPaper"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:background="@drawable/drawer_item_background"
