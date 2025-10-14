@@ -140,4 +140,16 @@
     <string name="background_ruled_paper">کاغذ خط‌دار</string>
     <string name="background_graph_paper">کاغذ نموداری</string>
     <string name="desc_background_button">تغییر پس‌زمینه</string>
+    
+    <!-- Pagination -->
+    <string name="desc_previous_page">صفحه قبلی</string>
+    <string name="desc_next_page">صفحه بعدی</string>
+    <string name="desc_add_page">افزودن صفحه جدید</string>
+    <string name="desc_delete_page">حذف صفحه فعلی</string>
+    <string name="page_indicator_format">%1$d/%2$d</string>
+    <string name="max_pages_reached">حداکثر %1$d صفحه مجاز است</string>
+    <string name="delete_page_confirm">آیا مطمئن هستید که می خواهید این صفحه را حذف کنید؟</string>
+    <string name="delete_page_title">حذف صفحه</string>
+    <string name="cannot_delete_last_page">نمی توان آخرین صفحه را حذف کرد</string>
+    <string name="page_deleted">صفحه حذف شد</string>
 </resources>

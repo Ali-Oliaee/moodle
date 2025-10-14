@@ -2275,4 +2275,34 @@ class WhiteboardView @JvmOverloads constructor(
     } else {
         undoStack.isNotEmpty()
     }
+    
+    // Page management methods
+    fun getAllPaths(): List<DrawingPath> = paths.toList()
+    
+    fun getAllTextObjects(): List<TextObject> = textObjects.toList()
+    
+    fun getAllShapeObjects(): List<ShapeObject> = shapeObjects.toList()
+    
+    fun loadPageData(
+        pagePaths: List<DrawingPath>,
+        pageTextObjects: List<TextObject>,
+        pageShapeObjects: List<ShapeObject>
+    ) {
+        // Clear current state
+        paths.clear()
+        undoStack.clear()
+        textObjects.clear()
+        shapeObjects.clear()
+        selectedTextObject = null
+        selectedShapeObject = null
+        
+        // Load page data
+        paths.addAll(pagePaths)
+        textObjects.addAll(pageTextObjects)
+        shapeObjects.addAll(pageShapeObjects)
+        
+        // Redraw canvas
+        redrawCanvas()
+        invalidate()
+    }
 }

@@ -68,6 +68,13 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnStrokeWidth: ImageButton
     private lateinit var btnBackground: ImageButton
     
+    // Pagination components
+    private lateinit var btnPreviousPage: ImageButton
+    private lateinit var btnNextPage: ImageButton
+    private lateinit var btnDeletePage: ImageButton
+    private lateinit var tvPageIndicator: TextView
+    private lateinit var pageManager: PageManager
+    
     // Popup views
     private var colorPopupWindow: PopupWindow? = null
     private var strokePopupWindow: PopupWindow? = null
@@ -109,6 +116,9 @@ class WhiteboardActivity : AppCompatActivity() {
         // Initialize UserPreferences
         userPreferences = UserPreferences(this)
         
+        // Initialize PageManager
+        pageManager = PageManager(userPreferences)
+        
         // Set the split-enabled layout
         setContentView(R.layout.activity_whiteboard_split)
         
@@ -147,12 +157,19 @@ class WhiteboardActivity : AppCompatActivity() {
         btnStrokeWidth = findViewById(R.id.btnStrokeWidth)
         btnBackground = findViewById(R.id.btnBackground)
         
+        // Pagination components
+        btnPreviousPage = findViewById(R.id.btnPreviousPage)
+        btnNextPage = findViewById(R.id.btnNextPage)
+        btnDeletePage = findViewById(R.id.btnDeletePage)
+        tvPageIndicator = findViewById(R.id.tvPageIndicator)
+        
         // Split mode components
         btnEnableSplit = findViewById(R.id.btnEnableSplit)
         btnDisableSplit = findViewById(R.id.btnDisableSplit)
         bottomToolbar = findViewById(R.id.bottomToolbar)
         
         setupSplitModeControls()
+        setupPaginationControls()
         
         // Set welcome message with username
         val username = userPreferences.getUsername()
@@ -183,6 +200,114 @@ class WhiteboardActivity : AppCompatActivity() {
         btnDisableSplit.setOnClickListener {
             disableSplitMode()
         }
+    }
+    
+    private fun setupPaginationControls() {
+        // Setup page manager listener
+        pageManager.setOnPageChangeListener(object : PageManager.OnPageChangeListener {
+            override fun onPageChanged(pageId: Int, totalPages: Int) {
+                updatePaginationUI()
+                loadCurrentPageToWhiteboard()
+            }
+            
+            override fun onPageCreated(pageId: Int, totalPages: Int) {
+                updatePaginationUI()
+                loadCurrentPageToWhiteboard()
+            }
+        })
+        
+        // Setup pagination button listeners
+        btnPreviousPage.setOnClickListener {
+            saveCurrentPageFromWhiteboard()
+            pageManager.goToPreviousPage()
+        }
+        
+        btnNextPage.setOnClickListener {
+            saveCurrentPageFromWhiteboard()
+            if (pageManager.canGoToNextPage()) {
+                pageManager.goToNextPage()
+            } else if (pageManager.canCreateNewPage()) {
+                pageManager.createNewPage()
+            } else {
+                Toast.makeText(this, getString(R.string.max_pages_reached, PageManager.MAX_PAGES), Toast.LENGTH_SHORT).show()
+            }
+        }
+        
+        btnDeletePage.setOnClickListener {
+            showDeletePageConfirmDialog()
+        }
+        
+        // Initialize pagination UI
+        updatePaginationUI()
+        loadCurrentPageToWhiteboard()
+    }
+    
+    private fun updatePaginationUI() {
+        val currentPageId = pageManager.getCurrentPageId()
+        val totalPages = pageManager.getTotalPages()
+        val pageIds = pageManager.getPageIds()
+        val currentIndex = pageIds.indexOf(currentPageId) + 1
+        
+        // Update page indicator
+        tvPageIndicator.text = getString(R.string.page_indicator_format, currentIndex, totalPages)
+        
+        // Update previous button state
+        btnPreviousPage.isEnabled = pageManager.canGoToPreviousPage()
+        btnPreviousPage.alpha = if (pageManager.canGoToPreviousPage()) 1.0f else 0.5f
+        
+        // Update next button icon and state
+        if (pageManager.canGoToNextPage()) {
+            btnNextPage.setImageResource(R.drawable.ic_arrow_forward)
+            btnNextPage.contentDescription = getString(R.string.desc_next_page)
+        } else if (pageManager.canCreateNewPage()) {
+            btnNextPage.setImageResource(R.drawable.ic_add)
+            btnNextPage.contentDescription = getString(R.string.desc_add_page)
+        } else {
+            btnNextPage.setImageResource(R.drawable.ic_add)
+            btnNextPage.contentDescription = getString(R.string.desc_add_page)
+            btnNextPage.alpha = 0.5f
+        }
+        
+        if (pageManager.canGoToNextPage() || pageManager.canCreateNewPage()) {
+            btnNextPage.alpha = 1.0f
+        }
+        
+        // Update delete button state (disable if only one page)
+        btnDeletePage.isEnabled = pageManager.getTotalPages() > 1
+        btnDeletePage.alpha = if (pageManager.getTotalPages() > 1) 1.0f else 0.5f
+    }
+    
+    private fun saveCurrentPageFromWhiteboard() {
+        val currentPage = pageManager.getCurrentPage()
+        
+        // Save current whiteboard state to the page
+        currentPage.paths.clear()
+        currentPage.paths.addAll(whiteboardView.getAllPaths())
+        
+        currentPage.textObjects.clear()
+        currentPage.textObjects.addAll(whiteboardView.getAllTextObjects())
+        
+        currentPage.shapeObjects.clear()
+        currentPage.shapeObjects.addAll(whiteboardView.getAllShapeObjects())
+        
+        currentPage.backgroundPattern = whiteboardView.getBackgroundPattern()
+    }
+    
+    private fun loadCurrentPageToWhiteboard() {
+        val currentPage = pageManager.getCurrentPage()
+        
+        // Load page state to whiteboard
+        whiteboardView.loadPageData(currentPage.paths, currentPage.textObjects, currentPage.shapeObjects)
+        whiteboardView.setBackgroundPattern(currentPage.backgroundPattern)
+        
+        // Apply shared settings
+        whiteboardView.setColor(pageManager.sharedColor)
+        whiteboardView.setStrokeWidth(pageManager.sharedStrokeWidth)
+        
+        // Update UI to reflect shared settings
+        currentSelectedColor = pageManager.sharedColor
+        btnColorPicker.backgroundTintList = android.content.res.ColorStateList.valueOf(currentSelectedColor)
+        currentStrokeWidth = pageManager.sharedStrokeWidth
     }
     
     private fun showSplitModeDialog() {
@@ -240,8 +365,16 @@ class WhiteboardActivity : AppCompatActivity() {
         btnShapes.setOnClickListener { showShapesPopup() }
         
         // Action listeners
-        btnUndo.setOnClickListener { whiteboardView.undo() }
-        btnRedo.setOnClickListener { whiteboardView.redo() }
+        btnUndo.setOnClickListener { 
+            if (pageManager.undoCurrentPage()) {
+                loadCurrentPageToWhiteboard()
+            }
+        }
+        btnRedo.setOnClickListener { 
+            if (pageManager.redoCurrentPage()) {
+                loadCurrentPageToWhiteboard()
+            }
+        }
         btnClear.setOnClickListener { showClearConfirmDialog() }
         btnModeToggle.setOnClickListener { toggleMode() }
         btnPinchMode.setOnClickListener { togglePinchMode() }
@@ -320,6 +453,7 @@ class WhiteboardActivity : AppCompatActivity() {
                 
                 if (fromUser) {
                     currentStrokeWidth = strokeWidth
+                    pageManager.updateSharedStrokeWidth(strokeWidth)
                     whiteboardView.setStrokeWidth(strokeWidth)
                 }
             }
@@ -406,6 +540,7 @@ class WhiteboardActivity : AppCompatActivity() {
     }
     
     private fun selectBackgroundPattern(pattern: BackgroundPattern) {
+        pageManager.updateSharedBackgroundPattern(pattern)
         whiteboardView.setBackgroundPattern(pattern)
         userPreferences.saveBackgroundPattern(pattern.id)
     }
@@ -419,6 +554,8 @@ class WhiteboardActivity : AppCompatActivity() {
     private fun setupWhiteboardListener() {
         whiteboardView.setOnDrawingChangeListener(object : WhiteboardView.OnDrawingChangeListener {
             override fun onDrawingChanged() {
+                // Save current drawing state to the current page
+                saveCurrentPageFromWhiteboard()
                 updateToolButtons()
             }
         })
@@ -760,6 +897,9 @@ class WhiteboardActivity : AppCompatActivity() {
         currentSelectedColor = color
         btnColorPicker.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
         
+        // Update shared settings in page manager
+        pageManager.updateSharedColor(color)
+        
         // Update whiteboard view
         whiteboardView.setColor(color)
     }
@@ -801,11 +941,12 @@ class WhiteboardActivity : AppCompatActivity() {
     }
     
     private fun updateToolButtons() {
-        // Update undo/redo button states
-        btnUndo.isEnabled = whiteboardView.canUndo()
-        btnRedo.isEnabled = whiteboardView.canRedo()
-        btnUndo.alpha = if (whiteboardView.canUndo()) 1.0f else 0.5f
-        btnRedo.alpha = if (whiteboardView.canRedo()) 1.0f else 0.5f
+        // Update undo/redo button states using page manager
+        val currentPage = pageManager.getCurrentPage()
+        btnUndo.isEnabled = currentPage.canUndo()
+        btnRedo.isEnabled = currentPage.canRedo()
+        btnUndo.alpha = if (currentPage.canUndo()) 1.0f else 0.5f
+        btnRedo.alpha = if (currentPage.canRedo()) 1.0f else 0.5f
     }
     
     private fun showClearConfirmDialog() {
@@ -813,7 +954,29 @@ class WhiteboardActivity : AppCompatActivity() {
             .setTitle(getString(R.string.clear_all))
             .setMessage(getString(R.string.clear_confirm))
             .setPositiveButton(getString(R.string.yes)) { _, _ ->
-                whiteboardView.clear()
+                pageManager.clearCurrentPage()
+                loadCurrentPageToWhiteboard()
+            }
+            .setNegativeButton(getString(R.string.no), null)
+            .show()
+    }
+    
+    private fun showDeletePageConfirmDialog() {
+        if (pageManager.getTotalPages() <= 1) {
+            Toast.makeText(this, getString(R.string.cannot_delete_last_page), Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.delete_page_title))
+            .setMessage(getString(R.string.delete_page_confirm))
+            .setPositiveButton(getString(R.string.yes)) { _, _ ->
+                val currentPageId = pageManager.getCurrentPageId()
+                if (pageManager.deletePage(currentPageId)) {
+                    updatePaginationUI()
+                    loadCurrentPageToWhiteboard()
+                    Toast.makeText(this, getString(R.string.page_deleted), Toast.LENGTH_SHORT).show()
+                }
             }
             .setNegativeButton(getString(R.string.no), null)
             .show()
