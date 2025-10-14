@@ -19,6 +19,7 @@
     <string name="tool_pen">قلم</string>
     <string name="tool_eraser">روشن کننده</string>
     <string name="tool_highlighter">روشن کننده</string>
+    <string name="tool_text">متن</string>
     <string name="drawing_mode">حالت رسم</string>
     <string name="pan_mode">حالت پان</string>
     
@@ -38,6 +39,7 @@
     <string name="color_yellow">زرد</string>
     <string name="color_purple">بنفش</string>
     <string name="color_orange">نارنجی</string>
+    <string name="color_white">سفید</string>
     
     <!-- Stroke Width -->
     <string name="stroke_thin">ریز</string>
@@ -54,6 +56,14 @@
     <string name="desc_pen_tool">انتخاب قلم</string>   
     <string name="desc_eraser_tool">انتخاب روشن کننده</string>
     <string name="desc_highlighter_tool">انتخاب روشن کننده</string>
+    <string name="desc_text_tool">انتخاب ابزار متن</string>
+    <string name="desc_formula_tool">انتخاب فرمول ریاضی</string>
+    <string name="desc_line_tool">انتخاب ابزار خط</string>
+    <string name="desc_circle_tool">انتخاب ابزار دایره</string>
+    <string name="desc_triangle_tool">انتخاب ابزار مثلث</string>
+    <string name="desc_rectangle_tool">انتخاب ابزار مستطیل</string>
+    <string name="desc_shapes_tool">انتخاب ابزار اشکال</string>
+    <string name="shapes">اشکال</string>
     <string name="desc_undo_button">برگشت از آخرین عمل</string>
     <string name="desc_redo_button">بازگردانی آخرین عمل</string>
     <string name="desc_clear_button">پاک کردن رویاگرانی</string>
@@ -70,6 +80,7 @@
     <string name="actions">عملیات</string>
     <string name="colors">رنگ ها</string>
     <string name="stroke_width">عرض خط</string>
+    <string name="current_width">عرض فعلی:</string>
     <string name="recording">ضبط</string>
     <string name="account">حساب کاربری</string>
     <string name="start_recording">شروع ضبط</string>
@@ -84,4 +95,61 @@
     <string name="sliding_drawer">کشویی</string>
     <string name="fixed_drawer">ثابت</string>
     <string name="drawer_mode_changed">حالت کشو تغییر کرد</string>
+
+    <!-- Attendance -->
+    <string name="attendance_title">حضور و غیاب</string>
+    <string name="attendance_present">حاضر</string>
+    <string name="attendance_absent">غایب</string>
+    <string name="attendance_submit">ثبت حضور و غیاب</string>
+    <string name="attendance_submitting">در حال ارسال...</string>
+    <string name="attendance_generic_error">دریافت لیست دانشجویان با خطا مواجه شد</string>
+    <string name="attendance_retry">تلاش مجدد</string>
+    <string name="attendance_empty_state">دانشجویی برای نمایش وجود ندارد</string>
+    <string name="attendance_student_id_format">شماره دانشجویی: %1$s</string>
+    <string name="attendance_empty_submit">ابتدا لیست دانشجویان بارگذاری شود.</string>
+    <string name="attendance_incomplete">%1$d دانشجو هنوز تعیین وضعیت نشده‌اند.</string>
+    <string name="attendance_submit_success">حضور و غیاب با موفقیت ثبت شد.</string>
+    <string name="attendance_submit_failure">ارسال حضور و غیاب با خطا مواجه شد.</string>
+    <string name="desc_back_button">بازگشت</string>
+    
+    <!-- Split Mode -->
+    <string name="enable_split">تقسیم تخته</string>
+    <string name="disable_split">حالت عادی</string>
+    <string name="split_mode_enabled">تخته تقسیم شد</string>
+    <string name="split_mode_disabled">تخته به حالت عادی برگشت</string>
+    <string name="section_count_2">2 بخش</string>
+    <string name="section_count_3">3 بخش</string>
+    <string name="section_count_4">4 بخش</string>
+    <string name="section_count_6">6 بخش</string>
+    <string name="student_section">بخش دانشجو %1$d</string>
+    <string name="clear_section_confirm">آیا مطمئن هستید که می خواهید این بخش را پاک کنید؟</string>
+    <string name="clear_all_sections_confirm">آیا مطمئن هستید که می خواهید همه بخش ها را پاک کنید؟</string>
+    <string name="section_active">بخش فعال: %1$s</string>
+    <string name="choose_section_count">تعداد بخش ها را انتخاب کنید</string>
+    <string name="cancel">لغو</string>
+    
+    <!-- Background Patterns -->
+    <string name="background_patterns">الگوهای پس‌زمینه</string>
+    <string name="background_plain">ساده</string>
+    <string name="background_grid_small">شبکه کوچک</string>
+    <string name="background_grid_large">شبکه بزرگ</string>
+    <string name="background_lines_horizontal">خطوط افقی</string>
+    <string name="background_lines_vertical">خطوط عمودی</string>
+    <string name="background_lines_both">خطوط متقاطع</string>
+    <string name="background_dot_grid">شبکه نقطه‌ای</string>
+    <string name="background_ruled_paper">کاغذ خط‌دار</string>
+    <string name="background_graph_paper">کاغذ نموداری</string>
+    <string name="desc_background_button">تغییر پس‌زمینه</string>
+    
+    <!-- Pagination -->
+    <string name="desc_previous_page">صفحه قبلی</string>
+    <string name="desc_next_page">صفحه بعدی</string>
+    <string name="desc_add_page">افزودن صفحه جدید</string>
+    <string name="desc_delete_page">حذف صفحه فعلی</string>
+    <string name="page_indicator_format">%1$d/%2$d</string>
+    <string name="max_pages_reached">حداکثر %1$d صفحه مجاز است</string>
+    <string name="delete_page_confirm">آیا مطمئن هستید که می خواهید این صفحه را حذف کنید؟</string>
+    <string name="delete_page_title">حذف صفحه</string>
+    <string name="cannot_delete_last_page">نمی توان آخرین صفحه را حذف کرد</string>
+    <string name="page_deleted">صفحه حذف شد</string>
 </resources>

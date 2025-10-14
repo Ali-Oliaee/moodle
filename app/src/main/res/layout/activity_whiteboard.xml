@@ -1,587 +1,227 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.v4.widget.DrawerLayout
+<android.support.constraint.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/drawerLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F5F5F5"
     tools:context=".ui.whiteboard.WhiteboardActivity">
 
-    <!-- Main Content Layout -->
-    <android.support.constraint.ConstraintLayout
+    <!-- Top Toolbar with attendance, logout, and record buttons -->
+    <LinearLayout
+        android:id="@+id/topToolbar"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="4dp"
+        android:background="#FFFFFF"
+        android:elevation="4dp"
+        android:gravity="center"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <!-- Top Toolbar with minimal controls -->
+        <!-- Record Button -->
         <LinearLayout
-            android:id="@+id/topToolbar"
-            android:layout_width="match_parent"
+            android:id="@+id/recordContainer"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
+            android:gravity="center_vertical"
             android:padding="8dp"
-            android:background="#FFFFFF"
-            android:elevation="4dp"
-            app:layout_constraintTop_toTopOf="parent">
+            android:background="@drawable/drawer_item_background"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginEnd="8dp">
 
-            <!-- Menu Button to open drawer -->
-            <ImageButton
-                android:id="@+id/btnMenu"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginEnd="16dp"
-                android:src="@drawable/ic_menu"
-                android:background="@drawable/tool_button_background"
-                android:contentDescription="@string/desc_menu_button" />
-
-            <!-- Welcome message -->
-            <TextView
-                android:id="@+id/tvWelcome"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/welcome_message"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:gravity="center_vertical"
-                android:layout_gravity="center_vertical" />
+            <Button
+                android:id="@+id/toggleRecordBtn"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/circle_button"
+                android:elevation="2dp"
+                android:contentDescription="@string/desc_record_button" />
 
         </LinearLayout>
 
-        <!-- Whiteboard View taking full space -->
-        <com.example.moodle.ui.whiteboard.WhiteboardView
-            android:id="@+id/whiteboardView"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:background="#FFFFFF"
-            app:layout_constraintTop_toBottomOf="@id/topToolbar"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+        <!-- Attendance Button -->
+        <ImageButton
+            android:id="@+id/btnAttendance"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="8dp"
+            android:src="@drawable/ic_attendance"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/attendance_title" />
 
-    </android.support.constraint.ConstraintLayout>
+        <!-- Logout Button -->
+        <ImageButton
+            android:id="@+id/btnLogout"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_logout"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/logout" />
 
-    <!-- Navigation Drawer -->
-    <ScrollView
-        android:id="@+id/navigationDrawer"
-        android:layout_width="240dp"
-        android:layout_height="match_parent"
-        android:layout_gravity="start"
+    </LinearLayout>
+
+    <!-- Whiteboard View taking remaining space -->
+    <com.example.moodle.ui.whiteboard.WhiteboardView
+        android:id="@+id/whiteboardView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:background="#FFFFFF"
-        android:elevation="8dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <!-- Drawer Header -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp"
-                android:background="@drawable/drawer_header_background"
-                android:layout_marginBottom="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/app_name"
-                    android:textSize="24sp"
-                    android:textStyle="bold"
-                    android:textColor="#FFFFFF"
-                    android:gravity="center" />
-
-                <TextView
-                    android:id="@+id/tvDrawerWelcome"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/welcome_message"
-                    android:textSize="14sp"
-                    android:textColor="#E0FFFFFF"
-                    android:gravity="center"
-                    android:layout_marginTop="8dp" />
-
-            </LinearLayout>
-
-            <!-- Drawing Tools Section -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/drawing_tools"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="#333333"
-                android:layout_marginBottom="12dp" />
-
-            <!-- Pen Tool -->
-            <LinearLayout
-                android:id="@+id/drawerPen"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:background="@drawable/drawer_item_background"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginBottom="4dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_pen"
-                    android:layout_marginEnd="16dp" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/tool_pen"
-                    android:textSize="14sp"
-                    android:textColor="#333333" />
-
-            </LinearLayout>
-
-            <!-- Eraser Tool -->
-            <LinearLayout
-                android:id="@+id/drawerEraser"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:background="@drawable/drawer_item_background"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginBottom="4dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_eraser"
-                    android:layout_marginEnd="16dp" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/tool_eraser_corrected"
-                    android:textSize="14sp"
-                    android:textColor="#333333" />
-
-            </LinearLayout>
-
-            <!-- Highlighter Tool -->
-            <LinearLayout
-                android:id="@+id/drawerHighlighter"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:background="@drawable/drawer_item_background"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginBottom="16dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_highlighter"
-                    android:layout_marginEnd="16dp" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/tool_highlighter_corrected"
-                    android:textSize="14sp"
-                    android:textColor="#333333" />
-
-            </LinearLayout>
-
-            <!-- Actions Section -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/actions"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="#333333"
-                android:layout_marginBottom="12dp" />
-
-            <!-- Undo -->
-            <LinearLayout
-                android:id="@+id/drawerUndo"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:background="@drawable/drawer_item_background"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginBottom="4dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_undo"
-                    android:layout_marginEnd="16dp" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/undo"
-                    android:textSize="14sp"
-                    android:textColor="#333333" />
-
-            </LinearLayout>
-
-            <!-- Redo -->
-            <LinearLayout
-                android:id="@+id/drawerRedo"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:background="@drawable/drawer_item_background"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginBottom="4dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_redo"
-                    android:layout_marginEnd="16dp" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/redo"
-                    android:textSize="14sp"
-                    android:textColor="#333333" />
-
-            </LinearLayout>
-
-            <!-- Clear -->
-            <LinearLayout
-                android:id="@+id/drawerClear"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:background="@drawable/drawer_item_background"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginBottom="4dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_clear"
-                    android:layout_marginEnd="16dp" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/clear_all"
-                    android:textSize="14sp"
-                    android:textColor="#333333" />
-
-            </LinearLayout>
-
-            <!-- Mode Toggle -->
-            <LinearLayout
-                android:id="@+id/drawerModeToggle"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:background="@drawable/drawer_item_background"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginBottom="4dp">
-
-                <ImageView
-                    android:id="@+id/imgModeToggle"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_pen"
-                    android:layout_marginEnd="16dp" />
-
-                <TextView
-                    android:id="@+id/tvModeToggle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/drawing_mode"
-                    android:textSize="14sp"
-                    android:textColor="#333333" />
-
-            </LinearLayout>
-
-            <!-- Pinch Mode -->
-            <LinearLayout
-                android:id="@+id/drawerPinchMode"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:background="@drawable/drawer_item_background"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginBottom="16dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_zoom"
-                    android:layout_marginEnd="16dp" />
-
-                <TextView
-                    android:id="@+id/tvPinchMode"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/pinch_mode_disabled"
-                    android:textSize="14sp"
-                    android:textColor="#333333" />
-
-            </LinearLayout>
-
-            <!-- Colors Section -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/colors"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="#333333"
-                android:layout_marginBottom="12dp" />
-
-            <!-- Color Grid -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:layout_marginBottom="16dp">
-
-                <Button
-                    android:id="@+id/colorBlack"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_margin="4dp"
-                    android:background="@drawable/color_button_background"
-                    android:backgroundTint="#000000"
-                    android:contentDescription="@string/color_black" />
-
-                <Button
-                    android:id="@+id/colorRed"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_margin="4dp"
-                    android:background="@drawable/color_button_background"
-                    android:backgroundTint="#F44336"
-                    android:contentDescription="@string/color_red" />
-
-                <Button
-                    android:id="@+id/colorBlue"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_margin="4dp"
-                    android:background="@drawable/color_button_background"
-                    android:backgroundTint="#2196F3"
-                    android:contentDescription="@string/color_blue" />
-
-                <Button
-                    android:id="@+id/colorGreen"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_margin="4dp"
-                    android:background="@drawable/color_button_background"
-                    android:backgroundTint="#4CAF50"
-                    android:contentDescription="@string/color_green" />
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:layout_marginBottom="16dp">
-
-                <Button
-                    android:id="@+id/colorYellow"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_margin="4dp"
-                    android:background="@drawable/color_button_background"
-                    android:backgroundTint="#FFEB3B"
-                    android:contentDescription="@string/color_yellow" />
-
-                <Button
-                    android:id="@+id/colorPurple"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_margin="4dp"
-                    android:background="@drawable/color_button_background"
-                    android:backgroundTint="#9C27B0"
-                    android:contentDescription="@string/color_purple" />
-
-                <Button
-                    android:id="@+id/colorOrange"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_margin="4dp"
-                    android:background="@drawable/color_button_background"
-                    android:backgroundTint="#FF9800"
-                    android:contentDescription="@string/color_orange" />
-
-                <View
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_margin="4dp" />
-
-            </LinearLayout>
-
-            <!-- Stroke Width Section -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/stroke_width"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="#333333"
-                android:layout_marginBottom="12dp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="24dp">
-
-                <SeekBar
-                    android:id="@+id/strokeWidthSeekBar"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:max="20"
-                    android:progress="8"
-                    android:contentDescription="@string/desc_stroke_width" />
-
-                <TextView
-                    android:id="@+id/strokeWidthValue"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="8"
-                    android:textSize="14sp"
-                    android:layout_marginStart="12dp"
-                    android:minWidth="32dp"
-                    android:gravity="center"
-                    android:textStyle="bold" />
-
-            </LinearLayout>
-
-            <!-- Recording Section -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/recording"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="#333333"
-                android:layout_marginBottom="12dp" />
-
-            <!-- Record Button -->
-            <LinearLayout
-                android:id="@+id/drawerRecord"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:background="@drawable/drawer_item_background"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginBottom="24dp">
-
-                <Button
-                    android:id="@+id/toggleRecordBtn"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_marginEnd="16dp"
-                    android:background="@drawable/circle_button"
-                    android:elevation="2dp"
-                    android:contentDescription="@string/desc_record_button" />
-
-                <TextView
-                    android:id="@+id/tvRecordStatus"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/start_recording"
-                    android:textSize="14sp"
-                    android:textColor="#333333" />
-
-            </LinearLayout>
-
-            <!-- Account Section -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/account"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="#333333"
-                android:layout_marginBottom="12dp" />
-
-            <!-- Logout -->
-            <LinearLayout
-                android:id="@+id/drawerLogout"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:background="@drawable/drawer_item_background"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginBottom="16dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_logout"
-                    android:layout_marginEnd="16dp" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/logout"
-                    android:textSize="14sp"
-                    android:textColor="#D32F2F" />
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-    </ScrollView>
-
-</android.support.v4.widget.DrawerLayout>
+        app:layout_constraintTop_toBottomOf="@id/topToolbar"
+        app:layout_constraintBottom_toTopOf="@id/bottomToolbar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Bottom Toolbar with drawing tools -->
+    <LinearLayout
+        android:id="@+id/bottomToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="#FFFFFF"
+        android:elevation="4dp"
+        android:padding="6dp"
+        android:gravity="center"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <!-- Drawing Tools -->
+        <ImageButton
+            android:id="@+id/btnPen"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_pen"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_pen_tool" />
+
+        <ImageButton
+            android:id="@+id/btnEraser"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_eraser"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_eraser_tool" />
+
+        <ImageButton
+            android:id="@+id/btnHighlighter"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_highlighter"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_highlighter_tool" />
+
+        <ImageButton
+            android:id="@+id/btnText"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_text"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_text_tool" />
+
+        <ImageButton
+            android:id="@+id/btnFormula"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_formula"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_formula_tool" />
+
+        <!-- Separator -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="30dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="#E0E0E0" />
+
+        <!-- Action Tools -->
+        <ImageButton
+            android:id="@+id/btnUndo"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_undo"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_undo_button" />
+
+        <ImageButton
+            android:id="@+id/btnRedo"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_redo"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_redo_button" />
+
+        <ImageButton
+            android:id="@+id/btnClear"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_clear"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_clear_button" />
+
+        <!-- Separator -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="30dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="#E0E0E0" />
+
+        <!-- Mode Tools -->
+        <ImageButton
+            android:id="@+id/btnModeToggle"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_pen"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_mode_toggle" />
+
+        <ImageButton
+            android:id="@+id/btnPinchMode"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_zoom"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_pinch_mode" />
+
+        <!-- Separator -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="30dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="#E0E0E0" />
+
+        <!-- Color Popup Button -->
+        <Button
+            android:id="@+id/btnColorPicker"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_margin="2dp"
+            android:background="@drawable/color_button_background"
+            android:backgroundTint="#000000"
+            android:contentDescription="@string/colors" />
+
+        <!-- Stroke Width Popup Button -->
+        <ImageButton
+            android:id="@+id/btnStrokeWidth"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_stroke_width"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/stroke_width" />
+
+    </LinearLayout>
+
+</android.support.constraint.ConstraintLayout>

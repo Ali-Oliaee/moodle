@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:background="@drawable/section_controller_background"
+    android:layout_margin="4dp">
+
+    <!-- Section Label -->
+    <TextView
+        android:id="@+id/sectionLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Student 1"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#666666"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="@drawable/section_label_background"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <!-- Drawing Tools Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="8dp">
+
+        <ImageButton
+            android:id="@+id/btnPen"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_pen"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_pen_tool" />
+
+        <ImageButton
+            android:id="@+id/btnEraser"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_eraser"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_eraser_tool" />
+
+        <ImageButton
+            android:id="@+id/btnHighlighter"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_highlighter"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_highlighter_tool" />
+
+        <ImageButton
+            android:id="@+id/btnText"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_text"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_text_tool" />
+
+    </LinearLayout>
+
+    <!-- Action Tools Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="4dp">
+
+        <ImageButton
+            android:id="@+id/btnUndo"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_undo"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_undo_button" />
+
+        <ImageButton
+            android:id="@+id/btnRedo"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_redo"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_redo_button" />
+
+        <ImageButton
+            android:id="@+id/btnClear"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_clear"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_clear_button" />
+
+    </LinearLayout>
+
+    <!-- Color Picker -->
+    <Button
+        android:id="@+id/colorPicker"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="center"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/color_button_background"
+        android:backgroundTint="#000000"
+        android:contentDescription="@string/colors" />
+
+    <!-- Stroke Width -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="4dp">
+
+        <SeekBar
+            android:id="@+id/strokeWidthSeekBar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:max="20"
+            android:progress="7"
+            android:contentDescription="@string/desc_stroke_width" />
+
+        <TextView
+            android:id="@+id/strokeWidthLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="8"
+            android:textSize="10sp"
+            android:layout_marginStart="4dp"
+            android:minWidth="16dp"
+            android:gravity="center" />
+
+    </LinearLayout>
+
+</LinearLayout>

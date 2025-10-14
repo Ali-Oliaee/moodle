@@ -24,7 +24,7 @@ class WhiteboardView @JvmOverloads constructor(
 
     // Drawing tools
     enum class DrawingTool {
-        PEN, ERASER, HIGHLIGHTER
+        PEN, ERASER, HIGHLIGHTER, TEXT, SELECTIVE_ERASER, LINE, CIRCLE, TRIANGLE, RECTANGLE
     }
 
     // Drawing state
@@ -33,6 +33,7 @@ class WhiteboardView @JvmOverloads constructor(
     private var currentStrokeWidth = 8f
     private var isDrawingMode = true
     private var isPinchModeEnabled = false
+    private var currentBackgroundPattern = BackgroundPattern.PLAIN
     
     // Listener for drawing changes
     private var drawingChangeListener: OnDrawingChangeListener? = null
@@ -61,6 +62,21 @@ class WhiteboardView @JvmOverloads constructor(
         alpha = 100 // Semi-transparent
     }
 
+    private val textPaint = Paint().apply {
+        isAntiAlias = true
+        style = Paint.Style.FILL
+        textAlign = Paint.Align.LEFT
+        textSize = 48f
+    }
+
+    // Text-related properties
+    private var textInputListener: OnTextInputListener? = null
+    
+    // Interface for text input events
+    interface OnTextInputListener {
+        fun onTextInputRequested(x: Float, y: Float)
+    }
+
     // Canvas and bitmap for drawing
     private var drawingBitmap: Bitmap? = null
     private var drawingCanvas: Canvas? = null
@@ -71,6 +87,41 @@ class WhiteboardView @JvmOverloads constructor(
     // Path tracking
     private val paths = mutableListOf<DrawingPath>()
     private val undoStack = mutableListOf<DrawingPath>()
+    
+    // Text objects tracking
+    private val textObjects = mutableListOf<TextObject>()
+    private var selectedTextObject: TextObject? = null
+    private var isDraggingText = false
+    private var isResizingText = false
+    private var isRotatingText = false
+    private var dragStartX = 0f
+    private var dragStartY = 0f
+    private var initialTextSize = 0f
+    private var initialRotation = 0f
+    
+    // Shape objects tracking
+    private val shapeObjects = mutableListOf<ShapeObject>()
+    private var selectedShapeObject: ShapeObject? = null
+    private var isDraggingShape = false
+    private var isResizingShape = false
+    private var isRotatingShape = false
+    private var currentResizeHandle: ShapeObject.ResizeHandle? = null
+    private var initialShapeStartX = 0f
+    private var initialShapeStartY = 0f
+    private var initialShapeEndX = 0f
+    private var initialShapeEndY = 0f
+    private var initialShapeRotation = 0f
+    
+    // Selective eraser tracking
+    private var selectionPath: Path? = null
+    private var isDrawingSelection = false
+    private val selectionPaint = Paint().apply {
+        color = Color.RED
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        pathEffect = DashPathEffect(floatArrayOf(10f, 5f), 0f)
+        alpha = 150
+    }
 
     // Multi-touch path tracking
     private val activePaths = mutableMapOf<Int, Path>()
@@ -92,12 +143,433 @@ class WhiteboardView @JvmOverloads constructor(
     // Multi-touch tracking
     private var isScaling = false
     private var isPanning = false
+    
+    // Section management for split mode
+    private val sectionManager = SectionManager()
+    private var currentActiveSection: SectionManager.Section? = null
+    
+    // Multi-section drawing support - track which section each pointer is drawing in
+    private val pointerSectionMap = mutableMapOf<Int, SectionManager.Section>()
+    
+    // Shape drawing state
+    private var isDrawingShape = false
+    private var shapeStartX = 0f
+    private var shapeStartY = 0f
+    private var shapeEndX = 0f
+    private var shapeEndY = 0f
+    private var previewPath: Path? = null
 
     data class DrawingPath(
         val path: Path,
         val paint: Paint,
-        val tool: DrawingTool
+        val tool: DrawingTool,
+        val text: String? = null,
+        val textX: Float = 0f,
+        val textY: Float = 0f,
+        val shapeStartX: Float = 0f,
+        val shapeStartY: Float = 0f,
+        val shapeEndX: Float = 0f,
+        val shapeEndY: Float = 0f
     )
+
+    data class ShapeObject(
+        var shapeType: DrawingTool,
+        var startX: Float,
+        var startY: Float,
+        var endX: Float,
+        var endY: Float,
+        var color: Int,
+        var strokeWidth: Float,
+        var rotation: Float = 0f,
+        var scaleX: Float = 1f,
+        var scaleY: Float = 1f,
+        var isSelected: Boolean = false
+    ) {
+        private val paint = Paint().apply {
+            isAntiAlias = true
+            style = Paint.Style.STROKE
+            strokeJoin = Paint.Join.ROUND
+            strokeCap = Paint.Cap.ROUND
+        }
+        
+        private val selectionPaint = Paint().apply {
+            color = Color.BLUE
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+            pathEffect = DashPathEffect(floatArrayOf(10f, 5f), 0f)
+        }
+        
+        private val handlePaint = Paint().apply {
+            color = Color.BLUE
+            style = Paint.Style.FILL
+        }
+        
+        private val rotationHandlePaint = Paint().apply {
+            color = Color.GREEN
+            style = Paint.Style.FILL
+        }
+        
+        fun updatePaint() {
+            paint.color = color
+            paint.strokeWidth = strokeWidth
+        }
+        
+        fun getBounds(): RectF {
+            val left = kotlin.math.min(startX, endX)
+            val top = kotlin.math.min(startY, endY)
+            val right = kotlin.math.max(startX, endX)
+            val bottom = kotlin.math.max(startY, endY)
+            return RectF(left - 20f, top - 20f, right + 20f, bottom + 20f)
+        }
+        
+        fun getCenterX(): Float = (startX + endX) / 2f
+        fun getCenterY(): Float = (startY + endY) / 2f
+        
+        fun draw(canvas: Canvas) {
+            updatePaint()
+            
+            canvas.save()
+            
+            // Apply transformations
+            val centerX = getCenterX()
+            val centerY = getCenterY()
+            
+            canvas.translate(centerX, centerY)
+            canvas.rotate(rotation)
+            canvas.scale(scaleX, scaleY)
+            canvas.translate(-centerX, -centerY)
+            
+            // Create and draw the shape path
+            val shapePath = createShapePath()
+            canvas.drawPath(shapePath, paint)
+            
+            canvas.restore()
+            
+            if (isSelected) {
+                drawSelectionBounds(canvas)
+            }
+        }
+        
+        private fun createShapePath(): Path {
+            val path = Path()
+            
+            when (shapeType) {
+                DrawingTool.LINE -> {
+                    path.moveTo(startX, startY)
+                    path.lineTo(endX, endY)
+                }
+                
+                DrawingTool.RECTANGLE -> {
+                    val left = kotlin.math.min(startX, endX)
+                    val top = kotlin.math.min(startY, endY)
+                    val right = kotlin.math.max(startX, endX)
+                    val bottom = kotlin.math.max(startY, endY)
+                    path.addRect(left, top, right, bottom, Path.Direction.CW)
+                }
+                
+                DrawingTool.CIRCLE -> {
+                    val centerX = (startX + endX) / 2
+                    val centerY = (startY + endY) / 2
+                    val radius = kotlin.math.sqrt(
+                        (endX - startX) * (endX - startX) + (endY - startY) * (endY - startY)
+                    ) / 2
+                    path.addCircle(centerX, centerY, radius, Path.Direction.CW)
+                }
+                
+                DrawingTool.TRIANGLE -> {
+                    val centerX = (startX + endX) / 2
+                    val centerY = (startY + endY) / 2
+                    val width = kotlin.math.abs(endX - startX)
+                    val height = kotlin.math.abs(endY - startY)
+                    val size = kotlin.math.max(width, height)
+                    
+                    val topX = centerX
+                    val topY = centerY - size / 2
+                    val leftX = centerX - size / 2
+                    val leftY = centerY + size / 2
+                    val rightX = centerX + size / 2
+                    val rightY = centerY + size / 2
+                    
+                    path.moveTo(topX, topY)
+                    path.lineTo(leftX, leftY)
+                    path.lineTo(rightX, rightY)
+                    path.close()
+                }
+                
+                else -> {
+                    // Default to line
+                    path.moveTo(startX, startY)
+                    path.lineTo(endX, endY)
+                }
+            }
+            
+            return path
+        }
+        
+        private fun drawSelectionBounds(canvas: Canvas) {
+            if (shapeType == DrawingTool.LINE) {
+                // For lines, draw endpoint handles instead of bounding box
+                drawLineEndpointHandles(canvas)
+            } else {
+                // For other shapes, draw normal bounding box with resize handles
+                drawNormalSelectionBounds(canvas)
+            }
+        }
+        
+        private fun drawLineEndpointHandles(canvas: Canvas) {
+            val handleSize = 20f
+            
+            // Draw start point handle (blue circle)
+            canvas.drawCircle(startX, startY, handleSize/2, handlePaint)
+            
+            // Draw end point handle (blue circle)
+            canvas.drawCircle(endX, endY, handleSize/2, handlePaint)
+            
+            // Draw selection line (dashed line along the actual line)
+            canvas.drawLine(startX, startY, endX, endY, selectionPaint)
+        }
+        
+        private fun drawNormalSelectionBounds(canvas: Canvas) {
+            val bounds = getBounds()
+            
+            canvas.save()
+            
+            // Apply rotation for selection bounds
+            val centerX = getCenterX()
+            val centerY = getCenterY()
+            if (rotation != 0f) {
+                canvas.rotate(rotation, centerX, centerY)
+            }
+            
+            // Draw selection rectangle
+            canvas.drawRect(bounds, selectionPaint)
+            
+            // Draw resize handles (corners)
+            val handleSize = 20f
+            val handles = arrayOf(
+                Pair(bounds.left, bounds.top), // Top-left
+                Pair(bounds.right, bounds.top), // Top-right
+                Pair(bounds.left, bounds.bottom), // Bottom-left
+                Pair(bounds.right, bounds.bottom) // Bottom-right
+            )
+            
+            for ((x, y) in handles) {
+                canvas.drawRect(
+                    x - handleSize/2, y - handleSize/2,
+                    x + handleSize/2, y + handleSize/2,
+                    handlePaint
+                )
+            }
+            
+            canvas.restore()
+            
+            // Draw rotation handle (green circle at top-center, outside rotation)
+            val rotationHandleX = centerX
+            val rotationHandleY = bounds.top - 40f
+            canvas.drawCircle(rotationHandleX, rotationHandleY, 15f, rotationHandlePaint)
+        }
+        
+        fun contains(touchX: Float, touchY: Float): Boolean {
+            val bounds = getBounds()
+            return bounds.contains(touchX, touchY)
+        }
+        
+        fun isResizeHandleTouched(touchX: Float, touchY: Float): ResizeHandle? {
+            if (!isSelected) return null
+            
+            // For lines, check endpoint handles instead
+            if (shapeType == DrawingTool.LINE) {
+                return getLineEndpointTouched(touchX, touchY)
+            }
+            
+            val bounds = getBounds()
+            val handleSize = 20f
+            
+            val handles = mapOf(
+                ResizeHandle.TOP_LEFT to Pair(bounds.left, bounds.top),
+                ResizeHandle.TOP_RIGHT to Pair(bounds.right, bounds.top),
+                ResizeHandle.BOTTOM_LEFT to Pair(bounds.left, bounds.bottom),
+                ResizeHandle.BOTTOM_RIGHT to Pair(bounds.right, bounds.bottom)
+            )
+            
+            for ((handle, pos) in handles) {
+                val (x, y) = pos
+                if (touchX >= x - handleSize/2 && touchX <= x + handleSize/2 &&
+                    touchY >= y - handleSize/2 && touchY <= y + handleSize/2) {
+                    return handle
+                }
+            }
+            
+            return null
+        }
+        
+        private fun getLineEndpointTouched(touchX: Float, touchY: Float): ResizeHandle? {
+            val handleSize = 20f
+            
+            // Check start point
+            val startDistance = kotlin.math.sqrt((touchX - startX) * (touchX - startX) + (touchY - startY) * (touchY - startY))
+            if (startDistance <= handleSize) {
+                return ResizeHandle.LINE_START
+            }
+            
+            // Check end point
+            val endDistance = kotlin.math.sqrt((touchX - endX) * (touchX - endX) + (touchY - endY) * (touchY - endY))
+            if (endDistance <= handleSize) {
+                return ResizeHandle.LINE_END
+            }
+            
+            return null
+        }
+        
+        fun isRotationHandleTouched(touchX: Float, touchY: Float): Boolean {
+            if (!isSelected) return false
+            
+            // Lines don't have rotation handles - they rotate by dragging endpoints
+            if (shapeType == DrawingTool.LINE) return false
+            
+            val bounds = getBounds()
+            val handleX = getCenterX()
+            val handleY = bounds.top - 40f
+            val handleRadius = 20f
+            
+            val distance = kotlin.math.sqrt((touchX - handleX) * (touchX - handleX) + (touchY - handleY) * (touchY - handleY))
+            return distance <= handleRadius
+        }
+        
+        enum class ResizeHandle {
+            TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT, LINE_START, LINE_END
+        }
+    }
+
+    data class TextObject(
+        var text: String,
+        var x: Float,
+        var y: Float,
+        var textSize: Float,
+        var color: Int,
+        var rotation: Float = 0f,
+        var isSelected: Boolean = false
+    ) {
+        val paint = Paint().apply {
+            isAntiAlias = true
+            style = Paint.Style.FILL
+            textAlign = Paint.Align.LEFT
+        }
+        
+        private val selectionPaint = Paint().apply {
+            color = Color.BLUE
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+            pathEffect = DashPathEffect(floatArrayOf(10f, 5f), 0f)
+        }
+        
+        private val handlePaint = Paint().apply {
+            color = Color.BLUE
+            style = Paint.Style.FILL
+        }
+        
+        private val rotationHandlePaint = Paint().apply {
+            color = Color.GREEN
+            style = Paint.Style.FILL
+        }
+        
+        fun updatePaint() {
+            paint.color = color
+            paint.textSize = textSize
+        }
+        
+        fun draw(canvas: Canvas) {
+            updatePaint()
+            
+            canvas.save()
+            
+            // Apply rotation around text center
+            if (rotation != 0f) {
+                val bounds = Rect()
+                paint.getTextBounds(text, 0, text.length, bounds)
+                val centerX = x + bounds.width() / 2f
+                val centerY = y + bounds.height() / 2f
+                canvas.rotate(rotation, centerX, centerY)
+            }
+            
+            canvas.drawText(text, x, y, paint)
+            canvas.restore()
+            
+            if (isSelected) {
+                drawSelectionBounds(canvas)
+            }
+        }
+        
+        private fun drawSelectionBounds(canvas: Canvas) {
+            val bounds = Rect()
+            paint.getTextBounds(text, 0, text.length, bounds)
+            
+            val left = x - 10f
+            val top = y + bounds.top - 10f
+            val right = x + bounds.width() + 10f
+            val bottom = y + bounds.bottom + 10f
+            
+            canvas.save()
+            
+            // Apply rotation for selection bounds
+            if (rotation != 0f) {
+                val centerX = x + bounds.width() / 2f
+                val centerY = y + bounds.height() / 2f
+                canvas.rotate(rotation, centerX, centerY)
+            }
+            
+            // Draw selection rectangle
+            canvas.drawRect(left, top, right, bottom, selectionPaint)
+            
+            // Draw resize handle (blue square at bottom-right)
+            val handleSize = 20f
+            canvas.drawRect(right - handleSize/2, bottom - handleSize/2, 
+                          right + handleSize/2, bottom + handleSize/2, handlePaint)
+            
+            canvas.restore()
+            
+            // Draw rotation handle (green circle at top-center, outside rotation)
+            val rotationHandleX = x + bounds.width() / 2f
+            val rotationHandleY = top - 30f
+            canvas.drawCircle(rotationHandleX, rotationHandleY, 10f, rotationHandlePaint)
+        }
+        
+        fun contains(touchX: Float, touchY: Float): Boolean {
+            val bounds = Rect()
+            paint.getTextBounds(text, 0, text.length, bounds)
+            
+            return touchX >= x - 10f && touchX <= x + bounds.width() + 10f &&
+                   touchY >= y + bounds.top - 10f && touchY <= y + bounds.bottom + 10f
+        }
+        
+        fun isResizeHandleTouched(touchX: Float, touchY: Float): Boolean {
+            if (!isSelected) return false
+            
+            val bounds = Rect()
+            paint.getTextBounds(text, 0, text.length, bounds)
+            
+            val handleX = x + bounds.width() + 10f
+            val handleY = y + bounds.bottom + 10f
+            val handleSize = 20f
+            
+            return touchX >= handleX - handleSize/2 && touchX <= handleX + handleSize/2 &&
+                   touchY >= handleY - handleSize/2 && touchY <= handleY + handleSize/2
+        }
+        
+        fun isRotationHandleTouched(touchX: Float, touchY: Float): Boolean {
+            if (!isSelected) return false
+            
+            val bounds = Rect()
+            paint.getTextBounds(text, 0, text.length, bounds)
+            
+            val handleX = x + bounds.width() / 2f
+            val handleY = y + bounds.top - 40f // 30f offset + 10f radius
+            val handleRadius = 15f // Slightly larger touch area
+            
+            val distance = kotlin.math.sqrt((touchX - handleX) * (touchX - handleX) + (touchY - handleY) * (touchY - handleY))
+            return distance <= handleRadius
+        }
+    }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -127,37 +599,127 @@ class WhiteboardView @JvmOverloads constructor(
             focusX = 0f
             focusY = 0f
         }
+        
+        // Update section manager with new dimensions
+        sectionManager.setBoardDimensions(w.toFloat(), h.toFloat())
     }
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
         
         canvas?.let { c ->
-            c.save()
-            
-            // Apply transformations
-            c.translate(-focusX, -focusY)
-            c.scale(scaleFactor, scaleFactor)
-            
-            // Draw the infinite bitmap with all previous strokes
-            drawingBitmap?.let { bitmap ->
-                c.drawBitmap(bitmap, 0f, 0f, null)
-            }
-            
-            // Draw current active paths being drawn
-            val paint = getCurrentPaint()
-            for (path in activePaths.values) {
-                if (!path.isEmpty) {
-                    c.drawPath(path, paint)
+            if (sectionManager.isSplitModeEnabled()) {
+                // In split mode: draw without transformations
+                // Draw white background (no patterns in split mode)
+                c.drawColor(Color.WHITE)
+                
+                // Draw section content
+                for (section in sectionManager.getAllSections()) {
+                    c.save()
+                    
+                    // Clip to drawing bounds only (not control area)
+                    c.clipRect(section.drawingBounds)
+                    
+                    // Draw section's paths
+                    for (drawingPath in section.paths) {
+                        if (drawingPath.tool == DrawingTool.TEXT && drawingPath.text != null) {
+                            c.drawText(drawingPath.text, drawingPath.textX, drawingPath.textY, drawingPath.paint)
+                        } else {
+                            c.drawPath(drawingPath.path, drawingPath.paint)
+                        }
+                    }
+                    
+                    // Draw section's text objects
+                    for (textObject in section.textObjects) {
+                        textObject.draw(c)
+                    }
+                    
+                    c.restore()
                 }
+                
+                // Draw current active paths being drawn
+                for ((pointerId, path) in activePaths) {
+                    if (!path.isEmpty) {
+                        val section = pointerSectionMap[pointerId]
+                        if (section != null) {
+                            c.save()
+                            c.clipRect(section.drawingBounds)
+                            c.drawPath(path, getCurrentPaintForSection(section))
+                            c.restore()
+                        }
+                    }
+                }
+                
+                // Draw shape preview in split mode
+                previewPath?.let { path ->
+                    currentActiveSection?.let { section ->
+                        c.save()
+                        c.clipRect(section.drawingBounds)
+                        c.drawPath(path, getCurrentPaintForSection(section))
+                        c.restore()
+                    }
+                }
+                
+                // Draw section borders, labels, and control areas
+                sectionManager.drawSections(c)
+                drawSectionControls(c)
+            } else {
+                // In normal mode: use transformations for infinite canvas
+                c.save()
+                
+                // Apply transformations
+                c.translate(-focusX, -focusY)
+                c.scale(scaleFactor, scaleFactor)
+                
+                // Draw background pattern
+                drawBackgroundPattern(c)
+                
+                // Draw the infinite bitmap with all previous strokes
+                drawingBitmap?.let { bitmap ->
+                    c.drawBitmap(bitmap, 0f, 0f, null)
+                }
+                
+                // Draw current active paths being drawn
+                for ((pointerId, path) in activePaths) {
+                    if (!path.isEmpty) {
+                        c.drawPath(path, getCurrentPaint())
+                    }
+                }
+                
+                // Draw text objects
+                for (textObject in textObjects) {
+                    textObject.draw(c)
+                }
+                
+                // Draw shape objects
+                for (shapeObject in shapeObjects) {
+                    shapeObject.draw(c)
+                }
+                
+                // Draw selection area for selective eraser
+                selectionPath?.let { path ->
+                    c.drawPath(path, selectionPaint)
+                }
+                
+                // Draw shape preview
+                previewPath?.let { path ->
+                    c.drawPath(path, getCurrentPaint())
+                }
+                
+                c.restore()
             }
-            
-            c.restore()
         }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        // Handle scale gesture only if pinch mode is enabled
+        // In split mode, disable pinch/pan features
+        if (sectionManager.isSplitModeEnabled()) {
+            // Always handle as drawing in split mode
+            handleDrawingTouch(event)
+            return true
+        }
+        
+        // Normal mode: Handle scale gesture only if pinch mode is enabled
         if (isPinchModeEnabled) {
             scaleGestureDetector.onTouchEvent(event)
             
@@ -187,19 +749,117 @@ class WhiteboardView @JvmOverloads constructor(
         
         when (action) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
-                val x = (event.getX(pointerIndex) + focusX) / scaleFactor
-                val y = (event.getY(pointerIndex) + focusY) / scaleFactor
+                // In split mode, use screen coordinates for section detection (not transformed)
+                val screenX = event.getX(pointerIndex)
+                val screenY = event.getY(pointerIndex)
                 
-                // Create new path for this pointer
-                val newPath = Path()
-                newPath.moveTo(x, y)
-                activePaths[pointerId] = newPath
-                activePathsLastX[pointerId] = x
-                activePathsLastY[pointerId] = y
+                // In split mode, determine which section this pointer is drawing in
+                if (sectionManager.isSplitModeEnabled()) {
+                    val touchedSection = sectionManager.getSectionForDrawing(screenX, screenY)
+                    android.util.Log.d("WhiteboardView", "Touch at ($screenX, $screenY), section: ${touchedSection?.id}")
+                    
+                    if (touchedSection != null) {
+                        // Check if touch is in control area
+                        if (touchedSection.containsInControlArea(screenX, screenY)) {
+                            android.util.Log.d("WhiteboardView", "Touch in control area")
+                            handleControlAreaTouch(touchedSection, screenX, screenY)
+                            return
+                        }
+                        
+                        // Check if touch is in drawing area
+                        if (!touchedSection.containsInDrawingArea(screenX, screenY)) {
+                            android.util.Log.d("WhiteboardView", "Touch outside drawing area - bounds: ${touchedSection.drawingBounds}")
+                            // Touch outside drawing area, ignore (could be in border area)
+                            return
+                        }
+                        
+                        android.util.Log.d("WhiteboardView", "Touch in drawing area, tool: ${touchedSection.currentTool}, creating path...")
+                        
+                        // Map this pointer to the touched section
+                        pointerSectionMap[pointerId] = touchedSection
+                        
+                        // Set as active section for UI feedback
+                        currentActiveSection = touchedSection
+                        sectionManager.setActiveSection(touchedSection)
+                    } else {
+                        // Touch outside any section, ignore
+                        return
+                    }
+                }
+                
+                // Get coordinates for actual drawing
+                // In split mode, use screen coordinates directly (no transformation)
+                // In normal mode, use transformed coordinates
+                val x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                val y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                
+                // Handle special tools differently
+                // In split mode, use section's tool; otherwise use global tool
+                val toolToUse = if (sectionManager.isSplitModeEnabled() && pointerSectionMap[pointerId] != null) {
+                    pointerSectionMap[pointerId]!!.currentTool
+                } else {
+                    currentTool
+                }
+                
+                when (toolToUse) {
+                    DrawingTool.TEXT -> {
+                        handleTextTouch(x, y, action)
+                    }
+                    DrawingTool.SELECTIVE_ERASER -> {
+                        handleSelectiveEraserTouch(x, y, action)
+                    }
+                    DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> {
+                        handleShapeTouch(x, y, action, toolToUse, pointerId)
+                    }
+                    else -> {
+                        // Create new path for this pointer
+                        android.util.Log.d("WhiteboardView", "Creating new path at ($x, $y) with tool: $toolToUse")
+                        val newPath = Path()
+                        newPath.moveTo(x, y)
+                        activePaths[pointerId] = newPath
+                        activePathsLastX[pointerId] = x
+                        activePathsLastY[pointerId] = y
+                        android.util.Log.d("WhiteboardView", "Path created, activePaths size: ${activePaths.size}")
+                    }
+                }
             }
             
             MotionEvent.ACTION_MOVE -> {
-                // Handle all active pointers
+                // Handle TEXT and SELECTIVE_ERASER tools specially for first pointer only
+                if (event.pointerCount == 1) {
+                    val id = event.getPointerId(0)
+                    val toolToUse = if (sectionManager.isSplitModeEnabled() && pointerSectionMap[id] != null) {
+                        pointerSectionMap[id]!!.currentTool
+                    } else {
+                        currentTool
+                    }
+                    
+                    when (toolToUse) {
+                        DrawingTool.TEXT -> {
+                            val x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
+                            val y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            handleTextTouch(x, y, action)
+                            return@handleDrawingTouch
+                        }
+                        DrawingTool.SELECTIVE_ERASER -> {
+                            val x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
+                            val y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            handleSelectiveEraserTouch(x, y, action)
+                            return@handleDrawingTouch
+                        }
+                        DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> {
+                            val x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
+                            val y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            handleShapeTouch(x, y, action, toolToUse, id)
+                            return@handleDrawingTouch
+                        }
+                        else -> {
+                            // Continue to handle drawing below
+                        }
+                    }
+                }
+                
+                // Handle all active pointers for drawing tools
                 for (i in 0 until event.pointerCount) {
                     val id = event.getPointerId(i)
                     val path = activePaths[id]
@@ -207,8 +867,22 @@ class WhiteboardView @JvmOverloads constructor(
                     val lastY = activePathsLastY[id]
                     
                     if (path != null && lastX != null && lastY != null) {
-                        val x = (event.getX(i) + focusX) / scaleFactor
-                        val y = (event.getY(i) + focusY) / scaleFactor
+                        val screenX = event.getX(i)
+                        val screenY = event.getY(i)
+                        
+                        // In split mode, check if still within the same section's drawing area (use screen coords)
+                        if (sectionManager.isSplitModeEnabled()) {
+                            val pointerSection = pointerSectionMap[id]
+                            if (pointerSection != null && !pointerSection.containsInDrawingArea(screenX, screenY)) {
+                                // Pointer moved outside its section's drawing area, stop drawing
+                                continue
+                            }
+                        }
+                        
+                        // Transform to drawing coordinates
+                        // In split mode use screen coords directly, in normal mode use transformed coords
+                        val x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                        val y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
                         
                         val dx = abs(x - lastX)
                         val dy = abs(y - lastY)
@@ -223,32 +897,88 @@ class WhiteboardView @JvmOverloads constructor(
             }
             
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
-                val path = activePaths[pointerId]
-                val lastX = activePathsLastX[pointerId]
-                val lastY = activePathsLastY[pointerId]
+                val toolToUse = if (sectionManager.isSplitModeEnabled() && pointerSectionMap[pointerId] != null) {
+                    pointerSectionMap[pointerId]!!.currentTool
+                } else {
+                    currentTool
+                }
                 
-                if (path != null && lastX != null && lastY != null) {
-                    // Finish the path
-                    path.lineTo(lastX, lastY)
-                    
-                    // Save the completed path
-                    val pathCopy = Path(path)
-                    val paintCopy = Paint(getCurrentPaint())
-                    paths.add(DrawingPath(pathCopy, paintCopy, currentTool))
-                    
-                    // Draw to bitmap
-                    drawingCanvas?.drawPath(pathCopy, paintCopy)
-                    
-                    // Remove from active paths
-                    activePaths.remove(pointerId)
-                    activePathsLastX.remove(pointerId)
-                    activePathsLastY.remove(pointerId)
-                    
-                    // Clear undo stack when new stroke is made (only for the last finger)
-                    if (activePaths.isEmpty()) {
-                        undoStack.clear()
-                        // Notify listener of drawing change
-                        drawingChangeListener?.onDrawingChanged()
+                when (toolToUse) {
+                    DrawingTool.TEXT -> {
+                        val screenX = event.getX(pointerIndex)
+                        val screenY = event.getY(pointerIndex)
+                        val x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                        val y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        handleTextTouch(x, y, action)
+                    }
+                    DrawingTool.SELECTIVE_ERASER -> {
+                        val screenX = event.getX(pointerIndex)
+                        val screenY = event.getY(pointerIndex)
+                        val x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                        val y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        handleSelectiveEraserTouch(x, y, action)
+                    }
+                    DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> {
+                        val screenX = event.getX(pointerIndex)
+                        val screenY = event.getY(pointerIndex)
+                        val x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                        val y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        handleShapeTouch(x, y, action, toolToUse, pointerId)
+                    }
+                    else -> {
+                        val path = activePaths[pointerId]
+                        val lastX = activePathsLastX[pointerId]
+                        val lastY = activePathsLastY[pointerId]
+                        
+                        if (path != null && lastX != null && lastY != null) {
+                            // Finish the path
+                            path.lineTo(lastX, lastY)
+                            
+                            android.util.Log.d("WhiteboardView", "Finishing path, isSplitMode: ${sectionManager.isSplitModeEnabled()}")
+                            
+                            // Save the completed path
+                            val pathCopy = Path(path)
+                            
+                            // In split mode, add to the section this pointer was drawing in
+                            if (sectionManager.isSplitModeEnabled()) {
+                                val pointerSection = pointerSectionMap[pointerId]
+                                android.util.Log.d("WhiteboardView", "Pointer section: ${pointerSection?.id}")
+                                
+                                if (pointerSection != null) {
+                                    // Use section's tool settings for this path
+                                    val sectionPaint = Paint(getCurrentPaintForSection(pointerSection))
+                                    val sectionDrawingPath = DrawingPath(pathCopy, sectionPaint, pointerSection.currentTool)
+                                    
+                                    pointerSection.paths.add(sectionDrawingPath)
+                                    pointerSection.undoStack.clear() // Clear undo stack when new stroke is made
+                                    
+                                    android.util.Log.d("WhiteboardView", "Path added to section ${pointerSection.id}, total paths: ${pointerSection.paths.size}")
+                                } else {
+                                    android.util.Log.e("WhiteboardView", "Pointer section is null!")
+                                }
+                                // Remove pointer from section map
+                                pointerSectionMap.remove(pointerId)
+                            } else {
+                                val paintCopy = Paint(getCurrentPaint())
+                                val drawingPath = DrawingPath(pathCopy, paintCopy, currentTool)
+                                paths.add(drawingPath)
+                                // Draw to bitmap
+                                drawingCanvas?.drawPath(pathCopy, paintCopy)
+                                android.util.Log.d("WhiteboardView", "Path added to global paths, total: ${paths.size}")
+                            }
+                            
+                            // Remove from active paths
+                            activePaths.remove(pointerId)
+                            activePathsLastX.remove(pointerId)
+                            activePathsLastY.remove(pointerId)
+                            
+                            // Clear undo stack when new stroke is made (only for the last finger)
+                            if (activePaths.isEmpty()) {
+                                undoStack.clear()
+                                // Notify listener of drawing change
+                                drawingChangeListener?.onDrawingChanged()
+                            }
+                        }
                     }
                 }
             }
@@ -258,10 +988,541 @@ class WhiteboardView @JvmOverloads constructor(
                 activePaths.clear()
                 activePathsLastX.clear()
                 activePathsLastY.clear()
+                pointerSectionMap.clear()
             }
         }
         
         invalidate()
+    }
+
+    private fun handleTextTouch(x: Float, y: Float, action: Int) {
+        when (action) {
+            MotionEvent.ACTION_DOWN -> {
+                // Check if touching a rotation handle first
+                selectedTextObject?.let { textObj ->
+                    if (textObj.isRotationHandleTouched(x, y)) {
+                        isRotatingText = true
+                        dragStartX = x
+                        dragStartY = y
+                        initialRotation = textObj.rotation
+                        return
+                    }
+                    
+                    // Check if touching a resize handle
+                    if (textObj.isResizeHandleTouched(x, y)) {
+                        isResizingText = true
+                        dragStartX = x
+                        dragStartY = y
+                        initialTextSize = textObj.textSize
+                        return
+                    }
+                }
+                
+                // Check if touching any text object
+                var touchedText: TextObject? = null
+                for (textObj in textObjects.reversed()) { // Check from top to bottom
+                    if (textObj.contains(x, y)) {
+                        touchedText = textObj
+                        break
+                    }
+                }
+                
+                if (touchedText != null) {
+                    // Deselect previous selection
+                    selectedTextObject?.isSelected = false
+                    
+                    // Select touched text
+                    selectedTextObject = touchedText
+                    touchedText.isSelected = true
+                    isDraggingText = true
+                    dragStartX = x
+                    dragStartY = y
+                } else {
+                    // Deselect any selected text
+                    selectedTextObject?.isSelected = false
+                    selectedTextObject = null
+                    
+                    // Request new text input at this position
+                    textInputListener?.onTextInputRequested(x, y)
+                }
+            }
+            
+            MotionEvent.ACTION_MOVE -> {
+                selectedTextObject?.let { textObj ->
+                    if (isRotatingText) {
+                        // Calculate rotation based on angle from text center
+                        val bounds = Rect()
+                        textObj.updatePaint()
+                        textObj.paint.getTextBounds(textObj.text, 0, textObj.text.length, bounds)
+                        val centerX = textObj.x + bounds.width() / 2f
+                        val centerY = textObj.y + bounds.height() / 2f
+                        
+                        val startAngle = kotlin.math.atan2((dragStartY - centerY).toDouble(), (dragStartX - centerX).toDouble())
+                        val currentAngle = kotlin.math.atan2((y - centerY).toDouble(), (x - centerX).toDouble())
+                        val deltaAngle = Math.toDegrees(currentAngle - startAngle).toFloat()
+                        
+                        textObj.rotation = (initialRotation + deltaAngle) % 360f
+                    } else if (isResizingText) {
+                        // Calculate resize based on distance from start point
+                        val distance = kotlin.math.sqrt((x - dragStartX) * (x - dragStartX) + (y - dragStartY) * (y - dragStartY))
+                        val scaleFactor = max(0.5f, min(3.0f, distance / 100f))
+                        textObj.textSize = initialTextSize * scaleFactor
+                    } else if (isDraggingText) {
+                        // Move text object
+                        val deltaX = x - dragStartX
+                        val deltaY = y - dragStartY
+                        textObj.x += deltaX
+                        textObj.y += deltaY
+                        dragStartX = x
+                        dragStartY = y
+                    }
+                }
+            }
+            
+            MotionEvent.ACTION_UP -> {
+                isDraggingText = false
+                isResizingText = false
+                isRotatingText = false
+                if (selectedTextObject != null) {
+                    drawingChangeListener?.onDrawingChanged()
+                }
+            }
+        }
+    }
+
+    private fun handleSelectiveEraserTouch(x: Float, y: Float, action: Int) {
+        when (action) {
+            MotionEvent.ACTION_DOWN -> {
+                // Start drawing selection area
+                selectionPath = Path().apply {
+                    moveTo(x, y)
+                }
+                isDrawingSelection = true
+                invalidate() // Force redraw to show selection path
+            }
+            
+            MotionEvent.ACTION_MOVE -> {
+                if (isDrawingSelection) {
+                    selectionPath?.lineTo(x, y)
+                    invalidate() // Force redraw to show selection path
+                }
+            }
+            
+            MotionEvent.ACTION_UP -> {
+                if (isDrawingSelection) {
+                    selectionPath?.close() // Close the selection area
+                    eraseElementsInSelection()
+                    
+                    // Clear selection path after erasing
+                    selectionPath = null
+                    isDrawingSelection = false
+                    
+                    drawingChangeListener?.onDrawingChanged()
+                    invalidate() // Force redraw after erasing
+                }
+            }
+        }
+    }
+
+    private fun handleShapeTouch(x: Float, y: Float, action: Int, tool: DrawingTool, pointerId: Int) {
+        when (action) {
+            MotionEvent.ACTION_DOWN -> {
+                // Check if touching a shape object first
+                if (handleShapeObjectTouch(x, y, action)) {
+                    return
+                }
+                
+                // Start creating new shape
+                isDrawingShape = true
+                shapeStartX = x
+                shapeStartY = y
+                shapeEndX = x
+                shapeEndY = y
+                
+                // Create preview path
+                previewPath = createShapePath(tool, shapeStartX, shapeStartY, shapeEndX, shapeEndY)
+                invalidate()
+            }
+            
+            MotionEvent.ACTION_MOVE -> {
+                // Handle shape object interactions
+                if (handleShapeObjectTouch(x, y, action)) {
+                    return
+                }
+                
+                if (isDrawingShape) {
+                    shapeEndX = x
+                    shapeEndY = y
+                    
+                    // Update preview path
+                    previewPath = createShapePath(tool, shapeStartX, shapeStartY, shapeEndX, shapeEndY)
+                    invalidate()
+                }
+            }
+            
+            MotionEvent.ACTION_UP -> {
+                // Handle shape object interactions
+                if (handleShapeObjectTouch(x, y, action)) {
+                    return
+                }
+                
+                if (isDrawingShape) {
+                    shapeEndX = x
+                    shapeEndY = y
+                    
+                    // Create new shape object
+                    val shapeObject = ShapeObject(
+                        shapeType = tool,
+                        startX = shapeStartX,
+                        startY = shapeStartY,
+                        endX = shapeEndX,
+                        endY = shapeEndY,
+                        color = currentColor,
+                        strokeWidth = currentStrokeWidth
+                    )
+                    
+                    // Add to shape objects list
+                    shapeObjects.add(shapeObject)
+                    
+                    // Select the new shape
+                    selectedShapeObject?.isSelected = false
+                    selectedShapeObject = shapeObject
+                    shapeObject.isSelected = true
+                    
+                    // Reset shape drawing state
+                    isDrawingShape = false
+                    previewPath = null
+                    
+                    // Clear undo stack and notify listener
+                    undoStack.clear()
+                    drawingChangeListener?.onDrawingChanged()
+                    invalidate()
+                }
+            }
+        }
+    }
+
+    private fun createShapePath(tool: DrawingTool, startX: Float, startY: Float, endX: Float, endY: Float): Path {
+        val path = Path()
+        
+        when (tool) {
+            DrawingTool.LINE -> {
+                path.moveTo(startX, startY)
+                path.lineTo(endX, endY)
+            }
+            
+            DrawingTool.RECTANGLE -> {
+                val left = min(startX, endX)
+                val top = min(startY, endY)
+                val right = max(startX, endX)
+                val bottom = max(startY, endY)
+                path.addRect(left, top, right, bottom, Path.Direction.CW)
+            }
+            
+            DrawingTool.CIRCLE -> {
+                val centerX = (startX + endX) / 2
+                val centerY = (startY + endY) / 2
+                val radius = kotlin.math.sqrt(
+                    (endX - startX) * (endX - startX) + (endY - startY) * (endY - startY)
+                ) / 2
+                path.addCircle(centerX, centerY, radius, Path.Direction.CW)
+            }
+            
+            DrawingTool.TRIANGLE -> {
+                // Create an equilateral triangle
+                val centerX = (startX + endX) / 2
+                val centerY = (startY + endY) / 2
+                val width = abs(endX - startX)
+                val height = abs(endY - startY)
+                val size = max(width, height)
+                
+                // Triangle points
+                val topX = centerX
+                val topY = centerY - size / 2
+                val leftX = centerX - size / 2
+                val leftY = centerY + size / 2
+                val rightX = centerX + size / 2
+                val rightY = centerY + size / 2
+                
+                path.moveTo(topX, topY)
+                path.lineTo(leftX, leftY)
+                path.lineTo(rightX, rightY)
+                path.close()
+            }
+            
+            else -> {
+                // Default to line for unsupported shapes
+                path.moveTo(startX, startY)
+                path.lineTo(endX, endY)
+            }
+        }
+        
+        return path
+    }
+
+    private fun handleShapeObjectTouch(x: Float, y: Float, action: Int): Boolean {
+        when (action) {
+            MotionEvent.ACTION_DOWN -> {
+                // Check if touching a rotation handle first
+                selectedShapeObject?.let { shapeObj ->
+                    if (shapeObj.isRotationHandleTouched(x, y)) {
+                        isRotatingShape = true
+                        dragStartX = x
+                        dragStartY = y
+                        initialShapeRotation = shapeObj.rotation
+                        return true
+                    }
+                    
+                    // Check if touching a resize handle
+                    val resizeHandle = shapeObj.isResizeHandleTouched(x, y)
+                    if (resizeHandle != null) {
+                        isResizingShape = true
+                        currentResizeHandle = resizeHandle
+                        dragStartX = x
+                        dragStartY = y
+                        initialShapeStartX = shapeObj.startX
+                        initialShapeStartY = shapeObj.startY
+                        initialShapeEndX = shapeObj.endX
+                        initialShapeEndY = shapeObj.endY
+                        return true
+                    }
+                }
+                
+                // Check if touching any shape object
+                var touchedShape: ShapeObject? = null
+                for (shapeObj in shapeObjects.reversed()) { // Check from top to bottom
+                    if (shapeObj.contains(x, y)) {
+                        touchedShape = shapeObj
+                        break
+                    }
+                }
+                
+                if (touchedShape != null) {
+                    // Deselect previous selections
+                    selectedShapeObject?.isSelected = false
+                    selectedTextObject?.isSelected = false
+                    
+                    // Select touched shape
+                    selectedShapeObject = touchedShape
+                    touchedShape.isSelected = true
+                    selectedTextObject = null
+                    isDraggingShape = true
+                    dragStartX = x
+                    dragStartY = y
+                    return true
+                } else {
+                    // Deselect any selected shape
+                    selectedShapeObject?.isSelected = false
+                    selectedShapeObject = null
+                    return false
+                }
+            }
+            
+            MotionEvent.ACTION_MOVE -> {
+                selectedShapeObject?.let { shapeObj ->
+                    if (isRotatingShape) {
+                        // Calculate rotation based on angle from shape center
+                        val centerX = shapeObj.getCenterX()
+                        val centerY = shapeObj.getCenterY()
+                        
+                        val startAngle = kotlin.math.atan2((dragStartY - centerY).toDouble(), (dragStartX - centerX).toDouble())
+                        val currentAngle = kotlin.math.atan2((y - centerY).toDouble(), (x - centerX).toDouble())
+                        val deltaAngle = Math.toDegrees(currentAngle - startAngle).toFloat()
+                        
+                        shapeObj.rotation = (initialShapeRotation + deltaAngle) % 360f
+                        invalidate()
+                        return true
+                    } else if (isResizingShape && currentResizeHandle != null) {
+                        // Handle resizing based on which handle is being dragged
+                        when (currentResizeHandle) {
+                            ShapeObject.ResizeHandle.LINE_START -> {
+                                // Drag start point of line
+                                shapeObj.startX = x
+                                shapeObj.startY = y
+                            }
+                            ShapeObject.ResizeHandle.LINE_END -> {
+                                // Drag end point of line
+                                shapeObj.endX = x
+                                shapeObj.endY = y
+                            }
+                            ShapeObject.ResizeHandle.TOP_LEFT -> {
+                                val deltaX = x - dragStartX
+                                val deltaY = y - dragStartY
+                                shapeObj.startX = initialShapeStartX + deltaX
+                                shapeObj.startY = initialShapeStartY + deltaY
+                            }
+                            ShapeObject.ResizeHandle.TOP_RIGHT -> {
+                                val deltaX = x - dragStartX
+                                val deltaY = y - dragStartY
+                                shapeObj.endX = initialShapeEndX + deltaX
+                                shapeObj.startY = initialShapeStartY + deltaY
+                            }
+                            ShapeObject.ResizeHandle.BOTTOM_LEFT -> {
+                                val deltaX = x - dragStartX
+                                val deltaY = y - dragStartY
+                                shapeObj.startX = initialShapeStartX + deltaX
+                                shapeObj.endY = initialShapeEndY + deltaY
+                            }
+                            ShapeObject.ResizeHandle.BOTTOM_RIGHT -> {
+                                val deltaX = x - dragStartX
+                                val deltaY = y - dragStartY
+                                shapeObj.endX = initialShapeEndX + deltaX
+                                shapeObj.endY = initialShapeEndY + deltaY
+                            }
+                        }
+                        invalidate()
+                        return true
+                    } else if (isDraggingShape) {
+                        // Move shape object
+                        val deltaX = x - dragStartX
+                        val deltaY = y - dragStartY
+                        shapeObj.startX += deltaX
+                        shapeObj.startY += deltaY
+                        shapeObj.endX += deltaX
+                        shapeObj.endY += deltaY
+                        dragStartX = x
+                        dragStartY = y
+                        invalidate()
+                        return true
+                    }
+                }
+                return false
+            }
+            
+            MotionEvent.ACTION_UP -> {
+                val wasInteracting = isDraggingShape || isResizingShape || isRotatingShape
+                isDraggingShape = false
+                isResizingShape = false
+                isRotatingShape = false
+                currentResizeHandle = null
+                
+                if (wasInteracting && selectedShapeObject != null) {
+                    drawingChangeListener?.onDrawingChanged()
+                }
+                return wasInteracting
+            }
+        }
+        return false
+    }
+
+    private fun eraseElementsInSelection() {
+        selectionPath?.let { selectionPath ->
+            // Create a region from the selection path for hit testing
+            val region = Region()
+            val rectF = RectF()
+            selectionPath.computeBounds(rectF, true)
+            region.setPath(selectionPath, Region(rectF.left.toInt(), rectF.top.toInt(), 
+                                               rectF.right.toInt(), rectF.bottom.toInt()))
+            
+            // Debug: Log selection area
+            android.util.Log.d("SelectiveEraser", "Selection bounds: ${rectF.left}, ${rectF.top}, ${rectF.right}, ${rectF.bottom}")
+            android.util.Log.d("SelectiveEraser", "Total paths to check: ${paths.size}")
+            android.util.Log.d("SelectiveEraser", "Total text objects to check: ${textObjects.size}")
+            
+            // Remove drawing paths that are completely within selection
+            val pathsToRemove = mutableListOf<DrawingPath>()
+            for (drawingPath in paths) {
+                if (isPathCompletelyWithinRegion(drawingPath.path, region)) {
+                    pathsToRemove.add(drawingPath)
+                }
+            }
+            android.util.Log.d("SelectiveEraser", "Paths to remove: ${pathsToRemove.size}")
+            paths.removeAll(pathsToRemove)
+            
+            // Remove text objects that are completely within selection
+            val textObjectsToRemove = mutableListOf<TextObject>()
+            for (textObject in textObjects) {
+                if (isTextObjectCompletelyWithinRegion(textObject, region)) {
+                    textObjectsToRemove.add(textObject)
+                }
+            }
+            android.util.Log.d("SelectiveEraser", "Text objects to remove: ${textObjectsToRemove.size}")
+            textObjects.removeAll(textObjectsToRemove)
+            
+            // Remove shape objects that are completely within selection
+            val shapeObjectsToRemove = mutableListOf<ShapeObject>()
+            for (shapeObject in shapeObjects) {
+                if (isShapeObjectCompletelyWithinRegion(shapeObject, region)) {
+                    shapeObjectsToRemove.add(shapeObject)
+                }
+            }
+            android.util.Log.d("SelectiveEraser", "Shape objects to remove: ${shapeObjectsToRemove.size}")
+            shapeObjects.removeAll(shapeObjectsToRemove)
+            
+            // Clear selected objects if they were removed
+            if (selectedTextObject in textObjectsToRemove) {
+                selectedTextObject = null
+            }
+            if (selectedShapeObject in shapeObjectsToRemove) {
+                selectedShapeObject = null
+            }
+            
+            // Redraw canvas without removed elements
+            redrawCanvas()
+        }
+    }
+
+    private fun isPathCompletelyWithinRegion(path: Path, region: Region): Boolean {
+        val pathMeasure = PathMeasure(path, false)
+        val length = pathMeasure.length
+        
+        if (length <= 0) return false
+        
+        val coords = FloatArray(2)
+        
+        // Sample points along the path and check if ALL are in the region
+        val sampleCount = max(10, (length / 10).toInt()) // Reasonable sampling
+        var pointsInside = 0
+        var totalPoints = 0
+        
+        for (i in 0..sampleCount) {
+            val distance = (i.toFloat() / sampleCount) * length
+            pathMeasure.getPosTan(distance, coords, null)
+            totalPoints++
+            if (region.contains(coords[0].toInt(), coords[1].toInt())) {
+                pointsInside++
+            }
+        }
+        
+        // Path is completely within if at least 80% of points are inside
+        // This allows for some edge cases while still being selective
+        return totalPoints > 0 && (pointsInside.toFloat() / totalPoints) >= 0.8f
+    }
+
+    private fun isTextObjectCompletelyWithinRegion(textObject: TextObject, region: Region): Boolean {
+        // Get text bounds
+        val bounds = Rect()
+        textObject.updatePaint()
+        textObject.paint.getTextBounds(textObject.text, 0, textObject.text.length, bounds)
+        
+        // Check all corners of the text bounding box
+        val left = textObject.x.toInt()
+        val top = (textObject.y + bounds.top).toInt()
+        val right = (textObject.x + bounds.width()).toInt()
+        val bottom = (textObject.y + bounds.bottom).toInt()
+        
+        // Text is completely within region only if all corners are inside
+        return region.contains(left, top) && 
+               region.contains(right, top) && 
+               region.contains(left, bottom) && 
+               region.contains(right, bottom)
+    }
+
+    private fun isShapeObjectCompletelyWithinRegion(shapeObject: ShapeObject, region: Region): Boolean {
+        // Get shape bounds
+        val bounds = shapeObject.getBounds()
+        
+        // Check all corners of the shape bounding box
+        val left = bounds.left.toInt()
+        val top = bounds.top.toInt()
+        val right = bounds.right.toInt()
+        val bottom = bounds.bottom.toInt()
+        
+        // Shape is completely within region only if all corners are inside
+        return region.contains(left, top) && 
+               region.contains(right, top) && 
+               region.contains(left, bottom) && 
+               region.contains(right, bottom)
     }
 
     private fun handlePanningTouch(event: MotionEvent) {
@@ -316,6 +1577,46 @@ class WhiteboardView @JvmOverloads constructor(
                 strokeWidth = currentStrokeWidth * 3
                 xfermode = null
             }
+            DrawingTool.TEXT -> textPaint.apply {
+                color = currentColor
+                textSize = currentStrokeWidth * 6 // Scale text size with stroke width
+            }
+            DrawingTool.SELECTIVE_ERASER -> selectionPaint // Use selection paint for drawing selection area
+            DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> drawPaint.apply {
+                color = currentColor
+                strokeWidth = currentStrokeWidth
+                xfermode = null
+                style = Paint.Style.STROKE
+            }
+        }
+    }
+    
+    private fun getCurrentPaintForSection(section: SectionManager.Section): Paint {
+        return when (section.currentTool) {
+            DrawingTool.PEN -> Paint(drawPaint).apply {
+                color = section.currentColor
+                strokeWidth = section.currentStrokeWidth
+                xfermode = null
+            }
+            DrawingTool.ERASER -> Paint(eraserPaint).apply {
+                strokeWidth = section.currentStrokeWidth * 2
+            }
+            DrawingTool.HIGHLIGHTER -> Paint(highlighterPaint).apply {
+                color = section.currentColor
+                strokeWidth = section.currentStrokeWidth * 3
+                xfermode = null
+            }
+            DrawingTool.TEXT -> Paint(textPaint).apply {
+                color = section.currentColor
+                textSize = section.currentStrokeWidth * 6
+            }
+            DrawingTool.SELECTIVE_ERASER -> Paint(selectionPaint)
+            DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> Paint(drawPaint).apply {
+                color = section.currentColor
+                strokeWidth = section.currentStrokeWidth
+                xfermode = null
+                style = Paint.Style.STROKE
+            }
         }
     }
 
@@ -340,6 +1641,46 @@ class WhiteboardView @JvmOverloads constructor(
         drawingChangeListener = listener
     }
 
+    fun setOnTextInputListener(listener: OnTextInputListener?) {
+        textInputListener = listener
+    }
+
+    fun addText(text: String, x: Float, y: Float) {
+        if (text.isNotEmpty()) {
+            // Create new text object
+            val textObject = TextObject(
+                text = text,
+                x = x,
+                y = y,
+                textSize = currentStrokeWidth * 6, // Scale with stroke width
+                color = currentColor
+            )
+            
+            // In split mode, add to the section containing the text position
+            if (sectionManager.isSplitModeEnabled()) {
+                val targetSection = sectionManager.getSectionAt(x, y)
+                if (targetSection != null) {
+                    targetSection.textObjects.add(textObject)
+                    targetSection.selectedTextObject?.isSelected = false
+                    targetSection.selectedTextObject = textObject
+                    textObject.isSelected = true
+                }
+            } else {
+                // Add to global text objects list
+                textObjects.add(textObject)
+                
+                // Select the new text object
+                selectedTextObject?.isSelected = false
+                selectedTextObject = textObject
+                textObject.isSelected = true
+            }
+            
+            // Notify listener and redraw
+            drawingChangeListener?.onDrawingChanged()
+            invalidate()
+        }
+    }
+
     fun setPinchModeEnabled(enabled: Boolean) {
         isPinchModeEnabled = enabled
     }
@@ -347,9 +1688,22 @@ class WhiteboardView @JvmOverloads constructor(
     fun isPinchModeEnabled(): Boolean {
         return isPinchModeEnabled
     }
+    
+    fun setBackgroundPattern(pattern: BackgroundPattern) {
+        currentBackgroundPattern = pattern
+        redrawCanvas()
+    }
+    
+    fun getBackgroundPattern(): BackgroundPattern {
+        return currentBackgroundPattern
+    }
 
     fun undo() {
-        if (canUndo()) {
+        if (sectionManager.isSplitModeEnabled() && currentActiveSection != null) {
+            currentActiveSection!!.undo()
+            drawingChangeListener?.onDrawingChanged()
+            invalidate()
+        } else if (canUndo()) {
             val lastPath = paths.removeAt(paths.size - 1)
             undoStack.add(lastPath)
             redrawCanvas()
@@ -358,7 +1712,11 @@ class WhiteboardView @JvmOverloads constructor(
     }
 
     fun redo() {
-        if (canRedo()) {
+        if (sectionManager.isSplitModeEnabled() && currentActiveSection != null) {
+            currentActiveSection!!.redo()
+            drawingChangeListener?.onDrawingChanged()
+            invalidate()
+        } else if (canRedo()) {
             val pathToRedo = undoStack.removeAt(undoStack.size - 1)
             paths.add(pathToRedo)
             redrawCanvas()
@@ -367,26 +1725,193 @@ class WhiteboardView @JvmOverloads constructor(
     }
 
     fun clear() {
-        paths.clear()
-        undoStack.clear()
-        activePaths.clear()
-        activePathsLastX.clear()
-        activePathsLastY.clear()
-        redrawCanvas()
-        drawingChangeListener?.onDrawingChanged()
+        if (sectionManager.isSplitModeEnabled() && currentActiveSection != null) {
+            currentActiveSection!!.clear()
+            drawingChangeListener?.onDrawingChanged()
+            invalidate()
+        } else {
+            paths.clear()
+            undoStack.clear()
+            activePaths.clear()
+            activePathsLastX.clear()
+            activePathsLastY.clear()
+            textObjects.clear()
+            selectedTextObject = null
+            shapeObjects.clear()
+            selectedShapeObject = null
+            selectionPath = null
+            isDrawingSelection = false
+            // Reset shape drawing state
+            isDrawingShape = false
+            previewPath = null
+            // Reset shape interaction state
+            isDraggingShape = false
+            isResizingShape = false
+            isRotatingShape = false
+            redrawCanvas()
+            drawingChangeListener?.onDrawingChanged()
+        }
     }
 
     private fun redrawCanvas() {
         // Clear the entire canvas
         drawingCanvas?.drawColor(Color.WHITE, PorterDuff.Mode.SRC)
         
-        // Redraw all paths
+        // Draw background pattern on canvas
+        drawingCanvas?.let { canvas ->
+            drawBackgroundPattern(canvas)
+        }
+        
+        // Redraw all paths and text
         for (drawingPath in paths) {
-            drawingCanvas?.drawPath(drawingPath.path, drawingPath.paint)
+            if (drawingPath.tool == DrawingTool.TEXT && drawingPath.text != null) {
+                // Draw text
+                drawingCanvas?.drawText(drawingPath.text, drawingPath.textX, drawingPath.textY, drawingPath.paint)
+            } else {
+                // Draw path
+                drawingCanvas?.drawPath(drawingPath.path, drawingPath.paint)
+            }
         }
         
         // Force a redraw of the view
         invalidate()
+    }
+    
+    private fun drawBackgroundPattern(canvas: Canvas) {
+        if (currentBackgroundPattern == BackgroundPattern.PLAIN) {
+            return // No pattern to draw
+        }
+        
+        val patternPaint = Paint().apply {
+            color = Color.parseColor("#E0E0E0")
+            strokeWidth = 1f
+            style = Paint.Style.STROKE
+        }
+        
+        val canvasWidth = drawingBitmap?.width?.toFloat() ?: width.toFloat()
+        val canvasHeight = drawingBitmap?.height?.toFloat() ?: height.toFloat()
+        
+        when (currentBackgroundPattern) {
+            BackgroundPattern.GRID_SMALL -> {
+                val spacing = 30f
+                // Draw vertical lines
+                var x = 0f
+                while (x <= canvasWidth) {
+                    canvas.drawLine(x, 0f, x, canvasHeight, patternPaint)
+                    x += spacing
+                }
+                // Draw horizontal lines
+                var y = 0f
+                while (y <= canvasHeight) {
+                    canvas.drawLine(0f, y, canvasWidth, y, patternPaint)
+                    y += spacing
+                }
+            }
+            BackgroundPattern.GRID_LARGE -> {
+                val spacing = 60f
+                // Draw vertical lines
+                var x = 0f
+                while (x <= canvasWidth) {
+                    canvas.drawLine(x, 0f, x, canvasHeight, patternPaint)
+                    x += spacing
+                }
+                // Draw horizontal lines
+                var y = 0f
+                while (y <= canvasHeight) {
+                    canvas.drawLine(0f, y, canvasWidth, y, patternPaint)
+                    y += spacing
+                }
+            }
+            BackgroundPattern.LINES_HORIZONTAL -> {
+                val spacing = 40f
+                var y = 0f
+                while (y <= canvasHeight) {
+                    canvas.drawLine(0f, y, canvasWidth, y, patternPaint)
+                    y += spacing
+                }
+            }
+            BackgroundPattern.LINES_VERTICAL -> {
+                val spacing = 40f
+                var x = 0f
+                while (x <= canvasWidth) {
+                    canvas.drawLine(x, 0f, x, canvasHeight, patternPaint)
+                    x += spacing
+                }
+            }
+            BackgroundPattern.LINES_BOTH -> {
+                val spacing = 40f
+                // Draw vertical lines
+                var x = 0f
+                while (x <= canvasWidth) {
+                    canvas.drawLine(x, 0f, x, canvasHeight, patternPaint)
+                    x += spacing
+                }
+                // Draw horizontal lines
+                var y = 0f
+                while (y <= canvasHeight) {
+                    canvas.drawLine(0f, y, canvasWidth, y, patternPaint)
+                    y += spacing
+                }
+            }
+            BackgroundPattern.DOT_GRID -> {
+                val spacing = 30f
+                val dotRadius = 2f
+                patternPaint.style = Paint.Style.FILL
+                var y = 0f
+                while (y <= canvasHeight) {
+                    var x = 0f
+                    while (x <= canvasWidth) {
+                        canvas.drawCircle(x, y, dotRadius, patternPaint)
+                        x += spacing
+                    }
+                    y += spacing
+                }
+            }
+            BackgroundPattern.RULED_PAPER -> {
+                val spacing = 40f
+                patternPaint.color = Color.parseColor("#B0BEC5")
+                var y = 0f
+                while (y <= canvasHeight) {
+                    canvas.drawLine(0f, y, canvasWidth, y, patternPaint)
+                    y += spacing
+                }
+            }
+            BackgroundPattern.GRAPH_PAPER -> {
+                val smallSpacing = 20f
+                val largeSpacing = 100f
+                
+                // Draw small grid
+                patternPaint.color = Color.parseColor("#EEEEEE")
+                patternPaint.strokeWidth = 0.5f
+                var x = 0f
+                while (x <= canvasWidth) {
+                    canvas.drawLine(x, 0f, x, canvasHeight, patternPaint)
+                    x += smallSpacing
+                }
+                var y = 0f
+                while (y <= canvasHeight) {
+                    canvas.drawLine(0f, y, canvasWidth, y, patternPaint)
+                    y += smallSpacing
+                }
+                
+                // Draw large grid
+                patternPaint.color = Color.parseColor("#BDBDBD")
+                patternPaint.strokeWidth = 1.5f
+                x = 0f
+                while (x <= canvasWidth) {
+                    canvas.drawLine(x, 0f, x, canvasHeight, patternPaint)
+                    x += largeSpacing
+                }
+                y = 0f
+                while (y <= canvasHeight) {
+                    canvas.drawLine(0f, y, canvasWidth, y, patternPaint)
+                    y += largeSpacing
+                }
+            }
+            BackgroundPattern.PLAIN -> {
+                // Do nothing - already handled at the start
+            }
+        }
     }
 
     // Gesture listeners
@@ -430,11 +1955,354 @@ class WhiteboardView @JvmOverloads constructor(
         drawingBitmap = null
         drawingCanvas = null
     }
+    
+    // Handle touch in control area
+    private fun handleControlAreaTouch(section: SectionManager.Section, x: Float, y: Float) {
+        val controlArea = section.controlBounds
+        val buttonSize = 28f
+        val buttonMargin = 3f
+        val startX = controlArea.left + 8f
+        val row1Y = controlArea.top + 35f
+        val row2Y = controlArea.top + 70f
+        
+        android.util.Log.d("WhiteboardView", "Control touch at ($x, $y) in section ${section.id}")
+        
+        // Check Row 1: Tool buttons
+        val tools = listOf(
+            DrawingTool.PEN,
+            DrawingTool.ERASER,
+            DrawingTool.HIGHLIGHTER,
+            DrawingTool.TEXT,
+            DrawingTool.LINE,
+            DrawingTool.CIRCLE,
+            DrawingTool.TRIANGLE,
+            DrawingTool.RECTANGLE
+        )
+        
+        tools.forEachIndexed { index, tool ->
+            val buttonX = startX + index * (buttonSize + buttonMargin)
+            if (x >= buttonX && x <= buttonX + buttonSize && y >= row1Y && y <= row1Y + buttonSize) {
+                android.util.Log.d("WhiteboardView", "Tool button pressed: $tool")
+                section.currentTool = tool
+                invalidate()
+                return
+            }
+        }
+        
+        // Check Row 2: Action buttons (Undo, Redo, Clear)
+        // Undo button
+        val undoX = startX
+        if (x >= undoX && x <= undoX + buttonSize && y >= row2Y && y <= row2Y + buttonSize) {
+            if (section.canUndo()) {
+                android.util.Log.d("WhiteboardView", "Undo pressed")
+                section.undo()
+                invalidate()
+            }
+            return
+        }
+        
+        // Redo button
+        val redoX = startX + (buttonSize + buttonMargin)
+        if (x >= redoX && x <= redoX + buttonSize && y >= row2Y && y <= row2Y + buttonSize) {
+            if (section.canRedo()) {
+                android.util.Log.d("WhiteboardView", "Redo pressed")
+                section.redo()
+                invalidate()
+            }
+            return
+        }
+        
+        // Clear button
+        val clearX = startX + 2 * (buttonSize + buttonMargin)
+        if (x >= clearX && x <= clearX + buttonSize && y >= row2Y && y <= row2Y + buttonSize) {
+            android.util.Log.d("WhiteboardView", "Clear pressed")
+            section.clear()
+            invalidate()
+            return
+        }
+        
+        // Color button - cycle through colors
+        val colorX = startX + 3 * (buttonSize + buttonMargin) + 4f
+        val colorSize = 24f
+        val colorY = row2Y + (buttonSize - colorSize) / 2
+        if (x >= colorX && x <= colorX + colorSize && y >= colorY && y <= colorY + colorSize) {
+            // Cycle through common colors
+            val colors = listOf(
+                Color.BLACK,
+                Color.RED,
+                Color.BLUE,
+                Color.GREEN,
+                Color.parseColor("#FFEB3B"), // Yellow
+                Color.parseColor("#9C27B0"), // Purple
+                Color.parseColor("#FF9800")  // Orange
+            )
+            val currentIndex = colors.indexOf(section.currentColor)
+            section.currentColor = colors[(currentIndex + 1) % colors.size]
+            android.util.Log.d("WhiteboardView", "Color changed to ${section.currentColor}")
+            invalidate()
+            return
+        }
+        
+        // Stroke width button - cycle through widths
+        val strokeX = colorX + colorSize + 8f
+        val strokeBoxSize = 28f
+        if (x >= strokeX && x <= strokeX + strokeBoxSize && y >= row2Y && y <= row2Y + strokeBoxSize) {
+            // Cycle through stroke widths
+            val widths = listOf(2f, 5f, 8f, 12f, 16f, 20f)
+            val currentIndex = widths.indexOfFirst { kotlin.math.abs(it - section.currentStrokeWidth) < 1f }
+            section.currentStrokeWidth = widths[(if (currentIndex >= 0) currentIndex + 1 else 0) % widths.size]
+            android.util.Log.d("WhiteboardView", "Stroke width changed to ${section.currentStrokeWidth}")
+            invalidate()
+            return
+        }
+    }
+    
+    // Draw controls in each section's control area
+    private fun drawSectionControls(canvas: Canvas) {
+        val buttonPaint = Paint().apply {
+            isAntiAlias = true
+            style = Paint.Style.FILL
+        }
+        
+        val textPaint = Paint().apply {
+            isAntiAlias = true
+            color = Color.WHITE
+            textSize = 20f
+            textAlign = Paint.Align.CENTER
+            isFakeBoldText = true
+        }
+        
+        val iconPaint = Paint().apply {
+            isAntiAlias = true
+            color = Color.WHITE
+            textSize = 24f
+            textAlign = Paint.Align.CENTER
+        }
+        
+        for (section in sectionManager.getAllSections()) {
+            val controlArea = section.controlBounds
+            val buttonSize = 28f
+            val buttonMargin = 3f
+            val startX = controlArea.left + 8f
+            val row1Y = controlArea.top + 35f
+            val row2Y = controlArea.top + 70f
+            
+            // Row 1: Tool buttons (Pen, Eraser, Highlighter, Text, Line, Circle, Triangle, Rectangle)
+            val tools = listOf(
+                Pair(DrawingTool.PEN, "✏"),
+                Pair(DrawingTool.ERASER, "⌫"),
+                Pair(DrawingTool.HIGHLIGHTER, "🖍"),
+                Pair(DrawingTool.TEXT, "T"),
+                Pair(DrawingTool.LINE, "—"),
+                Pair(DrawingTool.CIRCLE, "○"),
+                Pair(DrawingTool.TRIANGLE, "△"),
+                Pair(DrawingTool.RECTANGLE, "▭")
+            )
+            
+            tools.forEachIndexed { index, (tool, icon) ->
+                val x = startX + index * (buttonSize + buttonMargin)
+                
+                // Set button color based on selection
+                buttonPaint.color = if (section.currentTool == tool) {
+                    Color.parseColor("#4CAF50") // Green for selected
+                } else {
+                    Color.parseColor("#757575") // Gray for unselected
+                }
+                
+                // Draw button background
+                canvas.drawRect(x, row1Y, x + buttonSize, row1Y + buttonSize, buttonPaint)
+                
+                // Draw button icon/text
+                canvas.drawText(icon, x + buttonSize / 2, row1Y + buttonSize / 2 + 8f, iconPaint)
+            }
+            
+            // Row 2: Action buttons (Undo, Redo, Clear) + Color + Stroke
+            val row2Actions = listOf(
+                Triple("↶", section.canUndo(), "undo"),
+                Triple("↷", section.canRedo(), "redo"),
+                Triple("✕", true, "clear")
+            )
+            
+            row2Actions.forEachIndexed { index, (icon, enabled, _) ->
+                val x = startX + index * (buttonSize + buttonMargin)
+                
+                buttonPaint.color = if (enabled) {
+                    Color.parseColor("#2196F3") // Blue for enabled
+                } else {
+                    Color.parseColor("#BDBDBD") // Light gray for disabled
+                }
+                
+                canvas.drawRect(x, row2Y, x + buttonSize, row2Y + buttonSize, buttonPaint)
+                canvas.drawText(icon, x + buttonSize / 2, row2Y + buttonSize / 2 + 8f, iconPaint)
+            }
+            
+            // Draw color indicator (clickable)
+            val colorX = startX + 3 * (buttonSize + buttonMargin) + 4f
+            val colorSize = 24f
+            val colorY = row2Y + (buttonSize - colorSize) / 2
+            
+            // Draw border
+            val borderPaint = Paint().apply {
+                color = Color.BLACK
+                style = Paint.Style.STROKE
+                strokeWidth = 1f
+            }
+            canvas.drawRect(colorX, colorY, colorX + colorSize, colorY + colorSize, borderPaint)
+            
+            // Draw color
+            buttonPaint.color = section.currentColor
+            canvas.drawRect(colorX + 1, colorY + 1, colorX + colorSize - 1, colorY + colorSize - 1, buttonPaint)
+            
+            // Draw stroke width indicator (clickable)
+            val strokeX = colorX + colorSize + 8f
+            val strokeBoxSize = 28f
+            
+            // Draw background
+            buttonPaint.color = Color.parseColor("#EEEEEE")
+            canvas.drawRect(strokeX, row2Y, strokeX + strokeBoxSize, row2Y + strokeBoxSize, buttonPaint)
+            
+            // Draw line showing width
+            val strokeIndicatorPaint = Paint().apply {
+                color = Color.BLACK
+                style = Paint.Style.STROKE
+                strokeWidth = section.currentStrokeWidth.coerceIn(2f, 16f)
+                strokeCap = Paint.Cap.ROUND
+            }
+            canvas.drawLine(
+                strokeX + 4f, 
+                row2Y + strokeBoxSize / 2, 
+                strokeX + strokeBoxSize - 4f, 
+                row2Y + strokeBoxSize / 2, 
+                strokeIndicatorPaint
+            )
+        }
+    }
+
+    // Section management methods
+    fun enableSplitMode(numberOfSections: Int) {
+        sectionManager.enableSplitMode(numberOfSections)
+        invalidate()
+    }
+    
+    fun disableSplitMode() {
+        sectionManager.disableSplitMode()
+        currentActiveSection = null
+        invalidate()
+    }
+    
+    fun isSplitModeEnabled(): Boolean = sectionManager.isSplitModeEnabled()
+    
+    fun getAllSections(): List<SectionManager.Section> = sectionManager.getAllSections()
+    
+    fun setActiveSection(sectionId: Int) {
+        val section = sectionManager.getAllSections().find { it.id == sectionId }
+        currentActiveSection = section
+        sectionManager.setActiveSection(section)
+        
+        // Update current tool settings from the section
+        section?.let {
+            currentTool = it.currentTool
+            currentColor = it.currentColor
+            currentStrokeWidth = it.currentStrokeWidth
+        }
+        invalidate()
+    }
+    
+    fun getActiveSection(): SectionManager.Section? = currentActiveSection
+    
+    fun updateSectionTool(sectionId: Int, tool: DrawingTool) {
+        val section = sectionManager.getAllSections().find { it.id == sectionId }
+        section?.currentTool = tool
+        if (section == currentActiveSection) {
+            currentTool = tool
+        }
+    }
+    
+    fun updateSectionColor(sectionId: Int, color: Int) {
+        val section = sectionManager.getAllSections().find { it.id == sectionId }
+        section?.currentColor = color
+        if (section == currentActiveSection) {
+            currentColor = color
+        }
+    }
+    
+    fun updateSectionStrokeWidth(sectionId: Int, width: Float) {
+        val section = sectionManager.getAllSections().find { it.id == sectionId }
+        section?.currentStrokeWidth = width
+        if (section == currentActiveSection) {
+            currentStrokeWidth = width
+        }
+    }
+    
+    fun undoSection(sectionId: Int) {
+        val section = sectionManager.getAllSections().find { it.id == sectionId }
+        section?.undo()
+        drawingChangeListener?.onDrawingChanged()
+        invalidate()
+    }
+    
+    fun redoSection(sectionId: Int) {
+        val section = sectionManager.getAllSections().find { it.id == sectionId }
+        section?.redo()
+        drawingChangeListener?.onDrawingChanged()
+        invalidate()
+    }
+    
+    fun clearSection(sectionId: Int) {
+        val section = sectionManager.getAllSections().find { it.id == sectionId }
+        section?.clear()
+        drawingChangeListener?.onDrawingChanged()
+        invalidate()
+    }
+    
+    fun clearAllSections() {
+        sectionManager.clearAllSections()
+        drawingChangeListener?.onDrawingChanged()
+        invalidate()
+    }
 
     // Getters for current state
     fun getCurrentTool(): DrawingTool = currentTool
     fun getCurrentColor(): Int = currentColor
     fun getCurrentStrokeWidth(): Float = currentStrokeWidth
-    fun canUndo(): Boolean = paths.isNotEmpty()
-    fun canRedo(): Boolean = undoStack.isNotEmpty()
+    fun canUndo(): Boolean = if (sectionManager.isSplitModeEnabled() && currentActiveSection != null) {
+        currentActiveSection!!.canUndo()
+    } else {
+        paths.isNotEmpty()
+    }
+    fun canRedo(): Boolean = if (sectionManager.isSplitModeEnabled() && currentActiveSection != null) {
+        currentActiveSection!!.canRedo()
+    } else {
+        undoStack.isNotEmpty()
+    }
+    
+    // Page management methods
+    fun getAllPaths(): List<DrawingPath> = paths.toList()
+    
+    fun getAllTextObjects(): List<TextObject> = textObjects.toList()
+    
+    fun getAllShapeObjects(): List<ShapeObject> = shapeObjects.toList()
+    
+    fun loadPageData(
+        pagePaths: List<DrawingPath>,
+        pageTextObjects: List<TextObject>,
+        pageShapeObjects: List<ShapeObject>
+    ) {
+        // Clear current state
+        paths.clear()
+        undoStack.clear()
+        textObjects.clear()
+        shapeObjects.clear()
+        selectedTextObject = null
+        selectedShapeObject = null
+        
+        // Load page data
+        paths.addAll(pagePaths)
+        textObjects.addAll(pageTextObjects)
+        shapeObjects.addAll(pageShapeObjects)
+        
+        // Redraw canvas
+        redrawCanvas()
+        invalidate()
+    }
 }

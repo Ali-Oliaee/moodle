@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/popup_background"
+    android:padding="16dp"
+    android:elevation="8dp">
+
+    <!-- Stroke Width Control -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1"
+            android:textSize="12sp"
+            android:textColor="#666666"
+            android:layout_marginEnd="8dp" />
+
+        <SeekBar
+            android:id="@+id/strokeWidthSeekBar"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:max="20"
+            android:progress="8"
+            android:contentDescription="@string/desc_stroke_width" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="21"
+            android:textSize="12sp"
+            android:textColor="#666666"
+            android:layout_marginStart="8dp" />
+
+    </LinearLayout>
+
+</LinearLayout>
