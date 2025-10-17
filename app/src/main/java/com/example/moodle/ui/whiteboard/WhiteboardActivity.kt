@@ -102,6 +102,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private var currentSelectedTool: ImageButton? = null
     private var currentSelectedColor: Int = Color.BLACK
     private var isSelectiveEraserMode = false
+    private var isPenInSelectionMode = false
     private lateinit var userPreferences: UserPreferences
     
     // Import/Export managers
@@ -402,7 +403,7 @@ class WhiteboardActivity : AppCompatActivity() {
     
     private fun setupToolListeners() {
         // Tool selection listeners
-        btnPen.setOnClickListener { selectTool(WhiteboardView.DrawingTool.PEN, btnPen) }
+        btnPen.setOnClickListener { togglePenSelectionMode() }
         btnEraser.setOnClickListener { showEraserModePopup() }
         btnText.setOnClickListener { selectTool(WhiteboardView.DrawingTool.TEXT, btnText) }
         btnFormula.setOnClickListener { showFormulaPopup() }
@@ -801,133 +802,74 @@ class WhiteboardActivity : AppCompatActivity() {
         
         val formulas = getFormulaTemplates()
         
-        // Set up formula option listeners
+        // Set up formula option listeners - add formulas directly to board
         popupView.findViewById<LinearLayout>(R.id.formulaQuadratic).setOnClickListener {
             formulaPopupWindow?.dismiss()
-            showFormulaInputDialog(formulas[0])
+            addFormulaToBoard(formulas[0])
         }
         
         popupView.findViewById<LinearLayout>(R.id.formulaPythagorean).setOnClickListener {
             formulaPopupWindow?.dismiss()
-            showFormulaInputDialog(formulas[1])
+            addFormulaToBoard(formulas[1])
         }
         
         popupView.findViewById<LinearLayout>(R.id.formulaCircleArea).setOnClickListener {
             formulaPopupWindow?.dismiss()
-            showFormulaInputDialog(formulas[2])
+            addFormulaToBoard(formulas[2])
         }
         
         popupView.findViewById<LinearLayout>(R.id.formulaDistance).setOnClickListener {
             formulaPopupWindow?.dismiss()
-            showFormulaInputDialog(formulas[3])
+            addFormulaToBoard(formulas[3])
         }
         
         popupView.findViewById<LinearLayout>(R.id.formulaSlope).setOnClickListener {
             formulaPopupWindow?.dismiss()
-            showFormulaInputDialog(formulas[4])
+            addFormulaToBoard(formulas[4])
         }
         
         popupView.findViewById<LinearLayout>(R.id.formulaSphereVolume).setOnClickListener {
             formulaPopupWindow?.dismiss()
-            showFormulaInputDialog(formulas[5])
+            addFormulaToBoard(formulas[5])
         }
         
         popupView.findViewById<LinearLayout>(R.id.formulaCompoundInterest).setOnClickListener {
             formulaPopupWindow?.dismiss()
-            showFormulaInputDialog(formulas[6])
+            addFormulaToBoard(formulas[6])
         }
         
         popupView.findViewById<LinearLayout>(R.id.formulaCosines).setOnClickListener {
             formulaPopupWindow?.dismiss()
-            showFormulaInputDialog(formulas[7])
+            addFormulaToBoard(formulas[7])
         }
         
-        // Show popup above the formula button
-        formulaPopupWindow?.showAsDropDown(btnFormula, 0, -btnFormula.height - 450, Gravity.CENTER)
+        // Show popup at center of screen
+        formulaPopupWindow?.showAtLocation(
+            findViewById(android.R.id.content),
+            Gravity.CENTER,
+            0,
+            0
+        )
     }
 
-    private fun showFormulaInputDialog(formula: FormulaTemplate) {
-        val inflater = LayoutInflater.from(this)
-        val dialogView = inflater.inflate(R.layout.dialog_formula_input, null)
+    private fun addFormulaToBoard(formula: FormulaTemplate) {
+        // Replace placeholders with empty spaces (boxes) for manual filling
+        var formulaText = formula.template
         
-        val formulaDisplay = dialogView.findViewById<TextView>(R.id.formulaDisplay)
-        val inputContainer = dialogView.findViewById<LinearLayout>(R.id.inputFieldsContainer)
-        val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
-        val btnApply = dialogView.findViewById<Button>(R.id.btnApply)
-        
-        // Display the formula template
-        formulaDisplay.text = formula.template.replace(Regex("\\{[^}]+\\}"), "_")
-        
-        // Create input fields for each variable
-        val inputFields = mutableMapOf<String, EditText>()
-        
-        for (i in formula.variables.indices) {
-            val variable = formula.variables[i]
-            val description = formula.descriptions[i]
-            
-            // Create label
-            val label = TextView(this)
-            label.text = "$description ($variable):"
-            label.textSize = 14f
-            label.setTextColor(android.graphics.Color.parseColor("#333333"))
-            label.setPadding(0, 16, 0, 8)
-            
-            // Create input field
-            val editText = EditText(this)
-            editText.hint = "مقدار $variable را وارد کنید"
-            editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL or android.text.InputType.TYPE_NUMBER_FLAG_SIGNED
-            editText.layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            
-            inputContainer.addView(label)
-            inputContainer.addView(editText)
-            inputFields[variable] = editText
+        // Replace each variable placeholder with empty box symbol ☐
+        for (variable in formula.variables) {
+            formulaText = formulaText.replace("{$variable}", "☐")
         }
         
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .create()
-        
-        btnCancel.setOnClickListener {
-            dialog.dismiss()
-        }
-        
-        btnApply.setOnClickListener {
-            // Get values from input fields
-            val values = mutableMapOf<String, String>()
-            var allFieldsFilled = true
+        // Post to ensure view is measured and positioned correctly
+        whiteboardView.post {
+            // Add the formula as text to the whiteboard at center
+            val centerX = if (whiteboardView.width > 0) whiteboardView.width / 2f else 500f
+            val centerY = if (whiteboardView.height > 0) whiteboardView.height / 2f else 500f
+            whiteboardView.addText(formulaText, centerX, centerY)
             
-            for ((variable, editText) in inputFields) {
-                val value = editText.text.toString().trim()
-                if (value.isEmpty()) {
-                    allFieldsFilled = false
-                    editText.error = "این فیلد الزامی است"
-                } else {
-                    values[variable] = value
-                }
-            }
-            
-            if (allFieldsFilled) {
-                // Replace placeholders with actual values
-                var finalFormula = formula.template
-                for ((variable, value) in values) {
-                    finalFormula = finalFormula.replace("{$variable}", value)
-                }
-                
-                // Add the formula as text to the whiteboard
-                // Position it at the center of the screen
-                val centerX = whiteboardView.width / 2f
-                val centerY = whiteboardView.height / 2f
-                whiteboardView.addText(finalFormula, centerX, centerY)
-                
-                dialog.dismiss()
-                Toast.makeText(this, "فرمول به تخته اضافه شد", Toast.LENGTH_SHORT).show()
-            }
+            Toast.makeText(this, "فرمول به تخته اضافه شد - با قلم اعداد را پر کنید", Toast.LENGTH_SHORT).show()
         }
-        
-        dialog.show()
     }
     
     private fun showShapesPopup() {
@@ -981,6 +923,12 @@ class WhiteboardActivity : AppCompatActivity() {
         button.isSelected = true
         currentSelectedTool = button
         
+        // Reset pen selection mode when selecting other tools
+        if (button != btnPen && isPenInSelectionMode) {
+            isPenInSelectionMode = false
+            btnPen.setImageResource(R.drawable.ic_pen) // Reset to pen icon
+        }
+        
         // Update whiteboard view
         whiteboardView.setDrawingTool(tool)
         
@@ -1003,6 +951,22 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Update whiteboard view
         whiteboardView.setColor(color)
+    }
+    
+    private fun togglePenSelectionMode() {
+        isPenInSelectionMode = !isPenInSelectionMode
+        
+        if (isPenInSelectionMode) {
+            // Switch to selection mode
+            btnPen.setImageResource(R.drawable.ic_hand)
+            selectTool(WhiteboardView.DrawingTool.SELECTION, btnPen)
+            Toast.makeText(this, getString(R.string.selection_mode), Toast.LENGTH_SHORT).show()
+        } else {
+            // Switch back to pen mode
+            btnPen.setImageResource(R.drawable.ic_pen)
+            selectTool(WhiteboardView.DrawingTool.PEN, btnPen)
+            Toast.makeText(this, getString(R.string.pen_mode), Toast.LENGTH_SHORT).show()
+        }
     }
     
     private fun toggleMode() {

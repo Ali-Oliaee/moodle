@@ -21,6 +21,8 @@
     <string name="tool_text">متن</string>
     <string name="drawing_mode">حالت رسم</string>
     <string name="pan_mode">حالت پان</string>
+    <string name="selection_mode">حالت انتخاب - می‌توانید اشیاء را انتخاب و جابجا کنید</string>
+    <string name="pen_mode">حالت قلم - می‌توانید روی تخته بنویسید</string>
     
     <!-- Actions -->
     <string name="undo">برگشت</string>

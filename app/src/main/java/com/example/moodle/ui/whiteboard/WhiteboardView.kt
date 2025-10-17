@@ -24,7 +24,7 @@ class WhiteboardView @JvmOverloads constructor(
 
     // Drawing tools
     enum class DrawingTool {
-        PEN, ERASER, TEXT, SELECTIVE_ERASER, LINE, CIRCLE, TRIANGLE, RECTANGLE
+        PEN, ERASER, TEXT, SELECTIVE_ERASER, LINE, CIRCLE, TRIANGLE, RECTANGLE, SELECTION
     }
 
     // Drawing state
@@ -824,6 +824,9 @@ class WhiteboardView @JvmOverloads constructor(
                     DrawingTool.TEXT -> {
                         handleTextTouch(x, y, action)
                     }
+                    DrawingTool.SELECTION -> {
+                        handleSelectionTouch(x, y, action)
+                    }
                     DrawingTool.SELECTIVE_ERASER -> {
                         handleSelectiveEraserTouch(x, y, action)
                     }
@@ -863,6 +866,17 @@ class WhiteboardView @JvmOverloads constructor(
                                 y = clamped.second
                             }
                             handleTextTouch(x, y, action)
+                            return@handleDrawingTouch
+                        }
+                        DrawingTool.SELECTION -> {
+                            var x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
+                            var y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            if (!sectionManager.isSplitModeEnabled()) {
+                                val clamped = clampToBitmapBounds(x, y)
+                                x = clamped.first
+                                y = clamped.second
+                            }
+                            handleSelectionTouch(x, y, action)
                             return@handleDrawingTouch
                         }
                         DrawingTool.SELECTIVE_ERASER -> {
@@ -956,6 +970,18 @@ class WhiteboardView @JvmOverloads constructor(
                             y = clamped.second
                         }
                         handleTextTouch(x, y, action)
+                    }
+                    DrawingTool.SELECTION -> {
+                        val screenX = event.getX(pointerIndex)
+                        val screenY = event.getY(pointerIndex)
+                        var x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                        var y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        if (!sectionManager.isSplitModeEnabled()) {
+                            val clamped = clampToBitmapBounds(x, y)
+                            x = clamped.first
+                            y = clamped.second
+                        }
+                        handleSelectionTouch(x, y, action)
                     }
                     DrawingTool.SELECTIVE_ERASER -> {
                         val screenX = event.getX(pointerIndex)
@@ -1051,6 +1077,205 @@ class WhiteboardView @JvmOverloads constructor(
         invalidate()
     }
 
+    private fun handleSelectionTouch(x: Float, y: Float, action: Int) {
+        // Handle selection mode - can select, drag, resize, and rotate both text and shapes
+        when (action) {
+            MotionEvent.ACTION_DOWN -> {
+                // Check if touching handles of already selected text first
+                selectedTextObject?.let { textObj ->
+                    if (textObj.isRotationHandleTouched(x, y)) {
+                        isRotatingText = true
+                        dragStartX = x
+                        dragStartY = y
+                        initialRotation = textObj.rotation
+                        return
+                    }
+                    
+                    if (textObj.isResizeHandleTouched(x, y)) {
+                        isResizingText = true
+                        dragStartX = x
+                        dragStartY = y
+                        initialTextSize = textObj.textSize
+                        return
+                    }
+                }
+                
+                // Check if touching handles of already selected shape
+                selectedShapeObject?.let { shapeObj ->
+                    if (shapeObj.isRotationHandleTouched(x, y)) {
+                        isRotatingShape = true
+                        dragStartX = x
+                        dragStartY = y
+                        initialShapeRotation = shapeObj.rotation
+                        return
+                    }
+                    
+                    val handle = shapeObj.isResizeHandleTouched(x, y)
+                    if (handle != null) {
+                        isResizingShape = true
+                        currentResizeHandle = handle
+                        dragStartX = x
+                        dragStartY = y
+                        initialShapeStartX = shapeObj.startX
+                        initialShapeStartY = shapeObj.startY
+                        initialShapeEndX = shapeObj.endX
+                        initialShapeEndY = shapeObj.endY
+                        return
+                    }
+                }
+                
+                // Check if touching text objects
+                var touchedText: TextObject? = null
+                for (textObj in textObjects.reversed()) {
+                    if (textObj.contains(x, y)) {
+                        touchedText = textObj
+                        break
+                    }
+                }
+                
+                // Check if touching shape objects
+                var touchedShape: ShapeObject? = null
+                for (shapeObj in shapeObjects.reversed()) {
+                    if (shapeObj.contains(x, y)) {
+                        touchedShape = shapeObj
+                        break
+                    }
+                }
+                
+                if (touchedText != null) {
+                    // Deselect previous selections
+                    selectedTextObject?.isSelected = false
+                    selectedShapeObject?.isSelected = false
+                    
+                    // Select touched text
+                    selectedTextObject = touchedText
+                    touchedText.isSelected = true
+                    isDraggingText = true
+                    dragStartX = x
+                    dragStartY = y
+                } else if (touchedShape != null) {
+                    // Deselect previous selections
+                    selectedTextObject?.isSelected = false
+                    selectedShapeObject?.isSelected = false
+                    
+                    // Select touched shape
+                    selectedShapeObject = touchedShape
+                    touchedShape.isSelected = true
+                    isDraggingShape = true
+                    dragStartX = x
+                    dragStartY = y
+                } else {
+                    // Deselect everything
+                    selectedTextObject?.isSelected = false
+                    selectedShapeObject?.isSelected = false
+                    selectedTextObject = null
+                    selectedShapeObject = null
+                }
+                
+                invalidate()
+            }
+            
+            MotionEvent.ACTION_MOVE -> {
+                // Handle text transformations
+                selectedTextObject?.let { textObj ->
+                    if (isRotatingText) {
+                        val bounds = Rect()
+                        textObj.updatePaint()
+                        textObj.paint.getTextBounds(textObj.text, 0, textObj.text.length, bounds)
+                        val centerX = textObj.x + bounds.width() / 2f
+                        val centerY = textObj.y + bounds.height() / 2f
+                        
+                        val startAngle = kotlin.math.atan2((dragStartY - centerY).toDouble(), (dragStartX - centerX).toDouble())
+                        val currentAngle = kotlin.math.atan2((y - centerY).toDouble(), (x - centerX).toDouble())
+                        val deltaAngle = Math.toDegrees(currentAngle - startAngle).toFloat()
+                        
+                        textObj.rotation = (initialRotation + deltaAngle) % 360f
+                        invalidate()
+                        return
+                    } else if (isResizingText) {
+                        val distance = kotlin.math.sqrt((x - dragStartX) * (x - dragStartX) + (y - dragStartY) * (y - dragStartY))
+                        val scaleFactor = max(0.5f, min(3.0f, distance / 100f))
+                        textObj.textSize = initialTextSize * scaleFactor
+                        invalidate()
+                        return
+                    } else if (isDraggingText) {
+                        val dx = x - dragStartX
+                        val dy = y - dragStartY
+                        textObj.x += dx
+                        textObj.y += dy
+                        dragStartX = x
+                        dragStartY = y
+                        invalidate()
+                        return
+                    }
+                }
+                
+                // Handle shape transformations
+                selectedShapeObject?.let { shapeObj ->
+                    if (isRotatingShape) {
+                        val centerX = (shapeObj.startX + shapeObj.endX) / 2f
+                        val centerY = (shapeObj.startY + shapeObj.endY) / 2f
+                        
+                        val startAngle = kotlin.math.atan2((dragStartY - centerY).toDouble(), (dragStartX - centerX).toDouble())
+                        val currentAngle = kotlin.math.atan2((y - centerY).toDouble(), (x - centerX).toDouble())
+                        val deltaAngle = Math.toDegrees(currentAngle - startAngle).toFloat()
+                        
+                        shapeObj.rotation = (initialShapeRotation + deltaAngle) % 360f
+                        invalidate()
+                        return
+                    } else if (isResizingShape) {
+                        when (currentResizeHandle) {
+                            ShapeObject.ResizeHandle.TOP_LEFT -> {
+                                shapeObj.startX = x
+                                shapeObj.startY = y
+                            }
+                            ShapeObject.ResizeHandle.TOP_RIGHT -> {
+                                shapeObj.endX = x
+                                shapeObj.startY = y
+                            }
+                            ShapeObject.ResizeHandle.BOTTOM_LEFT -> {
+                                shapeObj.startX = x
+                                shapeObj.endY = y
+                            }
+                            ShapeObject.ResizeHandle.BOTTOM_RIGHT -> {
+                                shapeObj.endX = x
+                                shapeObj.endY = y
+                            }
+                            null -> {}
+                        }
+                        invalidate()
+                        return
+                    } else if (isDraggingShape) {
+                        val dx = x - dragStartX
+                        val dy = y - dragStartY
+                        shapeObj.startX += dx
+                        shapeObj.startY += dy
+                        shapeObj.endX += dx
+                        shapeObj.endY += dy
+                        dragStartX = x
+                        dragStartY = y
+                        invalidate()
+                        return
+                    }
+                }
+            }
+            
+            MotionEvent.ACTION_UP -> {
+                isDraggingText = false
+                isDraggingShape = false
+                isResizingText = false
+                isRotatingText = false
+                isResizingShape = false
+                isRotatingShape = false
+                currentResizeHandle = null
+                
+                if (selectedTextObject != null || selectedShapeObject != null) {
+                    drawingChangeListener?.onDrawingChanged()
+                }
+            }
+        }
+    }
+    
     private fun handleTextTouch(x: Float, y: Float, action: Int) {
         when (action) {
             MotionEvent.ACTION_DOWN -> {
@@ -1680,6 +1905,7 @@ class WhiteboardView @JvmOverloads constructor(
                 color = currentColor
                 textSize = currentStrokeWidth * 6 // Scale text size with stroke width
             }
+            DrawingTool.SELECTION -> drawPaint // Selection mode doesn't draw, but return a paint anyway
             DrawingTool.SELECTIVE_ERASER -> selectionPaint // Use selection paint for drawing selection area
             DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> drawPaint.apply {
                 color = currentColor
@@ -1704,6 +1930,7 @@ class WhiteboardView @JvmOverloads constructor(
                 color = section.currentColor
                 textSize = section.currentStrokeWidth * 6
             }
+            DrawingTool.SELECTION -> Paint(drawPaint) // Selection mode doesn't draw, but return a paint anyway
             DrawingTool.SELECTIVE_ERASER -> Paint(selectionPaint)
             DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> Paint(drawPaint).apply {
                 color = section.currentColor
