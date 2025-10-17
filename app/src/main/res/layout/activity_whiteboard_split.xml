@@ -53,23 +53,51 @@
             android:gravity="center_vertical"
             android:layout_marginEnd="8dp">
 
-            <Button
+            <ImageButton
                 android:id="@+id/btnEnableSplit"
-                android:layout_width="wrap_content"
+                android:layout_width="32dp"
                 android:layout_height="32dp"
-                android:text="@string/enable_split"
-                android:textSize="12sp"
+                android:src="@drawable/ic_split_enable"
                 android:background="@drawable/tool_button_background"
-                android:layout_marginEnd="4dp" />
+                android:layout_marginEnd="4dp"
+                android:contentDescription="@string/enable_split" />
 
-            <Button
+            <ImageButton
                 android:id="@+id/btnDisableSplit"
-                android:layout_width="wrap_content"
+                android:layout_width="32dp"
                 android:layout_height="32dp"
-                android:text="@string/disable_split"
-                android:textSize="12sp"
+                android:src="@drawable/ic_split_disable"
                 android:background="@drawable/tool_button_background"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:contentDescription="@string/disable_split" />
+
+        </LinearLayout>
+
+        <!-- Import/Export Controls -->
+        <LinearLayout
+            android:id="@+id/importExportControls"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginEnd="8dp">
+
+            <ImageButton
+                android:id="@+id/btnExport"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_export"
+                android:background="@drawable/tool_button_background"
+                android:layout_marginEnd="4dp"
+                android:contentDescription="@string/desc_export_button" />
+
+            <ImageButton
+                android:id="@+id/btnImport"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_import"
+                android:background="@drawable/tool_button_background"
+                android:contentDescription="@string/desc_import_button" />
 
         </LinearLayout>
 
@@ -102,6 +130,7 @@
 
     <!-- Main Content Area -->
     <LinearLayout
+        android:id="@+id/mainContentArea"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:orientation="horizontal"
@@ -149,15 +178,6 @@
             android:src="@drawable/ic_eraser"
             android:background="@drawable/tool_button_background"
             android:contentDescription="@string/desc_eraser_tool" />
-
-        <ImageButton
-            android:id="@+id/btnHighlighter"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="2dp"
-            android:src="@drawable/ic_highlighter"
-            android:background="@drawable/tool_button_background"
-            android:contentDescription="@string/desc_highlighter_tool" />
 
         <ImageButton
             android:id="@+id/btnText"
@@ -235,7 +255,7 @@
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:layout_margin="2dp"
-            android:src="@drawable/ic_pen"
+            android:src="@drawable/ic_move_4d"
             android:background="@drawable/tool_button_background"
             android:contentDescription="@string/desc_mode_toggle" />
 

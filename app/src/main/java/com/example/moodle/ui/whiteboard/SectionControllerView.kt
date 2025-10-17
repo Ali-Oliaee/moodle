@@ -36,7 +36,6 @@ class SectionControllerView @JvmOverloads constructor(
     private lateinit var sectionLabel: TextView
     private lateinit var btnPen: ImageButton
     private lateinit var btnEraser: ImageButton
-    private lateinit var btnHighlighter: ImageButton
     private lateinit var btnText: ImageButton
     private lateinit var btnUndo: ImageButton
     private lateinit var btnRedo: ImageButton
@@ -69,7 +68,6 @@ class SectionControllerView @JvmOverloads constructor(
         sectionLabel = view.findViewById(R.id.sectionLabel)
         btnPen = view.findViewById(R.id.btnPen)
         btnEraser = view.findViewById(R.id.btnEraser)
-        btnHighlighter = view.findViewById(R.id.btnHighlighter)
         btnText = view.findViewById(R.id.btnText)
         btnUndo = view.findViewById(R.id.btnUndo)
         btnRedo = view.findViewById(R.id.btnRedo)
@@ -89,7 +87,6 @@ class SectionControllerView @JvmOverloads constructor(
         // Tool selection
         btnPen.setOnClickListener { selectTool(WhiteboardView.DrawingTool.PEN, btnPen) }
         btnEraser.setOnClickListener { selectTool(WhiteboardView.DrawingTool.ERASER, btnEraser) }
-        btnHighlighter.setOnClickListener { selectTool(WhiteboardView.DrawingTool.HIGHLIGHTER, btnHighlighter) }
         btnText.setOnClickListener { selectTool(WhiteboardView.DrawingTool.TEXT, btnText) }
         
         // Actions
@@ -131,7 +128,6 @@ class SectionControllerView @JvmOverloads constructor(
         // Update UI
         btnPen.isSelected = false
         btnEraser.isSelected = false
-        btnHighlighter.isSelected = false
         btnText.isSelected = false
         button.isSelected = true
         
@@ -215,7 +211,6 @@ class SectionControllerView @JvmOverloads constructor(
         when (section.currentTool) {
             WhiteboardView.DrawingTool.PEN -> selectTool(WhiteboardView.DrawingTool.PEN, btnPen)
             WhiteboardView.DrawingTool.ERASER -> selectTool(WhiteboardView.DrawingTool.ERASER, btnEraser)
-            WhiteboardView.DrawingTool.HIGHLIGHTER -> selectTool(WhiteboardView.DrawingTool.HIGHLIGHTER, btnHighlighter)
             WhiteboardView.DrawingTool.TEXT -> selectTool(WhiteboardView.DrawingTool.TEXT, btnText)
             else -> selectTool(WhiteboardView.DrawingTool.PEN, btnPen)
         }
@@ -236,7 +231,6 @@ class SectionControllerView @JvmOverloads constructor(
         // Initial state - pen selected
         btnPen.isSelected = true
         btnEraser.isSelected = false
-        btnHighlighter.isSelected = false
         btnText.isSelected = false
     }
 }

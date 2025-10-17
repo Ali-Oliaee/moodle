@@ -1,0 +1,374 @@
+package com.example.moodle.ui.whiteboard
+
+import android.content.Context
+import android.graphics.*
+import android.os.Environment
+import android.widget.Toast
+import com.example.moodle.R
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.*
+
+/**
+ * Manages exporting whiteboard content to various formats
+ * Supports PNG export and custom .moodle format for re-importing
+ */
+class ExportManager(private val context: Context) {
+    
+    companion object {
+        private const val EXPORT_FOLDER = "MoodleWhiteboard"
+        private const val PNG_QUALITY = 90
+        private const val CUSTOM_FORMAT_VERSION = "1.0"
+    }
+    
+    /**
+     * Export current whiteboard view as PNG image
+     */
+    fun exportToPNG(
+        whiteboardView: WhiteboardView,
+        onSuccess: (File) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        try {
+            // Create bitmap from whiteboard view
+            val bitmap = createBitmapFromView(whiteboardView)
+            
+            // Generate filename with timestamp
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val filename = "whiteboard_$timestamp.png"
+            
+            // Save to external storage
+            val file = saveBitmapToFile(bitmap, filename)
+            
+            if (file != null) {
+                onSuccess(file)
+                Toast.makeText(context, context.getString(R.string.export_png_success), Toast.LENGTH_LONG).show()
+            } else {
+                onError(context.getString(R.string.export_png_failed))
+            }
+        } catch (e: Exception) {
+            onError(context.getString(R.string.export_error, e.message))
+        }
+    }
+    
+    /**
+     * Export whiteboard data in custom format that can be re-imported
+     */
+    fun exportToCustomFormat(
+        whiteboardView: WhiteboardView,
+        pageManager: PageManager,
+        onSuccess: (File) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        try {
+            // Create JSON structure for export
+            val exportData = JSONObject()
+            exportData.put("version", CUSTOM_FORMAT_VERSION)
+            exportData.put("exportDate", System.currentTimeMillis())
+            exportData.put("appVersion", context.packageManager.getPackageInfo(context.packageName, 0).versionName)
+            
+            // Export current page data
+            val currentPageData = JSONObject()
+            currentPageData.put("backgroundPattern", whiteboardView.getBackgroundPattern().id)
+            
+            // Export paths
+            val pathsArray = JSONArray()
+            for (path in whiteboardView.getAllPaths()) {
+                val pathObj = serializeDrawingPath(path)
+                pathsArray.put(pathObj)
+            }
+            currentPageData.put("paths", pathsArray)
+            
+            // Export text objects
+            val textArray = JSONArray()
+            for (textObj in whiteboardView.getAllTextObjects()) {
+                val textObjData = serializeTextObject(textObj)
+                textArray.put(textObjData)
+            }
+            currentPageData.put("textObjects", textArray)
+            
+            // Export shape objects
+            val shapesArray = JSONArray()
+            for (shapeObj in whiteboardView.getAllShapeObjects()) {
+                val shapeObjData = serializeShapeObject(shapeObj)
+                shapesArray.put(shapeObjData)
+            }
+            currentPageData.put("shapeObjects", shapesArray)
+            
+            // Export split mode data if enabled
+            if (whiteboardView.isSplitModeEnabled()) {
+                val sectionsArray = JSONArray()
+                for (section in whiteboardView.getAllSections()) {
+                    val sectionData = serializeSection(section)
+                    sectionsArray.put(sectionData)
+                }
+                currentPageData.put("sections", sectionsArray)
+                currentPageData.put("splitModeEnabled", true)
+            } else {
+                currentPageData.put("splitModeEnabled", false)
+            }
+            
+            exportData.put("currentPage", currentPageData)
+            
+            // Export all pages from page manager
+            val allPagesArray = JSONArray()
+            for (pageId in pageManager.getPageIds()) {
+                val page = pageManager.getPage(pageId)
+                if (page != null) {
+                    val pageData = serializePage(page)
+                    allPagesArray.put(pageData)
+                }
+            }
+            exportData.put("allPages", allPagesArray)
+            exportData.put("currentPageId", pageManager.getCurrentPageId())
+            
+            // Export shared settings
+            val sharedSettings = JSONObject()
+            sharedSettings.put("color", pageManager.sharedColor)
+            sharedSettings.put("strokeWidth", pageManager.sharedStrokeWidth.toDouble())
+            sharedSettings.put("backgroundPattern", pageManager.sharedBackgroundPattern.id)
+            exportData.put("sharedSettings", sharedSettings)
+            
+            // Generate filename with timestamp
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val filename = "whiteboard_$timestamp.moodle"
+            
+            // Save to file
+            val file = saveJsonToFile(exportData.toString(2), filename)
+            
+            if (file != null) {
+                onSuccess(file)
+                Toast.makeText(context, context.getString(R.string.export_custom_success), Toast.LENGTH_LONG).show()
+            } else {
+                onError(context.getString(R.string.export_custom_failed))
+            }
+        } catch (e: Exception) {
+            onError(context.getString(R.string.export_error, e.message))
+        }
+    }
+    
+    /**
+     * Create bitmap from whiteboard view
+     */
+    private fun createBitmapFromView(whiteboardView: WhiteboardView): Bitmap {
+        val bitmap = Bitmap.createBitmap(
+            whiteboardView.width,
+            whiteboardView.height,
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(bitmap)
+        
+        // Draw white background
+        canvas.drawColor(Color.WHITE)
+        
+        // Draw the whiteboard content
+        whiteboardView.draw(canvas)
+        
+        return bitmap
+    }
+    
+    /**
+     * Save bitmap to PNG file
+     */
+    private fun saveBitmapToFile(bitmap: Bitmap, filename: String): File? {
+        return try {
+            val exportDir = getExportDirectory()
+            if (!exportDir.exists()) {
+                exportDir.mkdirs()
+            }
+            
+            val file = File(exportDir, filename)
+            val outputStream = FileOutputStream(file)
+            
+            bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, outputStream)
+            outputStream.flush()
+            outputStream.close()
+            
+            file
+        } catch (e: IOException) {
+            null
+        }
+    }
+    
+    /**
+     * Save JSON string to file
+     */
+    private fun saveJsonToFile(jsonString: String, filename: String): File? {
+        return try {
+            val exportDir = getExportDirectory()
+            if (!exportDir.exists()) {
+                exportDir.mkdirs()
+            }
+            
+            val file = File(exportDir, filename)
+            file.writeText(jsonString)
+            
+            file
+        } catch (e: IOException) {
+            null
+        }
+    }
+    
+    /**
+     * Get export directory - using Downloads folder like screen recordings
+     */
+    private fun getExportDirectory(): File {
+        return File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), EXPORT_FOLDER)
+    }
+    
+    /**
+     * Serialize DrawingPath to JSON
+     */
+    private fun serializeDrawingPath(drawingPath: WhiteboardView.DrawingPath): JSONObject {
+        val pathObj = JSONObject()
+        
+        // Serialize tool type
+        pathObj.put("tool", drawingPath.tool.name)
+        
+        // Serialize paint properties
+        val paintObj = JSONObject()
+        paintObj.put("color", drawingPath.paint.color)
+        paintObj.put("strokeWidth", drawingPath.paint.strokeWidth.toDouble())
+        paintObj.put("alpha", drawingPath.paint.alpha)
+        pathObj.put("paint", paintObj)
+        
+        // Serialize path data (simplified - store as SVG-like commands)
+        pathObj.put("pathData", serializePath(drawingPath.path))
+        
+        // Serialize text data if present
+        if (drawingPath.text != null) {
+            pathObj.put("text", drawingPath.text)
+            pathObj.put("textX", drawingPath.textX.toDouble())
+            pathObj.put("textY", drawingPath.textY.toDouble())
+        }
+        
+        // Serialize shape data if present
+        if (drawingPath.tool in listOf(
+                WhiteboardView.DrawingTool.LINE,
+                WhiteboardView.DrawingTool.CIRCLE,
+                WhiteboardView.DrawingTool.TRIANGLE,
+                WhiteboardView.DrawingTool.RECTANGLE
+            )) {
+            pathObj.put("shapeStartX", drawingPath.shapeStartX.toDouble())
+            pathObj.put("shapeStartY", drawingPath.shapeStartY.toDouble())
+            pathObj.put("shapeEndX", drawingPath.shapeEndX.toDouble())
+            pathObj.put("shapeEndY", drawingPath.shapeEndY.toDouble())
+        }
+        
+        return pathObj
+    }
+    
+    /**
+     * Serialize TextObject to JSON
+     */
+    private fun serializeTextObject(textObject: WhiteboardView.TextObject): JSONObject {
+        val textObj = JSONObject()
+        textObj.put("text", textObject.text)
+        textObj.put("x", textObject.x.toDouble())
+        textObj.put("y", textObject.y.toDouble())
+        textObj.put("textSize", textObject.textSize.toDouble())
+        textObj.put("color", textObject.color)
+        textObj.put("rotation", textObject.rotation.toDouble())
+        return textObj
+    }
+    
+    /**
+     * Serialize ShapeObject to JSON
+     */
+    private fun serializeShapeObject(shapeObject: WhiteboardView.ShapeObject): JSONObject {
+        val shapeObj = JSONObject()
+        shapeObj.put("shapeType", shapeObject.shapeType.name)
+        shapeObj.put("startX", shapeObject.startX.toDouble())
+        shapeObj.put("startY", shapeObject.startY.toDouble())
+        shapeObj.put("endX", shapeObject.endX.toDouble())
+        shapeObj.put("endY", shapeObject.endY.toDouble())
+        shapeObj.put("color", shapeObject.color)
+        shapeObj.put("strokeWidth", shapeObject.strokeWidth.toDouble())
+        shapeObj.put("rotation", shapeObject.rotation.toDouble())
+        shapeObj.put("scaleX", shapeObject.scaleX.toDouble())
+        shapeObj.put("scaleY", shapeObject.scaleY.toDouble())
+        return shapeObj
+    }
+    
+    /**
+     * Serialize Section to JSON
+     */
+    private fun serializeSection(section: SectionManager.Section): JSONObject {
+        val sectionObj = JSONObject()
+        sectionObj.put("id", section.id)
+        sectionObj.put("studentName", section.studentName)
+        sectionObj.put("currentTool", section.currentTool.name)
+        sectionObj.put("currentColor", section.currentColor)
+        sectionObj.put("currentStrokeWidth", section.currentStrokeWidth.toDouble())
+        
+        // Serialize bounds
+        val boundsObj = JSONObject()
+        boundsObj.put("left", section.bounds.left.toDouble())
+        boundsObj.put("top", section.bounds.top.toDouble())
+        boundsObj.put("right", section.bounds.right.toDouble())
+        boundsObj.put("bottom", section.bounds.bottom.toDouble())
+        sectionObj.put("bounds", boundsObj)
+        
+        // Serialize paths
+        val pathsArray = JSONArray()
+        for (path in section.paths) {
+            pathsArray.put(serializeDrawingPath(path))
+        }
+        sectionObj.put("paths", pathsArray)
+        
+        // Serialize text objects
+        val textArray = JSONArray()
+        for (textObj in section.textObjects) {
+            textArray.put(serializeTextObject(textObj))
+        }
+        sectionObj.put("textObjects", textArray)
+        
+        return sectionObj
+    }
+    
+    /**
+     * Serialize Page to JSON
+     */
+    private fun serializePage(page: PageData): JSONObject {
+        val pageObj = JSONObject()
+        pageObj.put("pageId", page.pageId)
+        pageObj.put("backgroundPattern", page.backgroundPattern.id)
+        
+        // Serialize paths
+        val pathsArray = JSONArray()
+        for (path in page.paths) {
+            pathsArray.put(serializeDrawingPath(path))
+        }
+        pageObj.put("paths", pathsArray)
+        
+        // Serialize text objects
+        val textArray = JSONArray()
+        for (textObj in page.textObjects) {
+            textArray.put(serializeTextObject(textObj))
+        }
+        pageObj.put("textObjects", textArray)
+        
+        // Serialize shape objects
+        val shapesArray = JSONArray()
+        for (shapeObj in page.shapeObjects) {
+            shapesArray.put(serializeShapeObject(shapeObj))
+        }
+        pageObj.put("shapeObjects", shapesArray)
+        
+        return pageObj
+    }
+    
+    /**
+     * Serialize Path to string (simplified approach)
+     * Note: This is a basic implementation. For full fidelity, consider using SVG path format
+     */
+    private fun serializePath(path: Path): String {
+        // For now, return a placeholder. In a full implementation, you would
+        // need to extract path segments and convert to a serializable format
+        return "PATH_DATA_PLACEHOLDER"
+    }
+}

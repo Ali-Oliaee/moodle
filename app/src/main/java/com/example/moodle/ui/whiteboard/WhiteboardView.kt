@@ -24,7 +24,7 @@ class WhiteboardView @JvmOverloads constructor(
 
     // Drawing tools
     enum class DrawingTool {
-        PEN, ERASER, HIGHLIGHTER, TEXT, SELECTIVE_ERASER, LINE, CIRCLE, TRIANGLE, RECTANGLE
+        PEN, ERASER, TEXT, SELECTIVE_ERASER, LINE, CIRCLE, TRIANGLE, RECTANGLE
     }
 
     // Drawing state
@@ -54,13 +54,6 @@ class WhiteboardView @JvmOverloads constructor(
         xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
     }
 
-    private val highlighterPaint = Paint().apply {
-        isAntiAlias = true
-        style = Paint.Style.STROKE
-        strokeJoin = Paint.Join.ROUND
-        strokeCap = Paint.Cap.ROUND
-        alpha = 100 // Semi-transparent
-    }
 
     private val textPaint = Paint().apply {
         isAntiAlias = true
@@ -143,6 +136,11 @@ class WhiteboardView @JvmOverloads constructor(
     // Multi-touch tracking
     private var isScaling = false
     private var isPanning = false
+    
+    // Boundary constraints
+    private var maxFocusX = 0f
+    private var maxFocusY = 0f
+    private var minScaleFactor = 0.1f  // Minimum zoom level to prevent seeing outside bitmap
     
     // Section management for split mode
     private val sectionManager = SectionManager()
@@ -591,6 +589,17 @@ class WhiteboardView @JvmOverloads constructor(
             // Center the initial view on the large canvas
             focusX = (canvasWidth - w) / 2f
             focusY = (canvasHeight - h) / 2f
+            
+            // Set maximum focus boundaries (bitmap size - view size)
+            maxFocusX = (canvasWidth - w).toFloat()
+            maxFocusY = (canvasHeight - h).toFloat()
+            
+            // Calculate minimum scale factor to prevent seeing empty space
+            // Min scale is when entire bitmap just fits in the view
+            minScaleFactor = max(
+                w.toFloat() / canvasWidth.toFloat(),
+                h.toFloat() / canvasHeight.toFloat()
+            )
         } catch (e: OutOfMemoryError) {
             // Fallback to screen size if memory is insufficient
             drawingBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
@@ -598,6 +607,9 @@ class WhiteboardView @JvmOverloads constructor(
             drawingCanvas?.drawColor(Color.WHITE)
             focusX = 0f
             focusY = 0f
+            maxFocusX = 0f
+            maxFocusY = 0f
+            minScaleFactor = 1.0f  // No zoom out for fallback case
         }
         
         // Update section manager with new dimensions
@@ -790,8 +802,15 @@ class WhiteboardView @JvmOverloads constructor(
                 // Get coordinates for actual drawing
                 // In split mode, use screen coordinates directly (no transformation)
                 // In normal mode, use transformed coordinates
-                val x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
-                val y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                var x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                var y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                
+                // Clamp coordinates to bitmap bounds in normal mode
+                if (!sectionManager.isSplitModeEnabled()) {
+                    val clamped = clampToBitmapBounds(x, y)
+                    x = clamped.first
+                    y = clamped.second
+                }
                 
                 // Handle special tools differently
                 // In split mode, use section's tool; otherwise use global tool
@@ -836,20 +855,35 @@ class WhiteboardView @JvmOverloads constructor(
                     
                     when (toolToUse) {
                         DrawingTool.TEXT -> {
-                            val x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
-                            val y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            var x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
+                            var y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            if (!sectionManager.isSplitModeEnabled()) {
+                                val clamped = clampToBitmapBounds(x, y)
+                                x = clamped.first
+                                y = clamped.second
+                            }
                             handleTextTouch(x, y, action)
                             return@handleDrawingTouch
                         }
                         DrawingTool.SELECTIVE_ERASER -> {
-                            val x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
-                            val y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            var x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
+                            var y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            if (!sectionManager.isSplitModeEnabled()) {
+                                val clamped = clampToBitmapBounds(x, y)
+                                x = clamped.first
+                                y = clamped.second
+                            }
                             handleSelectiveEraserTouch(x, y, action)
                             return@handleDrawingTouch
                         }
                         DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> {
-                            val x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
-                            val y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            var x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
+                            var y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            if (!sectionManager.isSplitModeEnabled()) {
+                                val clamped = clampToBitmapBounds(x, y)
+                                x = clamped.first
+                                y = clamped.second
+                            }
                             handleShapeTouch(x, y, action, toolToUse, id)
                             return@handleDrawingTouch
                         }
@@ -881,8 +915,15 @@ class WhiteboardView @JvmOverloads constructor(
                         
                         // Transform to drawing coordinates
                         // In split mode use screen coords directly, in normal mode use transformed coords
-                        val x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
-                        val y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        var x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                        var y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        
+                        // Clamp coordinates to bitmap bounds in normal mode
+                        if (!sectionManager.isSplitModeEnabled()) {
+                            val clamped = clampToBitmapBounds(x, y)
+                            x = clamped.first
+                            y = clamped.second
+                        }
                         
                         val dx = abs(x - lastX)
                         val dy = abs(y - lastY)
@@ -907,22 +948,37 @@ class WhiteboardView @JvmOverloads constructor(
                     DrawingTool.TEXT -> {
                         val screenX = event.getX(pointerIndex)
                         val screenY = event.getY(pointerIndex)
-                        val x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
-                        val y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        var x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                        var y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        if (!sectionManager.isSplitModeEnabled()) {
+                            val clamped = clampToBitmapBounds(x, y)
+                            x = clamped.first
+                            y = clamped.second
+                        }
                         handleTextTouch(x, y, action)
                     }
                     DrawingTool.SELECTIVE_ERASER -> {
                         val screenX = event.getX(pointerIndex)
                         val screenY = event.getY(pointerIndex)
-                        val x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
-                        val y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        var x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                        var y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        if (!sectionManager.isSplitModeEnabled()) {
+                            val clamped = clampToBitmapBounds(x, y)
+                            x = clamped.first
+                            y = clamped.second
+                        }
                         handleSelectiveEraserTouch(x, y, action)
                     }
                     DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> {
                         val screenX = event.getX(pointerIndex)
                         val screenY = event.getY(pointerIndex)
-                        val x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
-                        val y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        var x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                        var y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        if (!sectionManager.isSplitModeEnabled()) {
+                            val clamped = clampToBitmapBounds(x, y)
+                            x = clamped.first
+                            y = clamped.second
+                        }
                         handleShapeTouch(x, y, action, toolToUse, pointerId)
                     }
                     else -> {
@@ -1544,8 +1600,12 @@ class WhiteboardView @JvmOverloads constructor(
                         val dx = x - lastTouchX
                         val dy = y - lastTouchY
                         
-                        focusX += dx
-                        focusY += dy
+                        // Reverse directions: swipe up moves canvas down, swipe left moves canvas right
+                        focusX -= dx
+                        focusY -= dy
+                        
+                        // Constrain focus to bitmap boundaries
+                        constrainFocusToBounds()
                         
                         lastTouchX = x
                         lastTouchY = y
@@ -1561,6 +1621,50 @@ class WhiteboardView @JvmOverloads constructor(
             }
         }
     }
+    
+    /**
+     * Constrains focus position to stay within bitmap boundaries
+     * This prevents panning outside the drawable area
+     */
+    private fun constrainFocusToBounds() {
+        // Get bitmap dimensions
+        val bitmapWidth = drawingBitmap?.width?.toFloat() ?: width.toFloat()
+        val bitmapHeight = drawingBitmap?.height?.toFloat() ?: height.toFloat()
+        
+        // Calculate the scaled bitmap size
+        val scaledBitmapWidth = bitmapWidth * scaleFactor
+        val scaledBitmapHeight = bitmapHeight * scaleFactor
+        
+        // If bitmap fits entirely in view, center it
+        if (scaledBitmapWidth <= width) {
+            focusX = -(width - scaledBitmapWidth) / 2f
+        } else {
+            // Calculate max focus values to keep bitmap edges within view
+            val maxX = bitmapWidth - width / scaleFactor
+            focusX = focusX.coerceIn(0f, maxX * scaleFactor)
+        }
+        
+        if (scaledBitmapHeight <= height) {
+            focusY = -(height - scaledBitmapHeight) / 2f
+        } else {
+            // Calculate max focus values to keep bitmap edges within view
+            val maxY = bitmapHeight - height / scaleFactor
+            focusY = focusY.coerceIn(0f, maxY * scaleFactor)
+        }
+    }
+    
+    /**
+     * Clamps drawing coordinates to stay within bitmap boundaries
+     */
+    private fun clampToBitmapBounds(x: Float, y: Float): Pair<Float, Float> {
+        val bitmapWidth = drawingBitmap?.width?.toFloat() ?: width.toFloat()
+        val bitmapHeight = drawingBitmap?.height?.toFloat() ?: height.toFloat()
+        
+        val clampedX = x.coerceIn(0f, bitmapWidth)
+        val clampedY = y.coerceIn(0f, bitmapHeight)
+        
+        return Pair(clampedX, clampedY)
+    }
 
     private fun getCurrentPaint(): Paint {
         return when (currentTool) {
@@ -1571,11 +1675,6 @@ class WhiteboardView @JvmOverloads constructor(
             }
             DrawingTool.ERASER -> eraserPaint.apply {
                 strokeWidth = currentStrokeWidth * 2
-            }
-            DrawingTool.HIGHLIGHTER -> highlighterPaint.apply {
-                color = currentColor
-                strokeWidth = currentStrokeWidth * 3
-                xfermode = null
             }
             DrawingTool.TEXT -> textPaint.apply {
                 color = currentColor
@@ -1600,11 +1699,6 @@ class WhiteboardView @JvmOverloads constructor(
             }
             DrawingTool.ERASER -> Paint(eraserPaint).apply {
                 strokeWidth = section.currentStrokeWidth * 2
-            }
-            DrawingTool.HIGHLIGHTER -> Paint(highlighterPaint).apply {
-                color = section.currentColor
-                strokeWidth = section.currentStrokeWidth * 3
-                xfermode = null
             }
             DrawingTool.TEXT -> Paint(textPaint).apply {
                 color = section.currentColor
@@ -1696,6 +1790,40 @@ class WhiteboardView @JvmOverloads constructor(
     
     fun getBackgroundPattern(): BackgroundPattern {
         return currentBackgroundPattern
+    }
+    
+    /**
+     * Sets the zoom level programmatically
+     * @param zoomLevel value between minScaleFactor and 5.0f
+     */
+    fun setZoomLevel(zoomLevel: Float) {
+        scaleFactor = zoomLevel.coerceIn(minScaleFactor, 5.0f)
+        constrainFocusToBounds()
+        invalidate()
+    }
+    
+    /**
+     * Gets the current zoom level
+     * @return current scale factor
+     */
+    fun getZoomLevel(): Float {
+        return scaleFactor
+    }
+    
+    /**
+     * Gets the minimum allowed zoom level
+     * @return minimum scale factor
+     */
+    fun getMinZoomLevel(): Float {
+        return minScaleFactor
+    }
+    
+    /**
+     * Gets the maximum allowed zoom level
+     * @return maximum scale factor (5.0f)
+     */
+    fun getMaxZoomLevel(): Float {
+        return 5.0f
     }
 
     fun undo() {
@@ -1917,10 +2045,18 @@ class WhiteboardView @JvmOverloads constructor(
     // Gesture listeners
     private inner class GestureListener : GestureDetector.SimpleOnGestureListener() {
         override fun onDoubleTap(e: MotionEvent): Boolean {
-            // Reset zoom and pan
+            // Reset zoom and pan to center of bitmap
             scaleFactor = 1.0f
-            focusX = 0f
-            focusY = 0f
+            
+            // Center the view on the bitmap
+            val bitmapWidth = drawingBitmap?.width?.toFloat() ?: width.toFloat()
+            val bitmapHeight = drawingBitmap?.height?.toFloat() ?: height.toFloat()
+            focusX = (bitmapWidth - width) / 2f
+            focusY = (bitmapHeight - height) / 2f
+            
+            // Ensure we're within bounds
+            constrainFocusToBounds()
+            
             invalidate()
             return true
         }
@@ -1934,11 +2070,17 @@ class WhiteboardView @JvmOverloads constructor(
 
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             scaleFactor *= detector.scaleFactor
-            scaleFactor = max(0.1f, min(scaleFactor, 5.0f))
+            
+            // Constrain scale factor to prevent seeing empty space outside bitmap
+            // Use dynamic minimum based on bitmap/view ratio, and max 5x zoom
+            scaleFactor = max(minScaleFactor, min(scaleFactor, 5.0f))
             
             // Adjust focus point
             focusX = detector.focusX - (detector.focusX - focusX) * detector.scaleFactor
             focusY = detector.focusY - (detector.focusY - focusY) * detector.scaleFactor
+            
+            // Constrain focus to bitmap boundaries after zooming
+            constrainFocusToBounds()
             
             invalidate()
             return true
@@ -1971,7 +2113,6 @@ class WhiteboardView @JvmOverloads constructor(
         val tools = listOf(
             DrawingTool.PEN,
             DrawingTool.ERASER,
-            DrawingTool.HIGHLIGHTER,
             DrawingTool.TEXT,
             DrawingTool.LINE,
             DrawingTool.CIRCLE,
@@ -2087,11 +2228,10 @@ class WhiteboardView @JvmOverloads constructor(
             val row1Y = controlArea.top + 35f
             val row2Y = controlArea.top + 70f
             
-            // Row 1: Tool buttons (Pen, Eraser, Highlighter, Text, Line, Circle, Triangle, Rectangle)
+            // Row 1: Tool buttons (Pen, Eraser, Text, Line, Circle, Triangle, Rectangle)
             val tools = listOf(
                 Pair(DrawingTool.PEN, "✏"),
                 Pair(DrawingTool.ERASER, "⌫"),
-                Pair(DrawingTool.HIGHLIGHTER, "🖍"),
                 Pair(DrawingTool.TEXT, "T"),
                 Pair(DrawingTool.LINE, "—"),
                 Pair(DrawingTool.CIRCLE, "○"),

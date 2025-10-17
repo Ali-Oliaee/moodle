@@ -157,6 +157,28 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
         getCurrentPage().clear()
     }
     
+    fun clearAllPages() {
+        pages.clear()
+        currentPageId = DEFAULT_PAGE_ID
+        nextPageId = DEFAULT_PAGE_ID + 1
+        // Create default first page
+        pages[DEFAULT_PAGE_ID] = PageData(DEFAULT_PAGE_ID, backgroundPattern = sharedBackgroundPattern)
+        saveState()
+        pageChangeListener?.onPageChanged(currentPageId, getTotalPages())
+    }
+    
+    fun getPage(pageId: Int): PageData? {
+        return pages[pageId]
+    }
+    
+    fun addPage(page: PageData) {
+        pages[page.pageId] = page
+        if (page.pageId >= nextPageId) {
+            nextPageId = page.pageId + 1
+        }
+        saveState()
+    }
+    
     fun undoCurrentPage(): Boolean {
         val currentPage = getCurrentPage()
         return currentPage.undo() != null

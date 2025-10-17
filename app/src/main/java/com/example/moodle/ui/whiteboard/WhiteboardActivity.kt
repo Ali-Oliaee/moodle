@@ -9,6 +9,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.media.projection.MediaProjectionManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.support.v4.content.ContextCompat
@@ -32,9 +33,16 @@ class WhiteboardActivity : AppCompatActivity() {
     companion object {
         private const val REQUEST_CODE_SCREEN_CAPTURE = 1000
         private const val REQUEST_CODE_PERMISSIONS = 1001
+        private const val REQUEST_CODE_STORAGE_PERMISSIONS = 1002
+        private const val REQUEST_CODE_IMPORT_IMAGE = 2001
+        private const val REQUEST_CODE_IMPORT_MOODLE = 2002
         private val REQUIRED_PERMISSIONS = arrayOf(
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.RECORD_AUDIO
+        )
+        private val STORAGE_PERMISSIONS = arrayOf(
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
         )
     }
 
@@ -45,9 +53,13 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnAttendance: ImageButton
     private lateinit var btnLogout: ImageButton
     
+    // Import/Export Components
+    private lateinit var btnExport: ImageButton
+    private lateinit var btnImport: ImageButton
+    
     // Split mode components
-    private lateinit var btnEnableSplit: Button
-    private lateinit var btnDisableSplit: Button
+    private lateinit var btnEnableSplit: ImageButton
+    private lateinit var btnDisableSplit: ImageButton
     private lateinit var bottomToolbar: LinearLayout
     
     private var isSplitMode = false
@@ -55,7 +67,6 @@ class WhiteboardActivity : AppCompatActivity() {
     // Tool buttons
     private lateinit var btnPen: ImageButton
     private lateinit var btnEraser: ImageButton
-    private lateinit var btnHighlighter: ImageButton
     private lateinit var btnText: ImageButton
     private lateinit var btnFormula: ImageButton
     private lateinit var btnShapes: ImageButton
@@ -81,6 +92,8 @@ class WhiteboardActivity : AppCompatActivity() {
     private var eraserModePopupWindow: PopupWindow? = null
     private var formulaPopupWindow: PopupWindow? = null
     private var backgroundPopupWindow: PopupWindow? = null
+    private var zoomPopupWindow: PopupWindow? = null
+    private var isUpdatingZoomFromSlider = false
     private var currentStrokeWidth: Float = 8f
     
     // State
@@ -90,6 +103,10 @@ class WhiteboardActivity : AppCompatActivity() {
     private var currentSelectedColor: Int = Color.BLACK
     private var isSelectiveEraserMode = false
     private lateinit var userPreferences: UserPreferences
+    
+    // Import/Export managers
+    private lateinit var exportManager: ExportManager
+    private lateinit var importManager: ImportManager
     
     private val mediaProjectionManager by lazy {
         getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
@@ -119,6 +136,10 @@ class WhiteboardActivity : AppCompatActivity() {
         // Initialize PageManager
         pageManager = PageManager(userPreferences)
         
+        // Initialize Import/Export managers
+        exportManager = ExportManager(this)
+        importManager = ImportManager(this)
+        
         // Set the split-enabled layout
         setContentView(R.layout.activity_whiteboard_split)
         
@@ -141,10 +162,13 @@ class WhiteboardActivity : AppCompatActivity() {
         btnAttendance = findViewById(R.id.btnAttendance)
         btnLogout = findViewById(R.id.btnLogout)
         
+        // Import/Export buttons
+        btnExport = findViewById(R.id.btnExport)
+        btnImport = findViewById(R.id.btnImport)
+        
         // Tool buttons
         btnPen = findViewById(R.id.btnPen)
         btnEraser = findViewById(R.id.btnEraser)
-        btnHighlighter = findViewById(R.id.btnHighlighter)
         btnText = findViewById(R.id.btnText)
         btnFormula = findViewById(R.id.btnFormula)
         btnShapes = findViewById(R.id.btnShapes)
@@ -170,6 +194,7 @@ class WhiteboardActivity : AppCompatActivity() {
         
         setupSplitModeControls()
         setupPaginationControls()
+        setupImportExportControls()
         
         // Set welcome message with username
         val username = userPreferences.getUsername()
@@ -199,6 +224,26 @@ class WhiteboardActivity : AppCompatActivity() {
         
         btnDisableSplit.setOnClickListener {
             disableSplitMode()
+        }
+    }
+    
+    private fun setupImportExportControls() {
+        // Setup export button listener
+        btnExport.setOnClickListener {
+            if (checkStoragePermissions()) {
+                showExportOptionsDialog()
+            } else {
+                requestStoragePermissions()
+            }
+        }
+        
+        // Setup import button listener
+        btnImport.setOnClickListener {
+            if (checkStoragePermissions()) {
+                showImportOptionsDialog()
+            } else {
+                requestStoragePermissions()
+            }
         }
     }
     
@@ -359,7 +404,6 @@ class WhiteboardActivity : AppCompatActivity() {
         // Tool selection listeners
         btnPen.setOnClickListener { selectTool(WhiteboardView.DrawingTool.PEN, btnPen) }
         btnEraser.setOnClickListener { showEraserModePopup() }
-        btnHighlighter.setOnClickListener { selectTool(WhiteboardView.DrawingTool.HIGHLIGHTER, btnHighlighter) }
         btnText.setOnClickListener { selectTool(WhiteboardView.DrawingTool.TEXT, btnText) }
         btnFormula.setOnClickListener { showFormulaPopup() }
         btnShapes.setOnClickListener { showShapesPopup() }
@@ -377,7 +421,7 @@ class WhiteboardActivity : AppCompatActivity() {
         }
         btnClear.setOnClickListener { showClearConfirmDialog() }
         btnModeToggle.setOnClickListener { toggleMode() }
-        btnPinchMode.setOnClickListener { togglePinchMode() }
+        btnPinchMode.setOnClickListener { showZoomPopup() }
     }
     
     private fun setupPopupListeners() {
@@ -464,6 +508,64 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Show popup above the stroke width button
         strokePopupWindow?.showAsDropDown(btnStrokeWidth, 0, -btnStrokeWidth.height - 150, Gravity.CENTER)
+    }
+    
+    private fun showZoomPopup() {
+        val inflater = LayoutInflater.from(this)
+        val popupView = inflater.inflate(R.layout.popup_zoom_slider, null)
+        
+        zoomPopupWindow = PopupWindow(
+            popupView,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            true
+        )
+        
+        val zoomSlider = popupView.findViewById<SeekBar>(R.id.zoomSlider)
+        val btnResetZoom = popupView.findViewById<Button>(R.id.btnResetZoom)
+        
+        // Get current zoom level and range
+        val currentZoom = whiteboardView.getZoomLevel()
+        val minZoom = whiteboardView.getMinZoomLevel()
+        val maxZoom = whiteboardView.getMaxZoomLevel()
+        
+        // Convert zoom level to progress (0-100)
+        val progress = ((currentZoom - minZoom) / (maxZoom - minZoom) * 100f).toInt()
+        zoomSlider.progress = progress
+        
+        // Setup slider listener
+        zoomSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser && !isUpdatingZoomFromSlider) {
+                    // Convert progress (0-100) to zoom level (minZoom-maxZoom)
+                    val zoomLevel = minZoom + (progress / 100f) * (maxZoom - minZoom)
+                    
+                    isUpdatingZoomFromSlider = true
+                    whiteboardView.setZoomLevel(zoomLevel)
+                    
+                    // Update percentage text
+                    val percentage = (zoomLevel * 100).toInt()
+                    
+                    isUpdatingZoomFromSlider = false
+                }
+            }
+            
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+        
+        // Setup reset button
+        btnResetZoom.setOnClickListener {
+            whiteboardView.setZoomLevel(1.0f)
+            
+            // Update slider
+            val resetProgress = ((1.0f - minZoom) / (maxZoom - minZoom) * 100f).toInt()
+            zoomSlider.progress = resetProgress
+            
+        }
+        
+        // Show popup above the pinch mode button
+        zoomPopupWindow?.showAsDropDown(btnPinchMode, 0, -btnPinchMode.height - 150, Gravity.CENTER)
     }
     
     private fun showBackgroundPatternPopup() {
@@ -874,7 +976,6 @@ class WhiteboardActivity : AppCompatActivity() {
         // Update tool selection
         btnPen.isSelected = false
         btnEraser.isSelected = false
-        btnHighlighter.isSelected = false
         btnText.isSelected = false
         btnShapes.isSelected = false
         button.isSelected = true
@@ -908,12 +1009,8 @@ class WhiteboardActivity : AppCompatActivity() {
         isDrawingMode = !isDrawingMode
         whiteboardView.setDrawingMode(isDrawingMode)
         
-        // Update button icon
-        if (isDrawingMode) {
-            btnModeToggle.setImageResource(R.drawable.ic_pen)
-        } else {
-            btnModeToggle.setImageResource(R.drawable.ic_pan)
-        }
+        // Update button selected state (selected = pan mode, not selected = drawing mode)
+        btnModeToggle.isSelected = !isDrawingMode
         
         // Show toast to indicate mode
         val modeText = if (isDrawingMode) {
@@ -1024,12 +1121,21 @@ class WhiteboardActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         
-        if (requestCode == REQUEST_CODE_PERMISSIONS) {
-            if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                Toast.makeText(this, getString(R.string.permissions_granted), Toast.LENGTH_SHORT).show()
-                startRecording()
-            } else {
-                Toast.makeText(this, getString(R.string.permissions_denied), Toast.LENGTH_LONG).show()
+        when (requestCode) {
+            REQUEST_CODE_PERMISSIONS -> {
+                if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                    Toast.makeText(this, getString(R.string.permissions_granted), Toast.LENGTH_SHORT).show()
+                    startRecording()
+                } else {
+                    Toast.makeText(this, getString(R.string.permissions_denied), Toast.LENGTH_LONG).show()
+                }
+            }
+            REQUEST_CODE_STORAGE_PERMISSIONS -> {
+                if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                    Toast.makeText(this, getString(R.string.permissions_granted), Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, getString(R.string.storage_permission_denied), Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
@@ -1037,14 +1143,61 @@ class WhiteboardActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         
-        if (requestCode == REQUEST_CODE_SCREEN_CAPTURE) {
-            if (resultCode == Activity.RESULT_OK && data != null) {
-                startRecordingService(resultCode, data)
-                Toast.makeText(this, getString(R.string.recording_started), Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, getString(R.string.screen_capture_denied), Toast.LENGTH_SHORT).show()
+        when (requestCode) {
+            REQUEST_CODE_SCREEN_CAPTURE -> {
+                if (resultCode == Activity.RESULT_OK && data != null) {
+                    startRecordingService(resultCode, data)
+                    Toast.makeText(this, getString(R.string.recording_started), Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, getString(R.string.screen_capture_denied), Toast.LENGTH_SHORT).show()
+                }
+            }
+            REQUEST_CODE_IMPORT_IMAGE -> {
+                if (resultCode == Activity.RESULT_OK && data != null) {
+                    data.data?.let { uri ->
+                        importImage(uri)
+                    }
+                }
+            }
+            REQUEST_CODE_IMPORT_MOODLE -> {
+                if (resultCode == Activity.RESULT_OK && data != null) {
+                    data.data?.let { uri ->
+                        importMoodleFile(uri)
+                    }
+                }
             }
         }
+    }
+    
+    private fun importImage(uri: Uri) {
+        importManager.importImage(
+            uri,
+            whiteboardView,
+            onSuccess = {
+                // Success handled by ImportManager toast
+                updateToolButtons()
+            },
+            onError = { error ->
+                Toast.makeText(this, error, Toast.LENGTH_LONG).show()
+            }
+        )
+    }
+    
+    private fun importMoodleFile(uri: Uri) {
+        importManager.importCustomFormat(
+            uri,
+            whiteboardView,
+            pageManager,
+            onSuccess = {
+                // Success handled by ImportManager toast
+                updatePaginationUI()
+                loadCurrentPageToWhiteboard()
+                updateToolButtons()
+            },
+            onError = { error ->
+                Toast.makeText(this, error, Toast.LENGTH_LONG).show()
+            }
+        )
     }
 
     private fun startRecordingService(resultCode: Int, data: Intent) {
@@ -1092,6 +1245,9 @@ class WhiteboardActivity : AppCompatActivity() {
         btnDisableSplit.visibility = View.VISIBLE
         bottomToolbar.visibility = View.GONE
         
+        // Dismiss zoom popup if open
+        zoomPopupWindow?.dismiss()
+        
         Toast.makeText(this, getString(R.string.split_mode_enabled), Toast.LENGTH_SHORT).show()
     }
     
@@ -1108,6 +1264,154 @@ class WhiteboardActivity : AppCompatActivity() {
         Toast.makeText(this, getString(R.string.split_mode_disabled), Toast.LENGTH_SHORT).show()
     }
     
+    // Import/Export functionality
+    private fun showExportOptionsDialog() {
+        val inflater = LayoutInflater.from(this)
+        val dialogView = inflater.inflate(R.layout.dialog_export_options, null)
+        
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+        
+        // Export PNG option
+        dialogView.findViewById<LinearLayout>(R.id.exportPngOption).setOnClickListener {
+            dialog.dismiss()
+            exportToPNG()
+        }
+        
+        // Export Moodle format option
+        dialogView.findViewById<LinearLayout>(R.id.exportMoodleOption).setOnClickListener {
+            dialog.dismiss()
+            exportToMoodleFormat()
+        }
+        
+        // Cancel button
+        dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
+            dialog.dismiss()
+        }
+        
+        dialog.show()
+    }
+    
+    private fun showImportOptionsDialog() {
+        val inflater = LayoutInflater.from(this)
+        val dialogView = inflater.inflate(R.layout.dialog_import_options, null)
+        
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+        
+        // Import image option
+        dialogView.findViewById<LinearLayout>(R.id.importImageOption).setOnClickListener {
+            dialog.dismiss()
+            openImagePicker()
+        }
+        
+        // Import Moodle file option
+        dialogView.findViewById<LinearLayout>(R.id.importMoodleOption).setOnClickListener {
+            dialog.dismiss()
+            showImportMoodleConfirmDialog()
+        }
+        
+        // Cancel button
+        dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
+            dialog.dismiss()
+        }
+        
+        dialog.show()
+    }
+    
+    private fun exportToPNG() {
+        // Save current page state first
+        saveCurrentPageFromWhiteboard()
+        
+        exportManager.exportToPNG(
+            whiteboardView,
+            onSuccess = { file ->
+                // Success handled by ExportManager toast
+            },
+            onError = { error ->
+                Toast.makeText(this, error, Toast.LENGTH_LONG).show()
+            }
+        )
+    }
+    
+    private fun exportToMoodleFormat() {
+        // Save current page state first
+        saveCurrentPageFromWhiteboard()
+        
+        exportManager.exportToCustomFormat(
+            whiteboardView,
+            pageManager,
+            onSuccess = { file ->
+                // Success handled by ExportManager toast
+            },
+            onError = { error ->
+                Toast.makeText(this, error, Toast.LENGTH_LONG).show()
+            }
+        )
+    }
+    
+    private fun openImagePicker() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "image/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        
+        try {
+            startActivityForResult(
+                Intent.createChooser(intent, getString(R.string.select_image_file)),
+                REQUEST_CODE_IMPORT_IMAGE
+            )
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.no_file_manager), Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun showImportMoodleConfirmDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.import_moodle_file))
+            .setMessage(getString(R.string.import_will_clear_board))
+            .setPositiveButton(getString(R.string.continue_import)) { _, _ ->
+                openMoodleFilePicker()
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+    
+    private fun openMoodleFilePicker() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "*/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/octet-stream", "text/plain"))
+        }
+        
+        try {
+            startActivityForResult(
+                Intent.createChooser(intent, getString(R.string.select_moodle_file)),
+                REQUEST_CODE_IMPORT_MOODLE
+            )
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.no_file_manager), Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun checkStoragePermissions(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            STORAGE_PERMISSIONS.all { permission ->
+                ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+            }
+        } else {
+            true
+        }
+    }
+    
+    private fun requestStoragePermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            requestPermissions(STORAGE_PERMISSIONS, REQUEST_CODE_STORAGE_PERMISSIONS)
+        }
+    }
+    
     override fun onDestroy() {
         super.onDestroy()
         try {
@@ -1120,6 +1424,7 @@ class WhiteboardActivity : AppCompatActivity() {
         colorPopupWindow?.dismiss()
         strokePopupWindow?.dismiss()
         backgroundPopupWindow?.dismiss()
+        zoomPopupWindow?.dismiss()
         
         // Clean up whiteboard resources
         whiteboardView.cleanup()
