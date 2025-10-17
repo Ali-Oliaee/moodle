@@ -182,6 +182,15 @@
     <string name="export_custom_success">فایل Moodle با موفقیت ذخیره شد در Downloads/MoodleWhiteboard/</string>
     <string name="export_custom_failed">خروج فایل Moodle ناموفق بود</string>
     <string name="export_error">خطا در خروج: %1$s</string>
+    <string name="export_multiple_pages_success">%1$d تصویر PNG با موفقیت ذخیره شد در Downloads/MoodleWhiteboard/</string>
+    
+    <!-- Multi-page Export Dialog -->
+    <string name="export_page_selection">انتخاب صفحات</string>
+    <string name="export_current_page">صفحه فعلی</string>
+    <string name="export_all_pages">تمام صفحات</string>
+    <string name="export_page_selection_message">چند صفحه در تخته شما وجود دارد. می‌خواهید کدام صفحات را ذخیره کنید؟</string>
+    <string name="export_current_page_description">فقط صفحه فعلی را به عنوان PNG ذخیره کنید</string>
+    <string name="export_all_pages_description">تمام %1$d صفحات را به صورت فایل‌های PNG جداگانه ذخیره کنید</string>
     
     <!-- Import Messages -->
     <string name="import_image_success">تصویر با موفقیت وارد شد</string>

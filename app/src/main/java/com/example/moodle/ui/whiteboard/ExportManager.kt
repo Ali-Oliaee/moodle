@@ -3,6 +3,8 @@ package com.example.moodle.ui.whiteboard
 import android.content.Context
 import android.graphics.*
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import com.example.moodle.R
 import org.json.JSONArray
@@ -53,6 +55,103 @@ class ExportManager(private val context: Context) {
         } catch (e: Exception) {
             onError(context.getString(R.string.export_error, e.message))
         }
+    }
+    
+    /**
+     * Export all pages as separate PNG images
+     * Loads each page into the view temporarily to capture it properly
+     */
+    fun exportAllPagesToPNG(
+        whiteboardView: WhiteboardView,
+        pageManager: PageManager,
+        onSuccess: (List<File>) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val exportedFiles = mutableListOf<File>()
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val currentPageId = pageManager.getCurrentPageId()
+        val pageIds = pageManager.getPageIds()
+        val handler = Handler(Looper.getMainLooper())
+        
+        // Function to export a single page
+        fun exportPageAtIndex(index: Int) {
+            if (index >= pageIds.size) {
+                // All pages exported, restore original page
+                restorePage(whiteboardView, pageManager, currentPageId)
+                
+                if (exportedFiles.isNotEmpty()) {
+                    onSuccess(exportedFiles)
+                    Toast.makeText(
+                        context, 
+                        context.getString(R.string.export_multiple_pages_success, exportedFiles.size), 
+                        Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    onError(context.getString(R.string.export_png_failed))
+                }
+                return
+            }
+            
+            try {
+                val pageId = pageIds[index]
+                val page = pageManager.getPage(pageId)
+                
+                if (page != null) {
+                    // Load this page's data into the whiteboard view
+                    whiteboardView.loadPageData(page.paths, page.textObjects, page.shapeObjects)
+                    whiteboardView.setBackgroundPattern(page.backgroundPattern)
+                    whiteboardView.invalidate()
+                    
+                    // Wait for the view to render, then capture it
+                    handler.postDelayed({
+                        try {
+                            // Create bitmap from the whiteboard view
+                            val bitmap = createBitmapFromView(whiteboardView)
+                            
+                            // Generate filename for this page
+                            val pageNumber = index + 1
+                            val filename = "whiteboard_${timestamp}_page${pageNumber}.png"
+                            
+                            // Save to external storage
+                            val file = saveBitmapToFile(bitmap, filename)
+                            
+                            if (file != null) {
+                                exportedFiles.add(file)
+                                // Export next page
+                                exportPageAtIndex(index + 1)
+                            } else {
+                                // Restore original page before returning error
+                                restorePage(whiteboardView, pageManager, currentPageId)
+                                onError(context.getString(R.string.export_png_failed))
+                            }
+                        } catch (e: Exception) {
+                            restorePage(whiteboardView, pageManager, currentPageId)
+                            onError(context.getString(R.string.export_error, e.message))
+                        }
+                    }, 200) // 200ms delay to ensure rendering is complete
+                } else {
+                    // Skip this page and continue
+                    exportPageAtIndex(index + 1)
+                }
+            } catch (e: Exception) {
+                restorePage(whiteboardView, pageManager, currentPageId)
+                onError(context.getString(R.string.export_error, e.message))
+            }
+        }
+        
+        // Start exporting from the first page
+        exportPageAtIndex(0)
+    }
+    
+    /**
+     * Helper method to restore a page to the whiteboard view
+     */
+    private fun restorePage(whiteboardView: WhiteboardView, pageManager: PageManager, pageId: Int) {
+        pageManager.goToPage(pageId)
+        val page = pageManager.getCurrentPage()
+        whiteboardView.loadPageData(page.paths, page.textObjects, page.shapeObjects)
+        whiteboardView.setBackgroundPattern(page.backgroundPattern)
+        whiteboardView.invalidate()
     }
     
     /**

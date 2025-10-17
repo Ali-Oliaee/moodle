@@ -1325,9 +1325,66 @@ class WhiteboardActivity : AppCompatActivity() {
         // Save current page state first
         saveCurrentPageFromWhiteboard()
         
+        // Check if there are multiple pages
+        if (pageManager.getTotalPages() > 1) {
+            showPageSelectionDialog()
+        } else {
+            // Only one page, export directly
+            exportCurrentPageToPNG()
+        }
+    }
+    
+    private fun showPageSelectionDialog() {
+        val inflater = LayoutInflater.from(this)
+        val dialogView = inflater.inflate(R.layout.dialog_page_selection, null)
+        
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+        
+        val totalPages = pageManager.getTotalPages()
+        
+        // Update the description for all pages option with the actual count
+        val tvAllPagesDescription = dialogView.findViewById<TextView>(R.id.tvAllPagesDescription)
+        tvAllPagesDescription.text = getString(R.string.export_all_pages_description, totalPages)
+        
+        // Export current page option
+        dialogView.findViewById<LinearLayout>(R.id.exportCurrentPageOption).setOnClickListener {
+            dialog.dismiss()
+            exportCurrentPageToPNG()
+        }
+        
+        // Export all pages option
+        dialogView.findViewById<LinearLayout>(R.id.exportAllPagesOption).setOnClickListener {
+            dialog.dismiss()
+            exportAllPagesToPNG()
+        }
+        
+        // Cancel button
+        dialogView.findViewById<Button>(R.id.btnCancelPageSelection).setOnClickListener {
+            dialog.dismiss()
+        }
+        
+        dialog.show()
+    }
+    
+    private fun exportCurrentPageToPNG() {
         exportManager.exportToPNG(
             whiteboardView,
             onSuccess = { file ->
+                // Success handled by ExportManager toast
+            },
+            onError = { error ->
+                Toast.makeText(this, error, Toast.LENGTH_LONG).show()
+            }
+        )
+    }
+    
+    private fun exportAllPagesToPNG() {
+        exportManager.exportAllPagesToPNG(
+            whiteboardView,
+            pageManager,
+            onSuccess = { files ->
                 // Success handled by ExportManager toast
             },
             onError = { error ->
