@@ -863,9 +863,9 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Post to ensure view is measured and positioned correctly
         whiteboardView.post {
-            // Add the formula as text to the whiteboard at center
-            val centerX = if (whiteboardView.width > 0) whiteboardView.width / 2f else 500f
-            val centerY = if (whiteboardView.height > 0) whiteboardView.height / 2f else 500f
+            // Add the formula as text to the whiteboard at center of current view
+            val centerX = whiteboardView.getVisibleCanvasCenterX()
+            val centerY = whiteboardView.getVisibleCanvasCenterY()
             whiteboardView.addText(formulaText, centerX, centerY)
             
             Toast.makeText(this, "فرمول به تخته اضافه شد - با قلم اعداد را پر کنید", Toast.LENGTH_SHORT).show()

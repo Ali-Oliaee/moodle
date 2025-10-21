@@ -5,20 +5,15 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
     
-    <!-- Left rectangle representing first split section -->
+    <!-- Left panel with border -->
     <path
         android:fillColor="#FF333333"
-        android:pathData="M3,4 L10,4 L10,20 L3,20 Z" />
+        android:pathData="M2,4 C2,3.45 2.45,3 3,3 L10,3 C10.55,3 11,3.45 11,4 L11,20 C11,20.55 10.55,21 10,21 L3,21 C2.45,21 2,20.55 2,20 Z" />
     
-    <!-- Right rectangle representing second split section -->
+    <!-- Right panel with border -->
     <path
         android:fillColor="#FF333333"
-        android:pathData="M14,4 L21,4 L21,20 L14,20 Z" />
-    
-    <!-- Vertical divider line -->
-    <path
-        android:fillColor="#FF666666"
-        android:pathData="M11.5,4 L12.5,4 L12.5,20 L11.5,20 Z" />
+        android:pathData="M13,4 C13,3.45 13.45,3 14,3 L21,3 C21.55,3 22,3.45 22,4 L22,20 C22,20.55 21.55,21 21,21 L14,21 C13.45,21 13,20.55 13,20 Z" />
         
 </vector>
 
