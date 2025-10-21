@@ -18,10 +18,11 @@
     <!-- Drawing Tools -->
     <string name="tool_pen">قلم</string>
     <string name="tool_eraser">روشن کننده</string>
-    <string name="tool_highlighter">روشن کننده</string>
     <string name="tool_text">متن</string>
     <string name="drawing_mode">حالت رسم</string>
     <string name="pan_mode">حالت پان</string>
+    <string name="selection_mode">حالت انتخاب - می‌توانید اشیاء را انتخاب و جابجا کنید</string>
+    <string name="pen_mode">حالت قلم - می‌توانید روی تخته بنویسید</string>
     
     <!-- Actions -->
     <string name="undo">برگشت</string>
@@ -49,13 +50,17 @@
     <!-- Gestures -->
     <string name="double_tap_reset">دوباره کلیک کنید تا تنظیمات رویاگرانی را بازنشانی کنید</string>
     <string name="pinch_to_zoom">دستگیره کنید تا رویاگرانی را تغییر دهید</string>
+    <string name="zoom_in">بزرگ‌نمایی</string>
+    <string name="zoom_out">کوچک‌نمایی</string>
+    <string name="zoom_percentage">%1$d%%</string>
+    <string name="zoom_level">سطح بزرگنمایی</string>
+    <string name="reset_zoom">بازنشانی</string>
     <string name="pan_to_move">دستگیره کنید تا رویاگرانی را تغییر دهید</string>
     
     <!-- Content Descriptions for Accessibility -->
     <string name="desc_record_button">ضبط تصویر</string>
     <string name="desc_pen_tool">انتخاب قلم</string>   
     <string name="desc_eraser_tool">انتخاب روشن کننده</string>
-    <string name="desc_highlighter_tool">انتخاب روشن کننده</string>
     <string name="desc_text_tool">انتخاب ابزار متن</string>
     <string name="desc_formula_tool">انتخاب فرمول ریاضی</string>
     <string name="desc_line_tool">انتخاب ابزار خط</string>
@@ -88,7 +93,6 @@
     
     <!-- Tool names -->
     <string name="tool_eraser_corrected">پاک کن</string>
-    <string name="tool_highlighter_corrected">هایلایتر</string>
     
     <!-- Drawer Toggle -->
     <string name="tools">ابزارها</string>
@@ -152,4 +156,66 @@
     <string name="delete_page_title">حذف صفحه</string>
     <string name="cannot_delete_last_page">نمی توان آخرین صفحه را حذف کرد</string>
     <string name="page_deleted">صفحه حذف شد</string>
+    
+    <!-- Import/Export -->
+    <string name="import_export">ورود/خروج</string>
+    <string name="export_board">خروج تخته</string>
+    <string name="import_board">ورود تخته</string>
+    <string name="desc_export_button">خروج تخته</string>
+    <string name="desc_import_button">ورود تخته</string>
+    
+    <!-- Export Options -->
+    <string name="export_options">گزینه‌های خروج</string>
+    <string name="export_as_png">خروج به عنوان تصویر PNG</string>
+    <string name="export_as_moodle">خروج به فرمت Moodle</string>
+    <string name="export_png_description">ذخیره تخته به عنوان تصویر PNG</string>
+    <string name="export_moodle_description">ذخیره تخته در فرمت قابل بازیابی</string>
+    
+    <!-- Import Options -->
+    <string name="import_options">گزینه‌های ورود</string>
+    <string name="import_image">ورود تصویر</string>
+    <string name="import_moodle_file">ورود فایل Moodle</string>
+    <string name="import_image_description">افزودن تصویر به تخته</string>
+    <string name="import_moodle_description">بازیابی تخته از فایل Moodle</string>
+    
+    <!-- Export Messages -->
+    <string name="export_png_success">تصویر PNG با موفقیت ذخیره شد در Downloads/MoodleWhiteboard/</string>
+    <string name="export_png_failed">خروج تصویر PNG ناموفق بود</string>
+    <string name="export_custom_success">فایل Moodle با موفقیت ذخیره شد در Downloads/MoodleWhiteboard/</string>
+    <string name="export_custom_failed">خروج فایل Moodle ناموفق بود</string>
+    <string name="export_error">خطا در خروج: %1$s</string>
+    <string name="export_multiple_pages_success">%1$d تصویر PNG با موفقیت ذخیره شد در Downloads/MoodleWhiteboard/</string>
+    
+    <!-- Multi-page Export Dialog -->
+    <string name="export_page_selection">انتخاب صفحات</string>
+    <string name="export_current_page">صفحه فعلی</string>
+    <string name="export_all_pages">تمام صفحات</string>
+    <string name="export_page_selection_message">چند صفحه در تخته شما وجود دارد. می‌خواهید کدام صفحات را ذخیره کنید؟</string>
+    <string name="export_current_page_description">فقط صفحه فعلی را به عنوان PNG ذخیره کنید</string>
+    <string name="export_all_pages_description">تمام %1$d صفحات را به صورت فایل‌های PNG جداگانه ذخیره کنید</string>
+    
+    <!-- Import Messages -->
+    <string name="import_image_success">تصویر با موفقیت وارد شد</string>
+    <string name="import_image_failed">ورود تصویر ناموفق بود</string>
+    <string name="import_image_invalid">فایل تصویر نامعتبر است</string>
+    <string name="import_custom_success">فایل Moodle با موفقیت وارد شد</string>
+    <string name="import_custom_failed">ورود فایل Moodle ناموفق بود</string>
+    <string name="import_version_mismatch">نسخه فایل (%1$s) با نسخه پشتیبانی شده (%2$s) سازگار نیست</string>
+    <string name="import_error">خطا در ورود: %1$s</string>
+    <string name="imported_image_placeholder">تصویر وارد شده (%1$dx%2$d)</string>
+    <string name="image_import_instruction">نوت: در نسخه آینده امکان نمایش کامل تصاویر اضافه خواهد شد</string>
+    
+    <!-- File Picker -->
+    <string name="select_image_file">انتخاب فایل تصویر</string>
+    <string name="select_moodle_file">انتخاب فایل Moodle</string>
+    <string name="no_file_manager">هیچ مدیر فایلی یافت نشد</string>
+    
+    <!-- Permissions -->
+    <string name="storage_permission_required">اجازه دسترسی به حافظه مورد نیاز است</string>
+    <string name="storage_permission_denied">اجازه دسترسی به حافظه رد شد</string>
+    <string name="grant_permission">اعطای اجازه</string>
+    
+    <!-- Confirmation Dialogs -->
+    <string name="import_will_clear_board">ورود فایل Moodle محتوای فعلی تخته را پاک خواهد کرد. ادامه می‌دهید؟</string>
+    <string name="continue_import">ادامه ورود</string>
 </resources>

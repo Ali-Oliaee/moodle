@@ -119,15 +119,6 @@
                     android:background="@drawable/tool_button_background"
                     android:contentDescription="@string/desc_eraser_tool" />
 
-                <ImageButton
-                    android:id="@+id/btnHighlighter"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_margin="4dp"
-                    android:src="@drawable/ic_highlighter"
-                    android:background="@drawable/tool_button_background"
-                    android:contentDescription="@string/desc_highlighter_tool" />
-
                 <!-- Separator -->
                 <View
                     android:layout_width="2dp"
@@ -176,7 +167,7 @@
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:layout_margin="4dp"
-                    android:src="@drawable/ic_pen"
+                    android:src="@drawable/ic_move_4d"
                     android:background="@drawable/tool_button_background"
                     android:contentDescription="@string/desc_mode_toggle" />
 

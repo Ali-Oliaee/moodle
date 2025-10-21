@@ -24,7 +24,7 @@ class WhiteboardView @JvmOverloads constructor(
 
     // Drawing tools
     enum class DrawingTool {
-        PEN, ERASER, HIGHLIGHTER, TEXT, SELECTIVE_ERASER, LINE, CIRCLE, TRIANGLE, RECTANGLE
+        PEN, ERASER, TEXT, SELECTIVE_ERASER, LINE, CIRCLE, TRIANGLE, RECTANGLE, SELECTION
     }
 
     // Drawing state
@@ -54,13 +54,6 @@ class WhiteboardView @JvmOverloads constructor(
         xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
     }
 
-    private val highlighterPaint = Paint().apply {
-        isAntiAlias = true
-        style = Paint.Style.STROKE
-        strokeJoin = Paint.Join.ROUND
-        strokeCap = Paint.Cap.ROUND
-        alpha = 100 // Semi-transparent
-    }
 
     private val textPaint = Paint().apply {
         isAntiAlias = true
@@ -112,6 +105,21 @@ class WhiteboardView @JvmOverloads constructor(
     private var initialShapeEndY = 0f
     private var initialShapeRotation = 0f
     
+    // Image objects tracking
+    private val imageObjects = mutableListOf<ImageObject>()
+    private var selectedImageObject: ImageObject? = null
+    private var isDraggingImage = false
+    private var isResizingImage = false
+    private var isRotatingImage = false
+    private var currentImageResizeHandle: ImageObject.ResizeHandle? = null
+    private var initialImageX = 0f
+    private var initialImageY = 0f
+    private var initialImageWidth = 0f
+    private var initialImageHeight = 0f
+    private var initialImageScaleX = 1f
+    private var initialImageScaleY = 1f
+    private var initialImageRotation = 0f
+    
     // Selective eraser tracking
     private var selectionPath: Path? = null
     private var isDrawingSelection = false
@@ -143,6 +151,11 @@ class WhiteboardView @JvmOverloads constructor(
     // Multi-touch tracking
     private var isScaling = false
     private var isPanning = false
+    
+    // Boundary constraints
+    private var maxFocusX = 0f
+    private var maxFocusY = 0f
+    private var minScaleFactor = 0.1f  // Minimum zoom level to prevent seeing outside bitmap
     
     // Section management for split mode
     private val sectionManager = SectionManager()
@@ -571,6 +584,272 @@ class WhiteboardView @JvmOverloads constructor(
         }
     }
 
+    data class ImageObject(
+        var bitmap: Bitmap,
+        var x: Float,
+        var y: Float,
+        var width: Float,
+        var height: Float,
+        var rotation: Float = 0f,
+        var scaleX: Float = 1f,
+        var scaleY: Float = 1f,
+        var isSelected: Boolean = false
+    ) {
+        private val paint = Paint().apply {
+            isAntiAlias = true
+            isFilterBitmap = true
+        }
+        
+        private val selectionPaint = Paint().apply {
+            color = Color.BLUE
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+            pathEffect = DashPathEffect(floatArrayOf(10f, 5f), 0f)
+        }
+        
+        private val handlePaint = Paint().apply {
+            color = Color.BLUE
+            style = Paint.Style.FILL
+        }
+        
+        private val rotationHandlePaint = Paint().apply {
+            color = Color.GREEN
+            style = Paint.Style.FILL
+        }
+        
+        private val deleteButtonPaint = Paint().apply {
+            color = Color.RED
+            style = Paint.Style.FILL
+        }
+        
+        private val deleteIconPaint = Paint().apply {
+            color = Color.WHITE
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+            strokeCap = Paint.Cap.ROUND
+        }
+        
+        fun getBounds(): RectF {
+            val scaledWidth = width * scaleX
+            val scaledHeight = height * scaleY
+            return RectF(x, y, x + scaledWidth, y + scaledHeight)
+        }
+        
+        fun getCenterX(): Float {
+            val scaledWidth = width * scaleX
+            return x + scaledWidth / 2f
+        }
+        
+        fun getCenterY(): Float {
+            val scaledHeight = height * scaleY
+            return y + scaledHeight / 2f
+        }
+        
+        /**
+         * Transform touch coordinates to account for image rotation
+         * Returns a Pair of (transformedX, transformedY)
+         */
+        private fun transformTouchPoint(touchX: Float, touchY: Float): Pair<Float, Float> {
+            if (rotation == 0f) {
+                return Pair(touchX, touchY)
+            }
+            
+            val centerX = getCenterX()
+            val centerY = getCenterY()
+            val angle = -Math.toRadians(rotation.toDouble())
+            val cos = kotlin.math.cos(angle).toFloat()
+            val sin = kotlin.math.sin(angle).toFloat()
+            
+            val dx = touchX - centerX
+            val dy = touchY - centerY
+            
+            val transformedX = centerX + dx * cos - dy * sin
+            val transformedY = centerY + dx * sin + dy * cos
+            
+            return Pair(transformedX, transformedY)
+        }
+        
+        fun draw(canvas: Canvas) {
+            canvas.save()
+            
+            // Apply rotation around center
+            if (rotation != 0f) {
+                canvas.rotate(rotation, getCenterX(), getCenterY())
+            }
+            
+            // Draw the bitmap with scaling
+            val destRect = RectF(x, y, x + width * scaleX, y + height * scaleY)
+            canvas.drawBitmap(bitmap, null, destRect, paint)
+            
+            canvas.restore()
+            
+            if (isSelected) {
+                drawSelectionBounds(canvas)
+            }
+        }
+        
+        private fun drawSelectionBounds(canvas: Canvas) {
+            val bounds = getBounds()
+            
+            canvas.save()
+            
+            // Apply rotation for selection bounds
+            if (rotation != 0f) {
+                canvas.rotate(rotation, getCenterX(), getCenterY())
+            }
+            
+            // Draw selection rectangle
+            canvas.drawRect(bounds, selectionPaint)
+            
+            // Draw corner resize handles
+            val handleSize = 20f
+            
+            // Top-left handle
+            canvas.drawRect(bounds.left - handleSize/2, bounds.top - handleSize/2,
+                          bounds.left + handleSize/2, bounds.top + handleSize/2, handlePaint)
+            
+            // Top-right handle
+            canvas.drawRect(bounds.right - handleSize/2, bounds.top - handleSize/2,
+                          bounds.right + handleSize/2, bounds.top + handleSize/2, handlePaint)
+            
+            // Bottom-left handle
+            canvas.drawRect(bounds.left - handleSize/2, bounds.bottom - handleSize/2,
+                          bounds.left + handleSize/2, bounds.bottom + handleSize/2, handlePaint)
+            
+            // Bottom-right handle
+            canvas.drawRect(bounds.right - handleSize/2, bounds.bottom - handleSize/2,
+                          bounds.right + handleSize/2, bounds.bottom + handleSize/2, handlePaint)
+            
+            // Draw rotation handle (green circle at top-center, inside rotation)
+            val rotationHandleX = getCenterX()
+            val rotationHandleY = bounds.top - 40f
+            canvas.drawCircle(rotationHandleX, rotationHandleY, 10f, rotationHandlePaint)
+            
+            // Draw delete button (red circle with X at top-right corner, inside rotation)
+            val deleteButtonX = bounds.right + 20f
+            val deleteButtonY = bounds.top - 20f
+            val deleteButtonRadius = 15f
+            
+            // Draw red circle
+            canvas.drawCircle(deleteButtonX, deleteButtonY, deleteButtonRadius, deleteButtonPaint)
+            
+            // Draw white X
+            val xSize = 8f
+            canvas.drawLine(
+                deleteButtonX - xSize, deleteButtonY - xSize,
+                deleteButtonX + xSize, deleteButtonY + xSize,
+                deleteIconPaint
+            )
+            canvas.drawLine(
+                deleteButtonX + xSize, deleteButtonY - xSize,
+                deleteButtonX - xSize, deleteButtonY + xSize,
+                deleteIconPaint
+            )
+            
+            canvas.restore()
+        }
+        
+        fun contains(touchX: Float, touchY: Float): Boolean {
+            val bounds = getBounds()
+            
+            // For rotated images, we need to transform the touch point
+            if (rotation != 0f) {
+                val centerX = getCenterX()
+                val centerY = getCenterY()
+                
+                // Rotate touch point back to unrotated space
+                val angle = -Math.toRadians(rotation.toDouble())
+                val cos = kotlin.math.cos(angle).toFloat()
+                val sin = kotlin.math.sin(angle).toFloat()
+                
+                val dx = touchX - centerX
+                val dy = touchY - centerY
+                
+                val rotatedX = centerX + dx * cos - dy * sin
+                val rotatedY = centerY + dx * sin + dy * cos
+                
+                return rotatedX >= bounds.left && rotatedX <= bounds.right &&
+                       rotatedY >= bounds.top && rotatedY <= bounds.bottom
+            }
+            
+            return touchX >= bounds.left && touchX <= bounds.right &&
+                   touchY >= bounds.top && touchY <= bounds.bottom
+        }
+        
+        fun isResizeHandleTouched(touchX: Float, touchY: Float): ResizeHandle? {
+            if (!isSelected) return null
+            
+            val bounds = getBounds()
+            val handleSize = 20f
+            val touchRadius = handleSize
+            
+            // Transform touch point to account for rotation
+            val (transformedTouchX, transformedTouchY) = transformTouchPoint(touchX, touchY)
+            
+            // Check each corner handle in the rotated space
+            val handles = listOf(
+                Pair(ResizeHandle.TOP_LEFT, Pair(bounds.left, bounds.top)),
+                Pair(ResizeHandle.TOP_RIGHT, Pair(bounds.right, bounds.top)),
+                Pair(ResizeHandle.BOTTOM_LEFT, Pair(bounds.left, bounds.bottom)),
+                Pair(ResizeHandle.BOTTOM_RIGHT, Pair(bounds.right, bounds.bottom))
+            )
+            
+            for ((handle, pos) in handles) {
+                val distance = kotlin.math.sqrt(
+                    (transformedTouchX - pos.first) * (transformedTouchX - pos.first) + 
+                    (transformedTouchY - pos.second) * (transformedTouchY - pos.second)
+                )
+                if (distance <= touchRadius) {
+                    return handle
+                }
+            }
+            
+            return null
+        }
+        
+        fun isRotationHandleTouched(touchX: Float, touchY: Float): Boolean {
+            if (!isSelected) return false
+            
+            // Rotation handle is drawn in rotated space (before canvas.restore)
+            // so we need to transform touch coordinates
+            val bounds = getBounds()
+            val handleX = getCenterX()
+            val handleY = bounds.top - 40f
+            val handleRadius = 20f
+            
+            val (transformedTouchX, transformedTouchY) = transformTouchPoint(touchX, touchY)
+            
+            val distance = kotlin.math.sqrt(
+                (transformedTouchX - handleX) * (transformedTouchX - handleX) + 
+                (transformedTouchY - handleY) * (transformedTouchY - handleY)
+            )
+            return distance <= handleRadius
+        }
+        
+        fun isDeleteButtonTouched(touchX: Float, touchY: Float): Boolean {
+            if (!isSelected) return false
+            
+            // Delete button is drawn in rotated space (before canvas.restore)
+            // so we need to transform touch coordinates
+            val bounds = getBounds()
+            val deleteButtonX = bounds.right + 20f
+            val deleteButtonY = bounds.top - 20f
+            val deleteButtonRadius = 20f // Slightly larger touch area
+            
+            val (transformedTouchX, transformedTouchY) = transformTouchPoint(touchX, touchY)
+            
+            val distance = kotlin.math.sqrt(
+                (transformedTouchX - deleteButtonX) * (transformedTouchX - deleteButtonX) + 
+                (transformedTouchY - deleteButtonY) * (transformedTouchY - deleteButtonY)
+            )
+            return distance <= deleteButtonRadius
+        }
+        
+        enum class ResizeHandle {
+            TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT
+        }
+    }
+
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         
@@ -591,6 +870,17 @@ class WhiteboardView @JvmOverloads constructor(
             // Center the initial view on the large canvas
             focusX = (canvasWidth - w) / 2f
             focusY = (canvasHeight - h) / 2f
+            
+            // Set maximum focus boundaries (bitmap size - view size)
+            maxFocusX = (canvasWidth - w).toFloat()
+            maxFocusY = (canvasHeight - h).toFloat()
+            
+            // Calculate minimum scale factor to prevent seeing empty space
+            // Min scale is when entire bitmap just fits in the view
+            minScaleFactor = max(
+                w.toFloat() / canvasWidth.toFloat(),
+                h.toFloat() / canvasHeight.toFloat()
+            )
         } catch (e: OutOfMemoryError) {
             // Fallback to screen size if memory is insufficient
             drawingBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
@@ -598,6 +888,9 @@ class WhiteboardView @JvmOverloads constructor(
             drawingCanvas?.drawColor(Color.WHITE)
             focusX = 0f
             focusY = 0f
+            maxFocusX = 0f
+            maxFocusY = 0f
+            minScaleFactor = 1.0f  // No zoom out for fallback case
         }
         
         // Update section manager with new dimensions
@@ -696,6 +989,11 @@ class WhiteboardView @JvmOverloads constructor(
                     shapeObject.draw(c)
                 }
                 
+                // Draw image objects
+                for (imageObject in imageObjects) {
+                    imageObject.draw(c)
+                }
+                
                 // Draw selection area for selective eraser
                 selectionPath?.let { path ->
                     c.drawPath(path, selectionPaint)
@@ -790,8 +1088,15 @@ class WhiteboardView @JvmOverloads constructor(
                 // Get coordinates for actual drawing
                 // In split mode, use screen coordinates directly (no transformation)
                 // In normal mode, use transformed coordinates
-                val x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
-                val y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                var x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                var y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                
+                // Clamp coordinates to bitmap bounds in normal mode
+                if (!sectionManager.isSplitModeEnabled()) {
+                    val clamped = clampToBitmapBounds(x, y)
+                    x = clamped.first
+                    y = clamped.second
+                }
                 
                 // Handle special tools differently
                 // In split mode, use section's tool; otherwise use global tool
@@ -804,6 +1109,9 @@ class WhiteboardView @JvmOverloads constructor(
                 when (toolToUse) {
                     DrawingTool.TEXT -> {
                         handleTextTouch(x, y, action)
+                    }
+                    DrawingTool.SELECTION -> {
+                        handleSelectionTouch(x, y, action)
                     }
                     DrawingTool.SELECTIVE_ERASER -> {
                         handleSelectiveEraserTouch(x, y, action)
@@ -836,20 +1144,46 @@ class WhiteboardView @JvmOverloads constructor(
                     
                     when (toolToUse) {
                         DrawingTool.TEXT -> {
-                            val x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
-                            val y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            var x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
+                            var y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            if (!sectionManager.isSplitModeEnabled()) {
+                                val clamped = clampToBitmapBounds(x, y)
+                                x = clamped.first
+                                y = clamped.second
+                            }
                             handleTextTouch(x, y, action)
                             return@handleDrawingTouch
                         }
+                        DrawingTool.SELECTION -> {
+                            var x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
+                            var y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            if (!sectionManager.isSplitModeEnabled()) {
+                                val clamped = clampToBitmapBounds(x, y)
+                                x = clamped.first
+                                y = clamped.second
+                            }
+                            handleSelectionTouch(x, y, action)
+                            return@handleDrawingTouch
+                        }
                         DrawingTool.SELECTIVE_ERASER -> {
-                            val x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
-                            val y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            var x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
+                            var y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            if (!sectionManager.isSplitModeEnabled()) {
+                                val clamped = clampToBitmapBounds(x, y)
+                                x = clamped.first
+                                y = clamped.second
+                            }
                             handleSelectiveEraserTouch(x, y, action)
                             return@handleDrawingTouch
                         }
                         DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> {
-                            val x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
-                            val y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            var x = if (sectionManager.isSplitModeEnabled()) event.x else (event.x + focusX) / scaleFactor
+                            var y = if (sectionManager.isSplitModeEnabled()) event.y else (event.y + focusY) / scaleFactor
+                            if (!sectionManager.isSplitModeEnabled()) {
+                                val clamped = clampToBitmapBounds(x, y)
+                                x = clamped.first
+                                y = clamped.second
+                            }
                             handleShapeTouch(x, y, action, toolToUse, id)
                             return@handleDrawingTouch
                         }
@@ -881,8 +1215,15 @@ class WhiteboardView @JvmOverloads constructor(
                         
                         // Transform to drawing coordinates
                         // In split mode use screen coords directly, in normal mode use transformed coords
-                        val x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
-                        val y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        var x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                        var y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        
+                        // Clamp coordinates to bitmap bounds in normal mode
+                        if (!sectionManager.isSplitModeEnabled()) {
+                            val clamped = clampToBitmapBounds(x, y)
+                            x = clamped.first
+                            y = clamped.second
+                        }
                         
                         val dx = abs(x - lastX)
                         val dy = abs(y - lastY)
@@ -907,22 +1248,49 @@ class WhiteboardView @JvmOverloads constructor(
                     DrawingTool.TEXT -> {
                         val screenX = event.getX(pointerIndex)
                         val screenY = event.getY(pointerIndex)
-                        val x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
-                        val y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        var x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                        var y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        if (!sectionManager.isSplitModeEnabled()) {
+                            val clamped = clampToBitmapBounds(x, y)
+                            x = clamped.first
+                            y = clamped.second
+                        }
                         handleTextTouch(x, y, action)
+                    }
+                    DrawingTool.SELECTION -> {
+                        val screenX = event.getX(pointerIndex)
+                        val screenY = event.getY(pointerIndex)
+                        var x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                        var y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        if (!sectionManager.isSplitModeEnabled()) {
+                            val clamped = clampToBitmapBounds(x, y)
+                            x = clamped.first
+                            y = clamped.second
+                        }
+                        handleSelectionTouch(x, y, action)
                     }
                     DrawingTool.SELECTIVE_ERASER -> {
                         val screenX = event.getX(pointerIndex)
                         val screenY = event.getY(pointerIndex)
-                        val x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
-                        val y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        var x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                        var y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        if (!sectionManager.isSplitModeEnabled()) {
+                            val clamped = clampToBitmapBounds(x, y)
+                            x = clamped.first
+                            y = clamped.second
+                        }
                         handleSelectiveEraserTouch(x, y, action)
                     }
                     DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> {
                         val screenX = event.getX(pointerIndex)
                         val screenY = event.getY(pointerIndex)
-                        val x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
-                        val y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        var x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
+                        var y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
+                        if (!sectionManager.isSplitModeEnabled()) {
+                            val clamped = clampToBitmapBounds(x, y)
+                            x = clamped.first
+                            y = clamped.second
+                        }
                         handleShapeTouch(x, y, action, toolToUse, pointerId)
                     }
                     else -> {
@@ -995,6 +1363,321 @@ class WhiteboardView @JvmOverloads constructor(
         invalidate()
     }
 
+    private fun handleSelectionTouch(x: Float, y: Float, action: Int) {
+        // Handle selection mode - can select, drag, resize, and rotate text, shapes, and images
+        when (action) {
+            MotionEvent.ACTION_DOWN -> {
+                // Check if touching handles of already selected text first
+                selectedTextObject?.let { textObj ->
+                    if (textObj.isRotationHandleTouched(x, y)) {
+                        isRotatingText = true
+                        dragStartX = x
+                        dragStartY = y
+                        initialRotation = textObj.rotation
+                        return
+                    }
+                    
+                    if (textObj.isResizeHandleTouched(x, y)) {
+                        isResizingText = true
+                        dragStartX = x
+                        dragStartY = y
+                        initialTextSize = textObj.textSize
+                        return
+                    }
+                }
+                
+                // Check if touching handles of already selected shape
+                selectedShapeObject?.let { shapeObj ->
+                    if (shapeObj.isRotationHandleTouched(x, y)) {
+                        isRotatingShape = true
+                        dragStartX = x
+                        dragStartY = y
+                        initialShapeRotation = shapeObj.rotation
+                        return
+                    }
+                    
+                    val handle = shapeObj.isResizeHandleTouched(x, y)
+                    if (handle != null) {
+                        isResizingShape = true
+                        currentResizeHandle = handle
+                        dragStartX = x
+                        dragStartY = y
+                        initialShapeStartX = shapeObj.startX
+                        initialShapeStartY = shapeObj.startY
+                        initialShapeEndX = shapeObj.endX
+                        initialShapeEndY = shapeObj.endY
+                        return
+                    }
+                }
+                
+                // Check if touching handles of already selected image
+                selectedImageObject?.let { imageObj ->
+                    // Check delete button first
+                    if (imageObj.isDeleteButtonTouched(x, y)) {
+                        // Remove the image from the list
+                        imageObjects.remove(imageObj)
+                        selectedImageObject = null
+                        drawingChangeListener?.onDrawingChanged()
+                        invalidate()
+                        return
+                    }
+                    
+                    if (imageObj.isRotationHandleTouched(x, y)) {
+                        isRotatingImage = true
+                        dragStartX = x
+                        dragStartY = y
+                        initialImageRotation = imageObj.rotation
+                        return
+                    }
+                    
+                    val handle = imageObj.isResizeHandleTouched(x, y)
+                    if (handle != null) {
+                        isResizingImage = true
+                        currentImageResizeHandle = handle
+                        dragStartX = x
+                        dragStartY = y
+                        initialImageX = imageObj.x
+                        initialImageY = imageObj.y
+                        initialImageWidth = imageObj.width
+                        initialImageHeight = imageObj.height
+                        initialImageScaleX = imageObj.scaleX
+                        initialImageScaleY = imageObj.scaleY
+                        return
+                    }
+                }
+                
+                // Check if touching text objects
+                var touchedText: TextObject? = null
+                for (textObj in textObjects.reversed()) {
+                    if (textObj.contains(x, y)) {
+                        touchedText = textObj
+                        break
+                    }
+                }
+                
+                // Check if touching shape objects
+                var touchedShape: ShapeObject? = null
+                for (shapeObj in shapeObjects.reversed()) {
+                    if (shapeObj.contains(x, y)) {
+                        touchedShape = shapeObj
+                        break
+                    }
+                }
+                
+                // Check if touching image objects
+                var touchedImage: ImageObject? = null
+                for (imageObj in imageObjects.reversed()) {
+                    if (imageObj.contains(x, y)) {
+                        touchedImage = imageObj
+                        break
+                    }
+                }
+                
+                if (touchedText != null) {
+                    // Deselect previous selections
+                    selectedTextObject?.isSelected = false
+                    selectedShapeObject?.isSelected = false
+                    selectedImageObject?.isSelected = false
+                    
+                    // Select touched text
+                    selectedTextObject = touchedText
+                    touchedText.isSelected = true
+                    isDraggingText = true
+                    dragStartX = x
+                    dragStartY = y
+                } else if (touchedShape != null) {
+                    // Deselect previous selections
+                    selectedTextObject?.isSelected = false
+                    selectedShapeObject?.isSelected = false
+                    selectedImageObject?.isSelected = false
+                    
+                    // Select touched shape
+                    selectedShapeObject = touchedShape
+                    touchedShape.isSelected = true
+                    isDraggingShape = true
+                    dragStartX = x
+                    dragStartY = y
+                } else if (touchedImage != null) {
+                    // Deselect previous selections
+                    selectedTextObject?.isSelected = false
+                    selectedShapeObject?.isSelected = false
+                    selectedImageObject?.isSelected = false
+                    
+                    // Select touched image
+                    selectedImageObject = touchedImage
+                    touchedImage.isSelected = true
+                    isDraggingImage = true
+                    dragStartX = x
+                    dragStartY = y
+                } else {
+                    // Deselect everything
+                    selectedTextObject?.isSelected = false
+                    selectedShapeObject?.isSelected = false
+                    selectedImageObject?.isSelected = false
+                    selectedTextObject = null
+                    selectedShapeObject = null
+                    selectedImageObject = null
+                }
+                
+                invalidate()
+            }
+            
+            MotionEvent.ACTION_MOVE -> {
+                // Handle text transformations
+                selectedTextObject?.let { textObj ->
+                    if (isRotatingText) {
+                        val bounds = Rect()
+                        textObj.updatePaint()
+                        textObj.paint.getTextBounds(textObj.text, 0, textObj.text.length, bounds)
+                        val centerX = textObj.x + bounds.width() / 2f
+                        val centerY = textObj.y + bounds.height() / 2f
+                        
+                        val startAngle = kotlin.math.atan2((dragStartY - centerY).toDouble(), (dragStartX - centerX).toDouble())
+                        val currentAngle = kotlin.math.atan2((y - centerY).toDouble(), (x - centerX).toDouble())
+                        val deltaAngle = Math.toDegrees(currentAngle - startAngle).toFloat()
+                        
+                        textObj.rotation = (initialRotation + deltaAngle) % 360f
+                        invalidate()
+                        return
+                    } else if (isResizingText) {
+                        val distance = kotlin.math.sqrt((x - dragStartX) * (x - dragStartX) + (y - dragStartY) * (y - dragStartY))
+                        val scaleFactor = max(0.5f, min(3.0f, distance / 100f))
+                        textObj.textSize = initialTextSize * scaleFactor
+                        invalidate()
+                        return
+                    } else if (isDraggingText) {
+                        val dx = x - dragStartX
+                        val dy = y - dragStartY
+                        textObj.x += dx
+                        textObj.y += dy
+                        dragStartX = x
+                        dragStartY = y
+                        invalidate()
+                        return
+                    }
+                }
+                
+                // Handle shape transformations
+                selectedShapeObject?.let { shapeObj ->
+                    if (isRotatingShape) {
+                        val centerX = (shapeObj.startX + shapeObj.endX) / 2f
+                        val centerY = (shapeObj.startY + shapeObj.endY) / 2f
+                        
+                        val startAngle = kotlin.math.atan2((dragStartY - centerY).toDouble(), (dragStartX - centerX).toDouble())
+                        val currentAngle = kotlin.math.atan2((y - centerY).toDouble(), (x - centerX).toDouble())
+                        val deltaAngle = Math.toDegrees(currentAngle - startAngle).toFloat()
+                        
+                        shapeObj.rotation = (initialShapeRotation + deltaAngle) % 360f
+                        invalidate()
+                        return
+                    } else if (isResizingShape) {
+                        when (currentResizeHandle) {
+                            ShapeObject.ResizeHandle.TOP_LEFT -> {
+                                shapeObj.startX = x
+                                shapeObj.startY = y
+                            }
+                            ShapeObject.ResizeHandle.TOP_RIGHT -> {
+                                shapeObj.endX = x
+                                shapeObj.startY = y
+                            }
+                            ShapeObject.ResizeHandle.BOTTOM_LEFT -> {
+                                shapeObj.startX = x
+                                shapeObj.endY = y
+                            }
+                            ShapeObject.ResizeHandle.BOTTOM_RIGHT -> {
+                                shapeObj.endX = x
+                                shapeObj.endY = y
+                            }
+                            null -> {}
+                        }
+                        invalidate()
+                        return
+                    } else if (isDraggingShape) {
+                        val dx = x - dragStartX
+                        val dy = y - dragStartY
+                        shapeObj.startX += dx
+                        shapeObj.startY += dy
+                        shapeObj.endX += dx
+                        shapeObj.endY += dy
+                        dragStartX = x
+                        dragStartY = y
+                        invalidate()
+                        return
+                    }
+                }
+                
+                // Handle image transformations
+                selectedImageObject?.let { imageObj ->
+                    if (isRotatingImage) {
+                        val centerX = imageObj.getCenterX()
+                        val centerY = imageObj.getCenterY()
+                        
+                        val startAngle = kotlin.math.atan2((dragStartY - centerY).toDouble(), (dragStartX - centerX).toDouble())
+                        val currentAngle = kotlin.math.atan2((y - centerY).toDouble(), (x - centerX).toDouble())
+                        val deltaAngle = Math.toDegrees(currentAngle - startAngle).toFloat()
+                        
+                        imageObj.rotation = (initialImageRotation + deltaAngle) % 360f
+                        invalidate()
+                        return
+                    } else if (isResizingImage) {
+                        // Calculate scale based on handle being dragged
+                        val centerX = initialImageX + (initialImageWidth * initialImageScaleX) / 2f
+                        val centerY = initialImageY + (initialImageHeight * initialImageScaleY) / 2f
+                        
+                        val initialDistance = kotlin.math.sqrt(
+                            (dragStartX - centerX) * (dragStartX - centerX) + 
+                            (dragStartY - centerY) * (dragStartY - centerY)
+                        )
+                        val currentDistance = kotlin.math.sqrt(
+                            (x - centerX) * (x - centerX) + 
+                            (y - centerY) * (y - centerY)
+                        )
+                        
+                        val scaleFactor = if (initialDistance > 0) currentDistance / initialDistance else 1f
+                        imageObj.scaleX = max(0.1f, min(5.0f, initialImageScaleX * scaleFactor))
+                        imageObj.scaleY = max(0.1f, min(5.0f, initialImageScaleY * scaleFactor))
+                        
+                        // Adjust position to keep center point fixed
+                        val newWidth = initialImageWidth * imageObj.scaleX
+                        val newHeight = initialImageHeight * imageObj.scaleY
+                        imageObj.x = centerX - newWidth / 2f
+                        imageObj.y = centerY - newHeight / 2f
+                        
+                        invalidate()
+                        return
+                    } else if (isDraggingImage) {
+                        val dx = x - dragStartX
+                        val dy = y - dragStartY
+                        imageObj.x += dx
+                        imageObj.y += dy
+                        dragStartX = x
+                        dragStartY = y
+                        invalidate()
+                        return
+                    }
+                }
+            }
+            
+            MotionEvent.ACTION_UP -> {
+                isDraggingText = false
+                isDraggingShape = false
+                isDraggingImage = false
+                isResizingText = false
+                isRotatingText = false
+                isResizingShape = false
+                isRotatingShape = false
+                isResizingImage = false
+                isRotatingImage = false
+                currentResizeHandle = null
+                currentImageResizeHandle = null
+                
+                if (selectedTextObject != null || selectedShapeObject != null || selectedImageObject != null) {
+                    drawingChangeListener?.onDrawingChanged()
+                }
+            }
+        }
+    }
+    
     private fun handleTextTouch(x: Float, y: Float, action: Int) {
         when (action) {
             MotionEvent.ACTION_DOWN -> {
@@ -1544,8 +2227,12 @@ class WhiteboardView @JvmOverloads constructor(
                         val dx = x - lastTouchX
                         val dy = y - lastTouchY
                         
-                        focusX += dx
-                        focusY += dy
+                        // Reverse directions: swipe up moves canvas down, swipe left moves canvas right
+                        focusX -= dx
+                        focusY -= dy
+                        
+                        // Constrain focus to bitmap boundaries
+                        constrainFocusToBounds()
                         
                         lastTouchX = x
                         lastTouchY = y
@@ -1561,6 +2248,50 @@ class WhiteboardView @JvmOverloads constructor(
             }
         }
     }
+    
+    /**
+     * Constrains focus position to stay within bitmap boundaries
+     * This prevents panning outside the drawable area
+     */
+    private fun constrainFocusToBounds() {
+        // Get bitmap dimensions
+        val bitmapWidth = drawingBitmap?.width?.toFloat() ?: width.toFloat()
+        val bitmapHeight = drawingBitmap?.height?.toFloat() ?: height.toFloat()
+        
+        // Calculate the scaled bitmap size
+        val scaledBitmapWidth = bitmapWidth * scaleFactor
+        val scaledBitmapHeight = bitmapHeight * scaleFactor
+        
+        // If bitmap fits entirely in view, center it
+        if (scaledBitmapWidth <= width) {
+            focusX = -(width - scaledBitmapWidth) / 2f
+        } else {
+            // Calculate max focus values to keep bitmap edges within view
+            val maxX = bitmapWidth - width / scaleFactor
+            focusX = focusX.coerceIn(0f, maxX * scaleFactor)
+        }
+        
+        if (scaledBitmapHeight <= height) {
+            focusY = -(height - scaledBitmapHeight) / 2f
+        } else {
+            // Calculate max focus values to keep bitmap edges within view
+            val maxY = bitmapHeight - height / scaleFactor
+            focusY = focusY.coerceIn(0f, maxY * scaleFactor)
+        }
+    }
+    
+    /**
+     * Clamps drawing coordinates to stay within bitmap boundaries
+     */
+    private fun clampToBitmapBounds(x: Float, y: Float): Pair<Float, Float> {
+        val bitmapWidth = drawingBitmap?.width?.toFloat() ?: width.toFloat()
+        val bitmapHeight = drawingBitmap?.height?.toFloat() ?: height.toFloat()
+        
+        val clampedX = x.coerceIn(0f, bitmapWidth)
+        val clampedY = y.coerceIn(0f, bitmapHeight)
+        
+        return Pair(clampedX, clampedY)
+    }
 
     private fun getCurrentPaint(): Paint {
         return when (currentTool) {
@@ -1572,15 +2303,11 @@ class WhiteboardView @JvmOverloads constructor(
             DrawingTool.ERASER -> eraserPaint.apply {
                 strokeWidth = currentStrokeWidth * 2
             }
-            DrawingTool.HIGHLIGHTER -> highlighterPaint.apply {
-                color = currentColor
-                strokeWidth = currentStrokeWidth * 3
-                xfermode = null
-            }
             DrawingTool.TEXT -> textPaint.apply {
                 color = currentColor
                 textSize = currentStrokeWidth * 6 // Scale text size with stroke width
             }
+            DrawingTool.SELECTION -> drawPaint // Selection mode doesn't draw, but return a paint anyway
             DrawingTool.SELECTIVE_ERASER -> selectionPaint // Use selection paint for drawing selection area
             DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> drawPaint.apply {
                 color = currentColor
@@ -1601,15 +2328,11 @@ class WhiteboardView @JvmOverloads constructor(
             DrawingTool.ERASER -> Paint(eraserPaint).apply {
                 strokeWidth = section.currentStrokeWidth * 2
             }
-            DrawingTool.HIGHLIGHTER -> Paint(highlighterPaint).apply {
-                color = section.currentColor
-                strokeWidth = section.currentStrokeWidth * 3
-                xfermode = null
-            }
             DrawingTool.TEXT -> Paint(textPaint).apply {
                 color = section.currentColor
                 textSize = section.currentStrokeWidth * 6
             }
+            DrawingTool.SELECTION -> Paint(drawPaint) // Selection mode doesn't draw, but return a paint anyway
             DrawingTool.SELECTIVE_ERASER -> Paint(selectionPaint)
             DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> Paint(drawPaint).apply {
                 color = section.currentColor
@@ -1681,6 +2404,38 @@ class WhiteboardView @JvmOverloads constructor(
         }
     }
 
+    fun addImage(bitmap: Bitmap, x: Float, y: Float) {
+        // Create new image object centered at the given position
+        val imageWidth = bitmap.width.toFloat()
+        val imageHeight = bitmap.height.toFloat()
+        
+        // Position the image so that its center is at (x, y)
+        val imageX = x - imageWidth / 2f
+        val imageY = y - imageHeight / 2f
+        
+        val imageObject = ImageObject(
+            bitmap = bitmap,
+            x = imageX,
+            y = imageY,
+            width = imageWidth,
+            height = imageHeight
+        )
+        
+        // Add to global image objects list
+        imageObjects.add(imageObject)
+        
+        // Select the new image object
+        selectedImageObject?.isSelected = false
+        selectedTextObject?.isSelected = false
+        selectedShapeObject?.isSelected = false
+        selectedImageObject = imageObject
+        imageObject.isSelected = true
+        
+        // Notify listener and redraw
+        drawingChangeListener?.onDrawingChanged()
+        invalidate()
+    }
+
     fun setPinchModeEnabled(enabled: Boolean) {
         isPinchModeEnabled = enabled
     }
@@ -1696,6 +2451,40 @@ class WhiteboardView @JvmOverloads constructor(
     
     fun getBackgroundPattern(): BackgroundPattern {
         return currentBackgroundPattern
+    }
+    
+    /**
+     * Sets the zoom level programmatically
+     * @param zoomLevel value between minScaleFactor and 5.0f
+     */
+    fun setZoomLevel(zoomLevel: Float) {
+        scaleFactor = zoomLevel.coerceIn(minScaleFactor, 5.0f)
+        constrainFocusToBounds()
+        invalidate()
+    }
+    
+    /**
+     * Gets the current zoom level
+     * @return current scale factor
+     */
+    fun getZoomLevel(): Float {
+        return scaleFactor
+    }
+    
+    /**
+     * Gets the minimum allowed zoom level
+     * @return minimum scale factor
+     */
+    fun getMinZoomLevel(): Float {
+        return minScaleFactor
+    }
+    
+    /**
+     * Gets the maximum allowed zoom level
+     * @return maximum scale factor (5.0f)
+     */
+    fun getMaxZoomLevel(): Float {
+        return 5.0f
     }
 
     fun undo() {
@@ -1739,6 +2528,8 @@ class WhiteboardView @JvmOverloads constructor(
             selectedTextObject = null
             shapeObjects.clear()
             selectedShapeObject = null
+            imageObjects.clear()
+            selectedImageObject = null
             selectionPath = null
             isDrawingSelection = false
             // Reset shape drawing state
@@ -1748,6 +2539,10 @@ class WhiteboardView @JvmOverloads constructor(
             isDraggingShape = false
             isResizingShape = false
             isRotatingShape = false
+            // Reset image interaction state
+            isDraggingImage = false
+            isResizingImage = false
+            isRotatingImage = false
             redrawCanvas()
             drawingChangeListener?.onDrawingChanged()
         }
@@ -1917,10 +2712,18 @@ class WhiteboardView @JvmOverloads constructor(
     // Gesture listeners
     private inner class GestureListener : GestureDetector.SimpleOnGestureListener() {
         override fun onDoubleTap(e: MotionEvent): Boolean {
-            // Reset zoom and pan
+            // Reset zoom and pan to center of bitmap
             scaleFactor = 1.0f
-            focusX = 0f
-            focusY = 0f
+            
+            // Center the view on the bitmap
+            val bitmapWidth = drawingBitmap?.width?.toFloat() ?: width.toFloat()
+            val bitmapHeight = drawingBitmap?.height?.toFloat() ?: height.toFloat()
+            focusX = (bitmapWidth - width) / 2f
+            focusY = (bitmapHeight - height) / 2f
+            
+            // Ensure we're within bounds
+            constrainFocusToBounds()
+            
             invalidate()
             return true
         }
@@ -1934,11 +2737,17 @@ class WhiteboardView @JvmOverloads constructor(
 
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             scaleFactor *= detector.scaleFactor
-            scaleFactor = max(0.1f, min(scaleFactor, 5.0f))
+            
+            // Constrain scale factor to prevent seeing empty space outside bitmap
+            // Use dynamic minimum based on bitmap/view ratio, and max 5x zoom
+            scaleFactor = max(minScaleFactor, min(scaleFactor, 5.0f))
             
             // Adjust focus point
             focusX = detector.focusX - (detector.focusX - focusX) * detector.scaleFactor
             focusY = detector.focusY - (detector.focusY - focusY) * detector.scaleFactor
+            
+            // Constrain focus to bitmap boundaries after zooming
+            constrainFocusToBounds()
             
             invalidate()
             return true
@@ -1971,7 +2780,6 @@ class WhiteboardView @JvmOverloads constructor(
         val tools = listOf(
             DrawingTool.PEN,
             DrawingTool.ERASER,
-            DrawingTool.HIGHLIGHTER,
             DrawingTool.TEXT,
             DrawingTool.LINE,
             DrawingTool.CIRCLE,
@@ -2087,11 +2895,10 @@ class WhiteboardView @JvmOverloads constructor(
             val row1Y = controlArea.top + 35f
             val row2Y = controlArea.top + 70f
             
-            // Row 1: Tool buttons (Pen, Eraser, Highlighter, Text, Line, Circle, Triangle, Rectangle)
+            // Row 1: Tool buttons (Pen, Eraser, Text, Line, Circle, Triangle, Rectangle)
             val tools = listOf(
                 Pair(DrawingTool.PEN, "✏"),
                 Pair(DrawingTool.ERASER, "⌫"),
-                Pair(DrawingTool.HIGHLIGHTER, "🖍"),
                 Pair(DrawingTool.TEXT, "T"),
                 Pair(DrawingTool.LINE, "—"),
                 Pair(DrawingTool.CIRCLE, "○"),
@@ -2283,23 +3090,29 @@ class WhiteboardView @JvmOverloads constructor(
     
     fun getAllShapeObjects(): List<ShapeObject> = shapeObjects.toList()
     
+    fun getAllImageObjects(): List<ImageObject> = imageObjects.toList()
+    
     fun loadPageData(
         pagePaths: List<DrawingPath>,
         pageTextObjects: List<TextObject>,
-        pageShapeObjects: List<ShapeObject>
+        pageShapeObjects: List<ShapeObject>,
+        pageImageObjects: List<ImageObject> = emptyList()
     ) {
         // Clear current state
         paths.clear()
         undoStack.clear()
         textObjects.clear()
         shapeObjects.clear()
+        imageObjects.clear()
         selectedTextObject = null
         selectedShapeObject = null
+        selectedImageObject = null
         
         // Load page data
         paths.addAll(pagePaths)
         textObjects.addAll(pageTextObjects)
         shapeObjects.addAll(pageShapeObjects)
+        imageObjects.addAll(pageImageObjects)
         
         // Redraw canvas
         redrawCanvas()
