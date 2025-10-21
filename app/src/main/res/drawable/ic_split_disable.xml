@@ -5,10 +5,10 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
     
-    <!-- Single rectangle representing normal view -->
+    <!-- Single panel with border representing normal view -->
     <path
         android:fillColor="#FF333333"
-        android:pathData="M3,4 L21,4 L21,20 L3,20 Z" />
+        android:pathData="M3,3 L21,3 C21.55,3 22,3.45 22,4 L22,20 C22,20.55 21.55,21 21,21 L3,21 C2.45,21 2,20.55 2,20 L2,4 C2,3.45 2.45,3 3,3 Z M4,5 L4,19 L20,19 L20,5 Z" />
         
 </vector>
 

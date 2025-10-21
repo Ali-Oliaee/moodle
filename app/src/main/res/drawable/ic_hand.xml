@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="20dp"
-    android:height="20dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24"
+    android:width="18dp"
+    android:height="18dp"
+    android:viewportWidth="28"
+    android:viewportHeight="28"
     android:tint="#757575">
     <!-- Hand/pointer cursor icon for selection mode (Material Design pan_tool) -->
     <path
