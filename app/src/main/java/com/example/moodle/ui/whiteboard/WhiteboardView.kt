@@ -222,6 +222,18 @@ class WhiteboardView @JvmOverloads constructor(
             style = Paint.Style.FILL
         }
         
+        private val deleteButtonPaint = Paint().apply {
+            color = Color.RED
+            style = Paint.Style.FILL
+        }
+        
+        private val deleteIconPaint = Paint().apply {
+            color = Color.WHITE
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+            strokeCap = Paint.Cap.ROUND
+        }
+        
         fun updatePaint() {
             paint.color = color
             paint.strokeWidth = strokeWidth
@@ -237,6 +249,30 @@ class WhiteboardView @JvmOverloads constructor(
         
         fun getCenterX(): Float = (startX + endX) / 2f
         fun getCenterY(): Float = (startY + endY) / 2f
+        
+        /**
+         * Transform touch coordinates to account for shape rotation
+         * Returns a Pair of (transformedX, transformedY)
+         */
+        private fun transformTouchPoint(touchX: Float, touchY: Float): Pair<Float, Float> {
+            if (rotation == 0f) {
+                return Pair(touchX, touchY)
+            }
+            
+            val centerX = getCenterX()
+            val centerY = getCenterY()
+            val angle = -Math.toRadians(rotation.toDouble())
+            val cos = kotlin.math.cos(angle).toFloat()
+            val sin = kotlin.math.sin(angle).toFloat()
+            
+            val dx = touchX - centerX
+            val dy = touchY - centerY
+            
+            val transformedX = centerX + dx * cos - dy * sin
+            val transformedY = centerY + dx * sin + dy * cos
+            
+            return Pair(transformedX, transformedY)
+        }
         
         fun draw(canvas: Canvas) {
             updatePaint()
@@ -374,6 +410,27 @@ class WhiteboardView @JvmOverloads constructor(
                 )
             }
             
+            // Draw delete button (red circle with X at top-right corner, inside rotation)
+            val deleteButtonX = bounds.right + 20f
+            val deleteButtonY = bounds.top - 20f
+            val deleteButtonRadius = 15f
+            
+            // Draw red circle
+            canvas.drawCircle(deleteButtonX, deleteButtonY, deleteButtonRadius, deleteButtonPaint)
+            
+            // Draw white X
+            val xSize = 8f
+            canvas.drawLine(
+                deleteButtonX - xSize, deleteButtonY - xSize,
+                deleteButtonX + xSize, deleteButtonY + xSize,
+                deleteIconPaint
+            )
+            canvas.drawLine(
+                deleteButtonX + xSize, deleteButtonY - xSize,
+                deleteButtonX - xSize, deleteButtonY + xSize,
+                deleteIconPaint
+            )
+            
             canvas.restore()
             
             // Draw rotation handle (green circle at top-center, outside rotation)
@@ -397,18 +454,25 @@ class WhiteboardView @JvmOverloads constructor(
             
             val bounds = getBounds()
             val handleSize = 20f
+            val touchRadius = handleSize
             
-            val handles = mapOf(
-                ResizeHandle.TOP_LEFT to Pair(bounds.left, bounds.top),
-                ResizeHandle.TOP_RIGHT to Pair(bounds.right, bounds.top),
-                ResizeHandle.BOTTOM_LEFT to Pair(bounds.left, bounds.bottom),
-                ResizeHandle.BOTTOM_RIGHT to Pair(bounds.right, bounds.bottom)
+            // Transform touch point to account for rotation
+            val (transformedTouchX, transformedTouchY) = transformTouchPoint(touchX, touchY)
+            
+            // Check each corner handle in the rotated space
+            val handles = listOf(
+                Pair(ResizeHandle.TOP_LEFT, Pair(bounds.left, bounds.top)),
+                Pair(ResizeHandle.TOP_RIGHT, Pair(bounds.right, bounds.top)),
+                Pair(ResizeHandle.BOTTOM_LEFT, Pair(bounds.left, bounds.bottom)),
+                Pair(ResizeHandle.BOTTOM_RIGHT, Pair(bounds.right, bounds.bottom))
             )
             
             for ((handle, pos) in handles) {
-                val (x, y) = pos
-                if (touchX >= x - handleSize/2 && touchX <= x + handleSize/2 &&
-                    touchY >= y - handleSize/2 && touchY <= y + handleSize/2) {
+                val distance = kotlin.math.sqrt(
+                    (transformedTouchX - pos.first) * (transformedTouchX - pos.first) + 
+                    (transformedTouchY - pos.second) * (transformedTouchY - pos.second)
+                )
+                if (distance <= touchRadius) {
                     return handle
                 }
             }
@@ -449,6 +513,43 @@ class WhiteboardView @JvmOverloads constructor(
             return distance <= handleRadius
         }
         
+        fun isDeleteButtonTouched(touchX: Float, touchY: Float): Boolean {
+            if (!isSelected) return false
+            
+            // Lines don't have delete button - they can be deleted using selective eraser
+            if (shapeType == DrawingTool.LINE) return false
+            
+            val bounds = getBounds()
+            val deleteButtonX = bounds.right + 20f
+            val deleteButtonY = bounds.top - 20f
+            val deleteButtonRadius = 20f // Slightly larger touch area
+            
+            // For rotated shapes, we need to check in rotated space
+            // Transform touch point to account for rotation
+            if (rotation != 0f) {
+                val centerX = getCenterX()
+                val centerY = getCenterY()
+                val angle = -Math.toRadians(rotation.toDouble())
+                val cos = kotlin.math.cos(angle).toFloat()
+                val sin = kotlin.math.sin(angle).toFloat()
+                
+                val dx = touchX - centerX
+                val dy = touchY - centerY
+                
+                val transformedX = centerX + dx * cos - dy * sin
+                val transformedY = centerY + dx * sin + dy * cos
+                
+                val distance = kotlin.math.sqrt(
+                    (transformedX - deleteButtonX) * (transformedX - deleteButtonX) + 
+                    (transformedY - deleteButtonY) * (transformedY - deleteButtonY)
+                )
+                return distance <= deleteButtonRadius
+            }
+            
+            val distance = kotlin.math.sqrt((touchX - deleteButtonX) * (touchX - deleteButtonX) + (touchY - deleteButtonY) * (touchY - deleteButtonY))
+            return distance <= deleteButtonRadius
+        }
+        
         enum class ResizeHandle {
             TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT, LINE_START, LINE_END
         }
@@ -484,6 +585,18 @@ class WhiteboardView @JvmOverloads constructor(
         private val rotationHandlePaint = Paint().apply {
             color = Color.GREEN
             style = Paint.Style.FILL
+        }
+        
+        private val deleteButtonPaint = Paint().apply {
+            color = Color.RED
+            style = Paint.Style.FILL
+        }
+        
+        private val deleteIconPaint = Paint().apply {
+            color = Color.WHITE
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+            strokeCap = Paint.Cap.ROUND
         }
         
         fun updatePaint() {
@@ -539,6 +652,27 @@ class WhiteboardView @JvmOverloads constructor(
             canvas.drawRect(right - handleSize/2, bottom - handleSize/2, 
                           right + handleSize/2, bottom + handleSize/2, handlePaint)
             
+            // Draw delete button (red circle with X at top-right corner, inside rotation)
+            val deleteButtonX = right + 20f
+            val deleteButtonY = top - 20f
+            val deleteButtonRadius = 15f
+            
+            // Draw red circle
+            canvas.drawCircle(deleteButtonX, deleteButtonY, deleteButtonRadius, deleteButtonPaint)
+            
+            // Draw white X
+            val xSize = 8f
+            canvas.drawLine(
+                deleteButtonX - xSize, deleteButtonY - xSize,
+                deleteButtonX + xSize, deleteButtonY + xSize,
+                deleteIconPaint
+            )
+            canvas.drawLine(
+                deleteButtonX + xSize, deleteButtonY - xSize,
+                deleteButtonX - xSize, deleteButtonY + xSize,
+                deleteIconPaint
+            )
+            
             canvas.restore()
             
             // Draw rotation handle (green circle at top-center, outside rotation)
@@ -550,6 +684,26 @@ class WhiteboardView @JvmOverloads constructor(
         fun contains(touchX: Float, touchY: Float): Boolean {
             val bounds = Rect()
             paint.getTextBounds(text, 0, text.length, bounds)
+            
+            // For rotated text, we need to transform the touch point
+            if (rotation != 0f) {
+                val centerX = x + bounds.width() / 2f
+                val centerY = y + bounds.height() / 2f
+                
+                // Rotate touch point back to unrotated space
+                val angle = -Math.toRadians(rotation.toDouble())
+                val cos = kotlin.math.cos(angle).toFloat()
+                val sin = kotlin.math.sin(angle).toFloat()
+                
+                val dx = touchX - centerX
+                val dy = touchY - centerY
+                
+                val rotatedX = centerX + dx * cos - dy * sin
+                val rotatedY = centerY + dx * sin + dy * cos
+                
+                return rotatedX >= x - 10f && rotatedX <= x + bounds.width() + 10f &&
+                       rotatedY >= y + bounds.top - 10f && rotatedY <= y + bounds.bottom + 10f
+            }
             
             return touchX >= x - 10f && touchX <= x + bounds.width() + 10f &&
                    touchY >= y + bounds.top - 10f && touchY <= y + bounds.bottom + 10f
@@ -563,10 +717,33 @@ class WhiteboardView @JvmOverloads constructor(
             
             val handleX = x + bounds.width() + 10f
             val handleY = y + bounds.bottom + 10f
-            val handleSize = 20f
+            val handleRadius = 20f // Slightly larger touch area
             
-            return touchX >= handleX - handleSize/2 && touchX <= handleX + handleSize/2 &&
-                   touchY >= handleY - handleSize/2 && touchY <= handleY + handleSize/2
+            // For rotated text, we need to check in rotated space
+            // Transform touch point to account for rotation
+            if (rotation != 0f) {
+                val centerX = x + bounds.width() / 2f
+                val centerY = y + bounds.height() / 2f
+                val angle = -Math.toRadians(rotation.toDouble())
+                val cos = kotlin.math.cos(angle).toFloat()
+                val sin = kotlin.math.sin(angle).toFloat()
+                
+                val dx = touchX - centerX
+                val dy = touchY - centerY
+                
+                val transformedX = centerX + dx * cos - dy * sin
+                val transformedY = centerY + dx * sin + dy * cos
+                
+                val distance = kotlin.math.sqrt(
+                    (transformedX - handleX) * (transformedX - handleX) + 
+                    (transformedY - handleY) * (transformedY - handleY)
+                )
+                return distance <= handleRadius
+            }
+            
+            // For non-rotated text, use simple bounding box check
+            val distance = kotlin.math.sqrt((touchX - handleX) * (touchX - handleX) + (touchY - handleY) * (touchY - handleY))
+            return distance <= handleRadius
         }
         
         fun isRotationHandleTouched(touchX: Float, touchY: Float): Boolean {
@@ -579,8 +756,49 @@ class WhiteboardView @JvmOverloads constructor(
             val handleY = y + bounds.top - 40f // 30f offset + 10f radius
             val handleRadius = 15f // Slightly larger touch area
             
+            // Rotation handle is outside the rotation, so no transformation needed
             val distance = kotlin.math.sqrt((touchX - handleX) * (touchX - handleX) + (touchY - handleY) * (touchY - handleY))
             return distance <= handleRadius
+        }
+        
+        fun isDeleteButtonTouched(touchX: Float, touchY: Float): Boolean {
+            if (!isSelected) return false
+            
+            val bounds = Rect()
+            paint.getTextBounds(text, 0, text.length, bounds)
+            
+            val left = x - 10f
+            val top = y + bounds.top - 10f
+            val right = x + bounds.width() + 10f
+            
+            val deleteButtonX = right + 20f
+            val deleteButtonY = top - 20f
+            val deleteButtonRadius = 20f // Slightly larger touch area
+            
+            // For rotated text, we need to check in rotated space
+            // Transform touch point to account for rotation
+            if (rotation != 0f) {
+                val centerX = x + bounds.width() / 2f
+                val centerY = y + bounds.height() / 2f
+                val angle = -Math.toRadians(rotation.toDouble())
+                val cos = kotlin.math.cos(angle).toFloat()
+                val sin = kotlin.math.sin(angle).toFloat()
+                
+                val dx = touchX - centerX
+                val dy = touchY - centerY
+                
+                val transformedX = centerX + dx * cos - dy * sin
+                val transformedY = centerY + dx * sin + dy * cos
+                
+                val distance = kotlin.math.sqrt(
+                    (transformedX - deleteButtonX) * (transformedX - deleteButtonX) + 
+                    (transformedY - deleteButtonY) * (transformedY - deleteButtonY)
+                )
+                return distance <= deleteButtonRadius
+            }
+            
+            val distance = kotlin.math.sqrt((touchX - deleteButtonX) * (touchX - deleteButtonX) + (touchY - deleteButtonY) * (touchY - deleteButtonY))
+            return distance <= deleteButtonRadius
         }
     }
 
@@ -1369,6 +1587,16 @@ class WhiteboardView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 // Check if touching handles of already selected text first
                 selectedTextObject?.let { textObj ->
+                    // Check delete button first
+                    if (textObj.isDeleteButtonTouched(x, y)) {
+                        // Remove the text from the list
+                        textObjects.remove(textObj)
+                        selectedTextObject = null
+                        drawingChangeListener?.onDrawingChanged()
+                        invalidate()
+                        return
+                    }
+                    
                     if (textObj.isRotationHandleTouched(x, y)) {
                         isRotatingText = true
                         dragStartX = x
@@ -1388,6 +1616,16 @@ class WhiteboardView @JvmOverloads constructor(
                 
                 // Check if touching handles of already selected shape
                 selectedShapeObject?.let { shapeObj ->
+                    // Check delete button first
+                    if (shapeObj.isDeleteButtonTouched(x, y)) {
+                        // Remove the shape from the list
+                        shapeObjects.remove(shapeObj)
+                        selectedShapeObject = null
+                        drawingChangeListener?.onDrawingChanged()
+                        invalidate()
+                        return
+                    }
+                    
                     if (shapeObj.isRotationHandleTouched(x, y)) {
                         isRotatingShape = true
                         dragStartX = x
@@ -1571,25 +1809,38 @@ class WhiteboardView @JvmOverloads constructor(
                         invalidate()
                         return
                     } else if (isResizingShape) {
-                        when (currentResizeHandle) {
-                            ShapeObject.ResizeHandle.TOP_LEFT -> {
-                                shapeObj.startX = x
-                                shapeObj.startY = y
+                        // For LINE shapes, allow direct endpoint manipulation
+                        if (shapeObj.shapeType == DrawingTool.LINE) {
+                            when (currentResizeHandle) {
+                                ShapeObject.ResizeHandle.LINE_START -> {
+                                    shapeObj.startX = x
+                                    shapeObj.startY = y
+                                }
+                                ShapeObject.ResizeHandle.LINE_END -> {
+                                    shapeObj.endX = x
+                                    shapeObj.endY = y
+                                }
+                                else -> {}
                             }
-                            ShapeObject.ResizeHandle.TOP_RIGHT -> {
-                                shapeObj.endX = x
-                                shapeObj.startY = y
-                            }
-                            ShapeObject.ResizeHandle.BOTTOM_LEFT -> {
-                                shapeObj.startX = x
-                                shapeObj.endY = y
-                            }
-                            ShapeObject.ResizeHandle.BOTTOM_RIGHT -> {
-                                shapeObj.endX = x
-                                shapeObj.endY = y
-                            }
-                            null -> {}
+                        } else {
+                            // Use scale-based resizing for better handling of rotated shapes
+                            val centerX = (initialShapeStartX + initialShapeEndX) / 2f
+                            val centerY = (initialShapeStartY + initialShapeEndY) / 2f
+                            
+                            val initialDistance = kotlin.math.sqrt(
+                                (dragStartX - centerX) * (dragStartX - centerX) + 
+                                (dragStartY - centerY) * (dragStartY - centerY)
+                            )
+                            val currentDistance = kotlin.math.sqrt(
+                                (x - centerX) * (x - centerX) + 
+                                (y - centerY) * (y - centerY)
+                            )
+                            
+                            val scaleFactor = if (initialDistance > 0) currentDistance / initialDistance else 1f
+                            shapeObj.scaleX = max(0.1f, min(5.0f, scaleFactor))
+                            shapeObj.scaleY = max(0.1f, min(5.0f, scaleFactor))
                         }
+                        
                         invalidate()
                         return
                     } else if (isDraggingShape) {
