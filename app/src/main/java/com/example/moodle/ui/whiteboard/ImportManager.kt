@@ -46,9 +46,9 @@ class ImportManager(private val context: Context) {
                 return
             }
             
-            // Add the image to the whiteboard
-            val centerX = whiteboardView.width / 2f
-            val centerY = whiteboardView.height / 2f
+            // Add the image to the whiteboard at center of current view
+            val centerX = whiteboardView.getVisibleCanvasCenterX()
+            val centerY = whiteboardView.getVisibleCanvasCenterY()
             whiteboardView.addImage(bitmap, centerX, centerY)
             
             onSuccess()

@@ -2619,6 +2619,28 @@ class WhiteboardView @JvmOverloads constructor(
         textInputListener = listener
     }
 
+    /**
+     * Converts screen coordinates to canvas coordinates, accounting for zoom and pan
+     */
+    private fun screenToCanvasX(screenX: Float): Float {
+        return (screenX / scaleFactor) + focusX
+    }
+    
+    private fun screenToCanvasY(screenY: Float): Float {
+        return (screenY / scaleFactor) + focusY
+    }
+    
+    /**
+     * Gets the center of the current visible canvas area (accounting for zoom and pan)
+     */
+    fun getVisibleCanvasCenterX(): Float {
+        return screenToCanvasX(width / 2f)
+    }
+    
+    fun getVisibleCanvasCenterY(): Float {
+        return screenToCanvasY(height / 2f)
+    }
+
     fun addText(text: String, x: Float, y: Float) {
         if (text.isNotEmpty()) {
             // Create new text object
