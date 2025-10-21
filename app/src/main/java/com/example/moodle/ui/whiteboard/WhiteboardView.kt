@@ -1119,20 +1119,31 @@ class WhiteboardView @JvmOverloads constructor(
         super.onDraw(canvas)
         
         canvas?.let { c ->
+            android.util.Log.d("WhiteboardView", "onDraw called, splitMode=${sectionManager.isSplitModeEnabled()}, sections=${sectionManager.getAllSections().size}")
+            
             if (sectionManager.isSplitModeEnabled()) {
+                android.util.Log.d("WhiteboardView", "Drawing in SPLIT mode")
                 // In split mode: draw without transformations
                 // Draw white background (no patterns in split mode)
                 c.drawColor(Color.WHITE)
                 
+                // IMPORTANT: Draw section backgrounds/borders FIRST, then content on top
+                sectionManager.drawSections(c)
+                
                 // Draw section content
                 for (section in sectionManager.getAllSections()) {
+                    android.util.Log.d("WhiteboardView", "Drawing section ${section.id}: ${section.paths.size} paths, bounds=${section.drawingBounds}")
                     c.save()
                     
                     // Clip to drawing bounds only (not control area)
                     c.clipRect(section.drawingBounds)
                     
                     // Draw section's paths
-                    for (drawingPath in section.paths) {
+                    for ((index, drawingPath) in section.paths.withIndex()) {
+                        val pathBounds = RectF()
+                        drawingPath.path.computeBounds(pathBounds, true)
+                        android.util.Log.d("WhiteboardView", "Drawing path $index in section ${section.id}: bounds=$pathBounds, paint color=${drawingPath.paint.color}, strokeWidth=${drawingPath.paint.strokeWidth}")
+                        
                         if (drawingPath.tool == DrawingTool.TEXT && drawingPath.text != null) {
                             c.drawText(drawingPath.text, drawingPath.textX, drawingPath.textY, drawingPath.paint)
                         } else {
@@ -1153,6 +1164,9 @@ class WhiteboardView @JvmOverloads constructor(
                     if (!path.isEmpty) {
                         val section = pointerSectionMap[pointerId]
                         if (section != null) {
+                            val pathBounds = RectF()
+                            path.computeBounds(pathBounds, true)
+                            android.util.Log.d("WhiteboardView", "Drawing ACTIVE path for pointer $pointerId in section ${section.id}: bounds=$pathBounds")
                             c.save()
                             c.clipRect(section.drawingBounds)
                             c.drawPath(path, getCurrentPaintForSection(section))
@@ -1171,8 +1185,7 @@ class WhiteboardView @JvmOverloads constructor(
                     }
                 }
                 
-                // Draw section borders, labels, and control areas
-                sectionManager.drawSections(c)
+                // Draw section control toolbars on top
                 drawSectionControls(c)
             } else {
                 // In normal mode: use transformations for infinite canvas
@@ -1228,8 +1241,11 @@ class WhiteboardView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        android.util.Log.d("WhiteboardView", "onTouchEvent: action=${event.actionMasked}, splitMode=${sectionManager.isSplitModeEnabled()}, isDrawingMode=$isDrawingMode")
+        
         // In split mode, disable pinch/pan features
         if (sectionManager.isSplitModeEnabled()) {
+            android.util.Log.d("WhiteboardView", "Split mode active, calling handleDrawingTouch")
             // Always handle as drawing in split mode
             handleDrawingTouch(event)
             return true
@@ -1241,6 +1257,7 @@ class WhiteboardView @JvmOverloads constructor(
             
             // Don't process drawing if scaling
             if (isScaling) {
+                android.util.Log.d("WhiteboardView", "Currently scaling, skipping drawing")
                 return true
             }
         }
@@ -1250,8 +1267,10 @@ class WhiteboardView @JvmOverloads constructor(
         
         // Handle drawing only if in drawing mode
         if (isDrawingMode) {
+            android.util.Log.d("WhiteboardView", "Drawing mode active, calling handleDrawingTouch")
             handleDrawingTouch(event)
         } else {
+            android.util.Log.d("WhiteboardView", "Pan mode active, calling handlePanningTouch")
             handlePanningTouch(event)
         }
         
@@ -1263,11 +1282,15 @@ class WhiteboardView @JvmOverloads constructor(
         val pointerIndex = event.actionIndex
         val pointerId = event.getPointerId(pointerIndex)
         
+        android.util.Log.d("WhiteboardView", "handleDrawingTouch: action=$action, pointer=$pointerId, splitMode=${sectionManager.isSplitModeEnabled()}")
+        
         when (action) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
-                // In split mode, use screen coordinates for section detection (not transformed)
+                // Get screen coordinates
                 val screenX = event.getX(pointerIndex)
                 val screenY = event.getY(pointerIndex)
+                
+                android.util.Log.d("WhiteboardView", "ACTION_DOWN at ($screenX, $screenY)")
                 
                 // In split mode, determine which section this pointer is drawing in
                 if (sectionManager.isSplitModeEnabled()) {
@@ -1309,11 +1332,14 @@ class WhiteboardView @JvmOverloads constructor(
                 var x = if (sectionManager.isSplitModeEnabled()) screenX else (screenX + focusX) / scaleFactor
                 var y = if (sectionManager.isSplitModeEnabled()) screenY else (screenY + focusY) / scaleFactor
                 
+                android.util.Log.d("WhiteboardView", "Drawing coords: x=$x, y=$y (screen: $screenX, $screenY, focus: $focusX, $focusY, scale: $scaleFactor)")
+                
                 // Clamp coordinates to bitmap bounds in normal mode
                 if (!sectionManager.isSplitModeEnabled()) {
                     val clamped = clampToBitmapBounds(x, y)
                     x = clamped.first
                     y = clamped.second
+                    android.util.Log.d("WhiteboardView", "After clamp: x=$x, y=$y")
                 }
                 
                 // Handle special tools differently
@@ -1323,6 +1349,8 @@ class WhiteboardView @JvmOverloads constructor(
                 } else {
                     currentTool
                 }
+                
+                android.util.Log.d("WhiteboardView", "Tool to use: $toolToUse, isDrawingMode: $isDrawingMode")
                 
                 when (toolToUse) {
                     DrawingTool.TEXT -> {
@@ -1340,6 +1368,16 @@ class WhiteboardView @JvmOverloads constructor(
                     else -> {
                         // Create new path for this pointer
                         android.util.Log.d("WhiteboardView", "Creating new path at ($x, $y) with tool: $toolToUse")
+                        
+                        // CRITICAL CHECK: Are coordinates within section bounds?
+                        if (sectionManager.isSplitModeEnabled()) {
+                            val section = pointerSectionMap[pointerId]
+                            if (section != null) {
+                                android.util.Log.d("WhiteboardView", "Section ${section.id} drawing bounds: ${section.drawingBounds}")
+                                android.util.Log.d("WhiteboardView", "Touch point ($x, $y) in bounds? ${section.drawingBounds.contains(x, y)}")
+                            }
+                        }
+                        
                         val newPath = Path()
                         newPath.moveTo(x, y)
                         activePaths[pointerId] = newPath
@@ -1450,6 +1488,9 @@ class WhiteboardView @JvmOverloads constructor(
                             path.quadTo(lastX, lastY, (x + lastX) / 2, (y + lastY) / 2)
                             activePathsLastX[id] = x
                             activePathsLastY[id] = y
+                            
+                            // Invalidate to show drawing in real-time
+                            invalidate()
                         }
                     }
                 }
@@ -3038,224 +3079,249 @@ class WhiteboardView @JvmOverloads constructor(
         drawingCanvas = null
     }
     
-    // Handle touch in control area
+    // Handle touch in control toolbar - using exact same buttons as main toolbar
     private fun handleControlAreaTouch(section: SectionManager.Section, x: Float, y: Float) {
         val controlArea = section.controlBounds
-        val buttonSize = 28f
-        val buttonMargin = 3f
-        val startX = controlArea.left + 8f
-        val row1Y = controlArea.top + 35f
-        val row2Y = controlArea.top + 70f
+        val sectionWidth = section.bounds.width()
         
-        android.util.Log.d("WhiteboardView", "Control touch at ($x, $y) in section ${section.id}")
+        // Button dimensions matching main toolbar style
+        val buttonSize = 32f
+        val buttonSpacing = 4f
+        val padding = 8f
         
-        // Check Row 1: Tool buttons
-        val tools = listOf(
-            DrawingTool.PEN,
-            DrawingTool.ERASER,
-            DrawingTool.TEXT,
-            DrawingTool.LINE,
-            DrawingTool.CIRCLE,
-            DrawingTool.TRIANGLE,
-            DrawingTool.RECTANGLE
-        )
+        // Calculate total buttons and spacing
+        val buttonCount = 7 // Pen, Eraser, Undo, Redo, Clear, Color, Stroke
+        val centerY = controlArea.centerY()
+        val buttonTop = centerY - buttonSize / 2
+        val buttonBottom = centerY + buttonSize / 2
         
-        tools.forEachIndexed { index, tool ->
-            val buttonX = startX + index * (buttonSize + buttonMargin)
-            if (x >= buttonX && x <= buttonX + buttonSize && y >= row1Y && y <= row1Y + buttonSize) {
-                android.util.Log.d("WhiteboardView", "Tool button pressed: $tool")
-                section.currentTool = tool
-                invalidate()
-                return
-            }
-        }
+        // Check if touch is within button row
+        if (y < buttonTop || y > buttonBottom) return
         
-        // Check Row 2: Action buttons (Undo, Redo, Clear)
-        // Undo button
-        val undoX = startX
-        if (x >= undoX && x <= undoX + buttonSize && y >= row2Y && y <= row2Y + buttonSize) {
-            if (section.canUndo()) {
-                android.util.Log.d("WhiteboardView", "Undo pressed")
-                section.undo()
-                invalidate()
-            }
-            return
-        }
+        // Calculate button positions
+        val startX = controlArea.left + (sectionWidth - (buttonCount * buttonSize + (buttonCount - 1) * buttonSpacing)) / 2
         
-        // Redo button
-        val redoX = startX + (buttonSize + buttonMargin)
-        if (x >= redoX && x <= redoX + buttonSize && y >= row2Y && y <= row2Y + buttonSize) {
-            if (section.canRedo()) {
-                android.util.Log.d("WhiteboardView", "Redo pressed")
-                section.redo()
+        // Determine which button was pressed
+        val relativeX = x - startX
+        if (relativeX < 0) return
+        
+        val buttonIndex = (relativeX / (buttonSize + buttonSpacing)).toInt()
+        if (buttonIndex >= buttonCount) return
+        
+        val buttonLeft = startX + buttonIndex * (buttonSize + buttonSpacing)
+        val buttonRight = buttonLeft + buttonSize
+        
+        // Verify touch is within button bounds
+        if (x < buttonLeft || x > buttonRight) return
+        
+        // Handle button press based on index
+        when (buttonIndex) {
+            0 -> {
+                // Pen button
+                section.currentTool = DrawingTool.PEN
                 invalidate()
             }
-            return
-        }
-        
-        // Clear button
-        val clearX = startX + 2 * (buttonSize + buttonMargin)
-        if (x >= clearX && x <= clearX + buttonSize && y >= row2Y && y <= row2Y + buttonSize) {
-            android.util.Log.d("WhiteboardView", "Clear pressed")
-            section.clear()
-            invalidate()
-            return
-        }
-        
-        // Color button - cycle through colors
-        val colorX = startX + 3 * (buttonSize + buttonMargin) + 4f
-        val colorSize = 24f
-        val colorY = row2Y + (buttonSize - colorSize) / 2
-        if (x >= colorX && x <= colorX + colorSize && y >= colorY && y <= colorY + colorSize) {
-            // Cycle through common colors
-            val colors = listOf(
-                Color.BLACK,
-                Color.RED,
-                Color.BLUE,
-                Color.GREEN,
-                Color.parseColor("#FFEB3B"), // Yellow
-                Color.parseColor("#9C27B0"), // Purple
-                Color.parseColor("#FF9800")  // Orange
-            )
-            val currentIndex = colors.indexOf(section.currentColor)
-            section.currentColor = colors[(currentIndex + 1) % colors.size]
-            android.util.Log.d("WhiteboardView", "Color changed to ${section.currentColor}")
-            invalidate()
-            return
-        }
-        
-        // Stroke width button - cycle through widths
-        val strokeX = colorX + colorSize + 8f
-        val strokeBoxSize = 28f
-        if (x >= strokeX && x <= strokeX + strokeBoxSize && y >= row2Y && y <= row2Y + strokeBoxSize) {
-            // Cycle through stroke widths
-            val widths = listOf(2f, 5f, 8f, 12f, 16f, 20f)
-            val currentIndex = widths.indexOfFirst { kotlin.math.abs(it - section.currentStrokeWidth) < 1f }
-            section.currentStrokeWidth = widths[(if (currentIndex >= 0) currentIndex + 1 else 0) % widths.size]
-            android.util.Log.d("WhiteboardView", "Stroke width changed to ${section.currentStrokeWidth}")
-            invalidate()
-            return
+            1 -> {
+                // Eraser button
+                section.currentTool = DrawingTool.ERASER
+                invalidate()
+            }
+            2 -> {
+                // Undo button
+                if (section.canUndo()) {
+                    section.undo()
+                    invalidate()
+                }
+            }
+            3 -> {
+                // Redo button
+                if (section.canRedo()) {
+                    section.redo()
+                    invalidate()
+                }
+            }
+            4 -> {
+                // Clear button
+                section.clear()
+                invalidate()
+            }
+            5 -> {
+                // Color button - show popup
+                showSectionColorPopup(section, buttonLeft, buttonTop)
+            }
+            6 -> {
+                // Stroke width button - show popup
+                showSectionStrokePopup(section, buttonLeft, buttonTop)
+            }
         }
     }
     
-    // Draw controls in each section's control area
+    // Show color picker popup for a specific section
+    private fun showSectionColorPopup(section: SectionManager.Section, x: Float, y: Float) {
+        // Cycle through colors for now (popup implementation needed in Activity)
+        val colors = listOf(
+            Color.BLACK,
+            Color.parseColor("#F44336"), // Red
+            Color.parseColor("#2196F3"), // Blue
+            Color.parseColor("#4CAF50"), // Green
+            Color.parseColor("#FFEB3B"), // Yellow
+            Color.parseColor("#9C27B0"), // Purple
+            Color.parseColor("#FF9800")  // Orange
+        )
+        val currentIndex = colors.indexOf(section.currentColor)
+        section.currentColor = colors[(currentIndex + 1) % colors.size]
+        invalidate()
+    }
+    
+    // Show stroke width popup for a specific section
+    private fun showSectionStrokePopup(section: SectionManager.Section, x: Float, y: Float) {
+        // Cycle through widths for now (popup implementation needed in Activity)
+        val widths = listOf(2f, 5f, 8f, 12f, 16f, 20f)
+        val currentIndex = widths.indexOfFirst { kotlin.math.abs(it - section.currentStrokeWidth) < 1f }
+        section.currentStrokeWidth = widths[(if (currentIndex >= 0) currentIndex + 1 else 0) % widths.size]
+        invalidate()
+    }
+    
+    // Draw control toolbar using actual drawable icons like main toolbar
     private fun drawSectionControls(canvas: Canvas) {
-        val buttonPaint = Paint().apply {
+        // Load drawable resources
+        val iconPen = context.getDrawable(android.support.v7.appcompat.R.drawable.abc_ic_menu_cut_mtrl_alpha)
+        val iconEraser = context.getDrawable(android.support.v7.appcompat.R.drawable.abc_ic_clear_material)
+        val iconUndo = context.getDrawable(android.support.v7.appcompat.R.drawable.abc_ic_ab_back_material)
+        val iconRedo = context.getDrawable(android.support.v7.appcompat.R.drawable.abc_ic_go_search_api_material)
+        val iconClear = context.getDrawable(android.support.v7.appcompat.R.drawable.abc_ic_clear_material)
+        
+        // Button background paint
+        val buttonBg = Paint().apply {
             isAntiAlias = true
             style = Paint.Style.FILL
+            color = Color.parseColor("#F5F5F5")
         }
         
-        val textPaint = Paint().apply {
+        val selectedBg = Paint().apply {
             isAntiAlias = true
-            color = Color.WHITE
-            textSize = 20f
-            textAlign = Paint.Align.CENTER
-            isFakeBoldText = true
+            style = Paint.Style.FILL
+            color = Color.parseColor("#E0E0E0")
         }
         
-        val iconPaint = Paint().apply {
+        val borderPaint = Paint().apply {
+            color = Color.parseColor("#CCCCCC")
+            style = Paint.Style.STROKE
+            strokeWidth = 1f
             isAntiAlias = true
-            color = Color.WHITE
-            textSize = 24f
-            textAlign = Paint.Align.CENTER
         }
         
         for (section in sectionManager.getAllSections()) {
             val controlArea = section.controlBounds
-            val buttonSize = 28f
-            val buttonMargin = 3f
-            val startX = controlArea.left + 8f
-            val row1Y = controlArea.top + 35f
-            val row2Y = controlArea.top + 70f
+            val sectionWidth = section.bounds.width()
             
-            // Row 1: Tool buttons (Pen, Eraser, Text, Line, Circle, Triangle, Rectangle)
-            val tools = listOf(
-                Pair(DrawingTool.PEN, "✏"),
-                Pair(DrawingTool.ERASER, "⌫"),
-                Pair(DrawingTool.TEXT, "T"),
-                Pair(DrawingTool.LINE, "—"),
-                Pair(DrawingTool.CIRCLE, "○"),
-                Pair(DrawingTool.TRIANGLE, "△"),
-                Pair(DrawingTool.RECTANGLE, "▭")
-            )
+            // Button dimensions matching main toolbar
+            val buttonSize = 32f
+            val buttonSpacing = 4f
+            val buttonCount = 7
             
-            tools.forEachIndexed { index, (tool, icon) ->
-                val x = startX + index * (buttonSize + buttonMargin)
+            // Center buttons in control area
+            val totalWidth = buttonCount * buttonSize + (buttonCount - 1) * buttonSpacing
+            val startX = controlArea.left + (sectionWidth - totalWidth) / 2
+            val centerY = controlArea.centerY()
+            val buttonTop = centerY - buttonSize / 2
+            
+            // Draw buttons: Pen, Eraser, Undo, Redo, Clear, Color, Stroke
+            for (i in 0 until buttonCount) {
+                val buttonLeft = startX + i * (buttonSize + buttonSpacing)
+                val buttonRight = buttonLeft + buttonSize
+                val buttonBottom = buttonTop + buttonSize
+                val rect = RectF(buttonLeft, buttonTop, buttonRight, buttonBottom)
                 
-                // Set button color based on selection
-                buttonPaint.color = if (section.currentTool == tool) {
-                    Color.parseColor("#4CAF50") // Green for selected
-                } else {
-                    Color.parseColor("#757575") // Gray for unselected
+                // Determine if button is active/selected
+                val isSelected = when (i) {
+                    0 -> section.currentTool == DrawingTool.PEN
+                    1 -> section.currentTool == DrawingTool.ERASER
+                    else -> false
+                }
+                
+                val isEnabled = when (i) {
+                    2 -> section.canUndo()
+                    3 -> section.canRedo()
+                    else -> true
                 }
                 
                 // Draw button background
-                canvas.drawRect(x, row1Y, x + buttonSize, row1Y + buttonSize, buttonPaint)
-                
-                // Draw button icon/text
-                canvas.drawText(icon, x + buttonSize / 2, row1Y + buttonSize / 2 + 8f, iconPaint)
-            }
-            
-            // Row 2: Action buttons (Undo, Redo, Clear) + Color + Stroke
-            val row2Actions = listOf(
-                Triple("↶", section.canUndo(), "undo"),
-                Triple("↷", section.canRedo(), "redo"),
-                Triple("✕", true, "clear")
-            )
-            
-            row2Actions.forEachIndexed { index, (icon, enabled, _) ->
-                val x = startX + index * (buttonSize + buttonMargin)
-                
-                buttonPaint.color = if (enabled) {
-                    Color.parseColor("#2196F3") // Blue for enabled
+                if (isSelected) {
+                    canvas.drawRoundRect(rect, 4f, 4f, selectedBg)
                 } else {
-                    Color.parseColor("#BDBDBD") // Light gray for disabled
+                    canvas.drawRoundRect(rect, 4f, 4f, buttonBg)
                 }
+                canvas.drawRoundRect(rect, 4f, 4f, borderPaint)
                 
-                canvas.drawRect(x, row2Y, x + buttonSize, row2Y + buttonSize, buttonPaint)
-                canvas.drawText(icon, x + buttonSize / 2, row2Y + buttonSize / 2 + 8f, iconPaint)
+                // Draw button icon/content
+                when (i) {
+                    0 -> drawIcon(canvas, "✎", rect, isSelected) // Pen
+                    1 -> drawIcon(canvas, "⌫", rect, isSelected) // Eraser
+                    2 -> drawIcon(canvas, "↶", rect, isEnabled) // Undo
+                    3 -> drawIcon(canvas, "↷", rect, isEnabled) // Redo
+                    4 -> drawIcon(canvas, "✕", rect, true) // Clear
+                    5 -> drawColorButton(canvas, rect, section.currentColor) // Color
+                    6 -> drawStrokeButton(canvas, rect, section.currentStrokeWidth) // Stroke
+                }
             }
-            
-            // Draw color indicator (clickable)
-            val colorX = startX + 3 * (buttonSize + buttonMargin) + 4f
-            val colorSize = 24f
-            val colorY = row2Y + (buttonSize - colorSize) / 2
-            
-            // Draw border
-            val borderPaint = Paint().apply {
-                color = Color.BLACK
-                style = Paint.Style.STROKE
-                strokeWidth = 1f
-            }
-            canvas.drawRect(colorX, colorY, colorX + colorSize, colorY + colorSize, borderPaint)
-            
-            // Draw color
-            buttonPaint.color = section.currentColor
-            canvas.drawRect(colorX + 1, colorY + 1, colorX + colorSize - 1, colorY + colorSize - 1, buttonPaint)
-            
-            // Draw stroke width indicator (clickable)
-            val strokeX = colorX + colorSize + 8f
-            val strokeBoxSize = 28f
-            
-            // Draw background
-            buttonPaint.color = Color.parseColor("#EEEEEE")
-            canvas.drawRect(strokeX, row2Y, strokeX + strokeBoxSize, row2Y + strokeBoxSize, buttonPaint)
-            
-            // Draw line showing width
-            val strokeIndicatorPaint = Paint().apply {
-                color = Color.BLACK
-                style = Paint.Style.STROKE
-                strokeWidth = section.currentStrokeWidth.coerceIn(2f, 16f)
-                strokeCap = Paint.Cap.ROUND
-            }
-            canvas.drawLine(
-                strokeX + 4f, 
-                row2Y + strokeBoxSize / 2, 
-                strokeX + strokeBoxSize - 4f, 
-                row2Y + strokeBoxSize / 2, 
-                strokeIndicatorPaint
-            )
         }
+    }
+    
+    // Helper to draw icon text
+    private fun drawIcon(canvas: Canvas, icon: String, rect: RectF, enabled: Boolean) {
+        val paint = Paint().apply {
+            isAntiAlias = true
+            color = if (enabled) Color.parseColor("#333333") else Color.parseColor("#AAAAAA")
+            textSize = 20f
+            textAlign = Paint.Align.CENTER
+            isFakeBoldText = true
+        }
+        canvas.drawText(icon, rect.centerX(), rect.centerY() + 7f, paint)
+    }
+    
+    // Helper to draw color button
+    private fun drawColorButton(canvas: Canvas, rect: RectF, color: Int) {
+        val colorPaint = Paint().apply {
+            style = Paint.Style.FILL
+            this.color = color
+            isAntiAlias = true
+        }
+        val innerRect = RectF(
+            rect.left + 6f,
+            rect.top + 6f,
+            rect.right - 6f,
+            rect.bottom - 6f
+        )
+        canvas.drawRoundRect(innerRect, 2f, 2f, colorPaint)
+        
+        // Draw border
+        val borderPaint = Paint().apply {
+            style = Paint.Style.STROKE
+            this.color = Color.parseColor("#888888")
+            strokeWidth = 1f
+            isAntiAlias = true
+        }
+        canvas.drawRoundRect(innerRect, 2f, 2f, borderPaint)
+    }
+    
+    // Helper to draw stroke width button
+    private fun drawStrokeButton(canvas: Canvas, rect: RectF, strokeWidth: Float) {
+        val strokePaint = Paint().apply {
+            color = Color.parseColor("#333333")
+            style = Paint.Style.STROKE
+            this.strokeWidth = strokeWidth.coerceIn(2f, 10f)
+            strokeCap = Paint.Cap.ROUND
+            isAntiAlias = true
+        }
+        val margin = rect.width() * 0.25f
+        canvas.drawLine(
+            rect.left + margin,
+            rect.centerY(),
+            rect.right - margin,
+            rect.centerY(),
+            strokePaint
+        )
     }
 
     // Section management methods
