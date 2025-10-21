@@ -5,24 +5,32 @@ import android.util.Log
 
 /**
  * Manages board sections for split whiteboard functionality
- * Each section has its own drawing area and tools state
+ * Each section has its own drawing area and independent tools
+ * 
+ * Layout: Each section has controls at the bottom with:
+ * - Pen, Eraser, Undo, Redo, Color, Stroke Width, Clear
  */
 class SectionManager {
     
     companion object {
-        // Height reserved for control area at bottom of each section
-        const val CONTROL_AREA_HEIGHT = 120f
+        // Height reserved for control toolbar at bottom of each section
+        // Matches the main whiteboard toolbar height
+        const val CONTROL_TOOLBAR_HEIGHT = 60f
     }
     
     data class Section(
         val id: Int,
-        val bounds: RectF,
-        val drawingBounds: RectF, // Area for actual drawing (excluding controls)
-        val controlBounds: RectF, // Area for controls at bottom
-        val studentName: String = "Student $id",
+        val bounds: RectF,               // Total section bounds
+        val drawingBounds: RectF,        // Area for drawing (top part)
+        val controlBounds: RectF,        // Control toolbar at bottom
+        val studentName: String = "Section $id",
+        
+        // Tool state for this section
         var currentTool: WhiteboardView.DrawingTool = WhiteboardView.DrawingTool.PEN,
         var currentColor: Int = Color.BLACK,
         var currentStrokeWidth: Float = 8f,
+        
+        // Drawing data for this section
         val paths: MutableList<WhiteboardView.DrawingPath> = mutableListOf(),
         val undoStack: MutableList<WhiteboardView.DrawingPath> = mutableListOf(),
         val textObjects: MutableList<WhiteboardView.TextObject> = mutableListOf(),
@@ -104,16 +112,25 @@ class SectionManager {
     )
     
     fun setBoardDimensions(width: Float, height: Float) {
+        android.util.Log.d("SectionManager", "setBoardDimensions: $width x $height, isSplitMode=$isSplitMode")
         boardWidth = width
         boardHeight = height
         if (isSplitMode) {
+            android.util.Log.d("SectionManager", "Recalculating sections...")
             recalculateSections()
         }
     }
     
     fun enableSplitMode(numberOfSections: Int) {
+        android.util.Log.d("SectionManager", "enableSplitMode called with $numberOfSections sections, board: $boardWidth x $boardHeight")
+        
         if (numberOfSections < 2 || numberOfSections > 4) {
             Log.w("SectionManager", "Invalid number of sections: $numberOfSections. Must be between 2 and 4.")
+            return
+        }
+        
+        if (boardWidth == 0f || boardHeight == 0f) {
+            Log.e("SectionManager", "ERROR: Cannot enable split mode - board dimensions not set!")
             return
         }
         
@@ -151,17 +168,17 @@ class SectionManager {
         sections.add(Section(
             id = 1,
             bounds = RectF(0f, 0f, halfWidth, boardHeight),
-            drawingBounds = RectF(0f, 0f, halfWidth, boardHeight - CONTROL_AREA_HEIGHT),
-            controlBounds = RectF(0f, boardHeight - CONTROL_AREA_HEIGHT, halfWidth, boardHeight),
-            studentName = "Student 1"
+            drawingBounds = RectF(0f, 0f, halfWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
+            controlBounds = RectF(0f, boardHeight - CONTROL_TOOLBAR_HEIGHT, halfWidth, boardHeight),
+            studentName = "Section 1"
         ))
         
         sections.add(Section(
             id = 2,
             bounds = RectF(halfWidth, 0f, boardWidth, boardHeight),
-            drawingBounds = RectF(halfWidth, 0f, boardWidth, boardHeight - CONTROL_AREA_HEIGHT),
-            controlBounds = RectF(halfWidth, boardHeight - CONTROL_AREA_HEIGHT, boardWidth, boardHeight),
-            studentName = "Student 2"
+            drawingBounds = RectF(halfWidth, 0f, boardWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
+            controlBounds = RectF(halfWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT, boardWidth, boardHeight),
+            studentName = "Section 2"
         ))
     }
     
@@ -171,25 +188,25 @@ class SectionManager {
         sections.add(Section(
             id = 1,
             bounds = RectF(0f, 0f, thirdWidth, boardHeight),
-            drawingBounds = RectF(0f, 0f, thirdWidth, boardHeight - CONTROL_AREA_HEIGHT),
-            controlBounds = RectF(0f, boardHeight - CONTROL_AREA_HEIGHT, thirdWidth, boardHeight),
-            studentName = "Student 1"
+            drawingBounds = RectF(0f, 0f, thirdWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
+            controlBounds = RectF(0f, boardHeight - CONTROL_TOOLBAR_HEIGHT, thirdWidth, boardHeight),
+            studentName = "Section 1"
         ))
         
         sections.add(Section(
             id = 2,
             bounds = RectF(thirdWidth, 0f, thirdWidth * 2f, boardHeight),
-            drawingBounds = RectF(thirdWidth, 0f, thirdWidth * 2f, boardHeight - CONTROL_AREA_HEIGHT),
-            controlBounds = RectF(thirdWidth, boardHeight - CONTROL_AREA_HEIGHT, thirdWidth * 2f, boardHeight),
-            studentName = "Student 2"
+            drawingBounds = RectF(thirdWidth, 0f, thirdWidth * 2f, boardHeight - CONTROL_TOOLBAR_HEIGHT),
+            controlBounds = RectF(thirdWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT, thirdWidth * 2f, boardHeight),
+            studentName = "Section 2"
         ))
         
         sections.add(Section(
             id = 3,
             bounds = RectF(thirdWidth * 2f, 0f, boardWidth, boardHeight),
-            drawingBounds = RectF(thirdWidth * 2f, 0f, boardWidth, boardHeight - CONTROL_AREA_HEIGHT),
-            controlBounds = RectF(thirdWidth * 2f, boardHeight - CONTROL_AREA_HEIGHT, boardWidth, boardHeight),
-            studentName = "Student 3"
+            drawingBounds = RectF(thirdWidth * 2f, 0f, boardWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
+            controlBounds = RectF(thirdWidth * 2f, boardHeight - CONTROL_TOOLBAR_HEIGHT, boardWidth, boardHeight),
+            studentName = "Section 3"
         ))
     }
     
@@ -200,33 +217,33 @@ class SectionManager {
         sections.add(Section(
             id = 1,
             bounds = RectF(0f, 0f, halfWidth, halfHeight),
-            drawingBounds = RectF(0f, 0f, halfWidth, halfHeight - CONTROL_AREA_HEIGHT),
-            controlBounds = RectF(0f, halfHeight - CONTROL_AREA_HEIGHT, halfWidth, halfHeight),
-            studentName = "Student 1"
+            drawingBounds = RectF(0f, 0f, halfWidth, halfHeight - CONTROL_TOOLBAR_HEIGHT),
+            controlBounds = RectF(0f, halfHeight - CONTROL_TOOLBAR_HEIGHT, halfWidth, halfHeight),
+            studentName = "Section 1"
         ))
         
         sections.add(Section(
             id = 2,
             bounds = RectF(halfWidth, 0f, boardWidth, halfHeight),
-            drawingBounds = RectF(halfWidth, 0f, boardWidth, halfHeight - CONTROL_AREA_HEIGHT),
-            controlBounds = RectF(halfWidth, halfHeight - CONTROL_AREA_HEIGHT, boardWidth, halfHeight),
-            studentName = "Student 2"
+            drawingBounds = RectF(halfWidth, 0f, boardWidth, halfHeight - CONTROL_TOOLBAR_HEIGHT),
+            controlBounds = RectF(halfWidth, halfHeight - CONTROL_TOOLBAR_HEIGHT, boardWidth, halfHeight),
+            studentName = "Section 2"
         ))
         
         sections.add(Section(
             id = 3,
             bounds = RectF(0f, halfHeight, halfWidth, boardHeight),
-            drawingBounds = RectF(0f, halfHeight, halfWidth, boardHeight - CONTROL_AREA_HEIGHT),
-            controlBounds = RectF(0f, boardHeight - CONTROL_AREA_HEIGHT, halfWidth, boardHeight),
-            studentName = "Student 3"
+            drawingBounds = RectF(0f, halfHeight, halfWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
+            controlBounds = RectF(0f, boardHeight - CONTROL_TOOLBAR_HEIGHT, halfWidth, boardHeight),
+            studentName = "Section 3"
         ))
         
         sections.add(Section(
             id = 4,
             bounds = RectF(halfWidth, halfHeight, boardWidth, boardHeight),
-            drawingBounds = RectF(halfWidth, halfHeight, boardWidth, boardHeight - CONTROL_AREA_HEIGHT),
-            controlBounds = RectF(halfWidth, boardHeight - CONTROL_AREA_HEIGHT, boardWidth, boardHeight),
-            studentName = "Student 4"
+            drawingBounds = RectF(halfWidth, halfHeight, boardWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
+            controlBounds = RectF(halfWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT, boardWidth, boardHeight),
+            studentName = "Section 4"
         ))
     }
     
@@ -237,49 +254,49 @@ class SectionManager {
         sections.add(Section(
             id = 1,
             bounds = RectF(0f, 0f, thirdWidth, halfHeight),
-            drawingBounds = RectF(0f, 0f, thirdWidth, halfHeight - CONTROL_AREA_HEIGHT),
-            controlBounds = RectF(0f, halfHeight - CONTROL_AREA_HEIGHT, thirdWidth, halfHeight),
-            studentName = "Student 1"
+            drawingBounds = RectF(0f, 0f, thirdWidth, halfHeight - CONTROL_TOOLBAR_HEIGHT),
+            controlBounds = RectF(0f, halfHeight - CONTROL_TOOLBAR_HEIGHT, thirdWidth, halfHeight),
+            studentName = "Section 1"
         ))
         
         sections.add(Section(
             id = 2,
             bounds = RectF(thirdWidth, 0f, thirdWidth * 2f, halfHeight),
-            drawingBounds = RectF(thirdWidth, 0f, thirdWidth * 2f, halfHeight - CONTROL_AREA_HEIGHT),
-            controlBounds = RectF(thirdWidth, halfHeight - CONTROL_AREA_HEIGHT, thirdWidth * 2f, halfHeight),
-            studentName = "Student 2"
+            drawingBounds = RectF(thirdWidth, 0f, thirdWidth * 2f, halfHeight - CONTROL_TOOLBAR_HEIGHT),
+            controlBounds = RectF(thirdWidth, halfHeight - CONTROL_TOOLBAR_HEIGHT, thirdWidth * 2f, halfHeight),
+            studentName = "Section 2"
         ))
         
         sections.add(Section(
             id = 3,
             bounds = RectF(thirdWidth * 2f, 0f, boardWidth, halfHeight),
-            drawingBounds = RectF(thirdWidth * 2f, 0f, boardWidth, halfHeight - CONTROL_AREA_HEIGHT),
-            controlBounds = RectF(thirdWidth * 2f, halfHeight - CONTROL_AREA_HEIGHT, boardWidth, halfHeight),
-            studentName = "Student 3"
+            drawingBounds = RectF(thirdWidth * 2f, 0f, boardWidth, halfHeight - CONTROL_TOOLBAR_HEIGHT),
+            controlBounds = RectF(thirdWidth * 2f, halfHeight - CONTROL_TOOLBAR_HEIGHT, boardWidth, halfHeight),
+            studentName = "Section 3"
         ))
         
         sections.add(Section(
             id = 4,
             bounds = RectF(0f, halfHeight, thirdWidth, boardHeight),
-            drawingBounds = RectF(0f, halfHeight, thirdWidth, boardHeight - CONTROL_AREA_HEIGHT),
-            controlBounds = RectF(0f, boardHeight - CONTROL_AREA_HEIGHT, thirdWidth, boardHeight),
-            studentName = "Student 4"
+            drawingBounds = RectF(0f, halfHeight, thirdWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
+            controlBounds = RectF(0f, boardHeight - CONTROL_TOOLBAR_HEIGHT, thirdWidth, boardHeight),
+            studentName = "Section 4"
         ))
         
         sections.add(Section(
             id = 5,
             bounds = RectF(thirdWidth, halfHeight, thirdWidth * 2f, boardHeight),
-            drawingBounds = RectF(thirdWidth, halfHeight, thirdWidth * 2f, boardHeight - CONTROL_AREA_HEIGHT),
-            controlBounds = RectF(thirdWidth, boardHeight - CONTROL_AREA_HEIGHT, thirdWidth * 2f, boardHeight),
-            studentName = "Student 5"
+            drawingBounds = RectF(thirdWidth, halfHeight, thirdWidth * 2f, boardHeight - CONTROL_TOOLBAR_HEIGHT),
+            controlBounds = RectF(thirdWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT, thirdWidth * 2f, boardHeight),
+            studentName = "Section 5"
         ))
         
         sections.add(Section(
             id = 6,
             bounds = RectF(thirdWidth * 2f, halfHeight, boardWidth, boardHeight),
-            drawingBounds = RectF(thirdWidth * 2f, halfHeight, boardWidth, boardHeight - CONTROL_AREA_HEIGHT),
-            controlBounds = RectF(thirdWidth * 2f, boardHeight - CONTROL_AREA_HEIGHT, boardWidth, boardHeight),
-            studentName = "Student 6"
+            drawingBounds = RectF(thirdWidth * 2f, halfHeight, boardWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
+            controlBounds = RectF(thirdWidth * 2f, boardHeight - CONTROL_TOOLBAR_HEIGHT, boardWidth, boardHeight),
+            studentName = "Section 6"
         ))
     }
     
@@ -315,19 +332,19 @@ class SectionManager {
         if (!isSplitMode) return
         
         for ((index, section) in sections.withIndex()) {
-            // Draw light background for drawing area
-            sectionBackgroundPaint.color = sectionColors[index % sectionColors.size]
+            // Draw white background for drawing area
+            sectionBackgroundPaint.color = Color.WHITE
             canvas.drawRect(section.drawingBounds, sectionBackgroundPaint)
             
-            // Draw control area background (slightly darker)
-            sectionBackgroundPaint.color = Color.parseColor("#E0E0E0")
+            // Draw light gray background for control toolbar
+            sectionBackgroundPaint.color = Color.parseColor("#F5F5F5")
             canvas.drawRect(section.controlBounds, sectionBackgroundPaint)
             
-            // Draw divider line between drawing area and control area
+            // Draw thin divider line between drawing area and control toolbar
             val dividerPaint = Paint().apply {
-                color = Color.parseColor("#666666")
+                color = Color.parseColor("#DDDDDD")
                 style = Paint.Style.STROKE
-                strokeWidth = 2f
+                strokeWidth = 1f
             }
             canvas.drawLine(
                 section.bounds.left,
@@ -337,13 +354,21 @@ class SectionManager {
                 dividerPaint
             )
             
-            // Draw section border (outer divider lines)
-            canvas.drawRect(section.bounds, sectionBorderPaint)
-            
-            // Draw section label in control area
-            val centerX = section.bounds.centerX()
-            val labelY = section.controlBounds.top + 25f
-            canvas.drawText(section.studentName, centerX, labelY, sectionLabelPaint)
+            // Draw vertical section borders (bold lines between sections)
+            if (index > 0) {
+                val borderPaint = Paint().apply {
+                    color = Color.parseColor("#333333")
+                    style = Paint.Style.STROKE
+                    strokeWidth = 3f
+                }
+                canvas.drawLine(
+                    section.bounds.left,
+                    0f,
+                    section.bounds.left,
+                    boardHeight,
+                    borderPaint
+                )
+            }
         }
     }
     
