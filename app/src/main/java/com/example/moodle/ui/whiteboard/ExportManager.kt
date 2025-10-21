@@ -5,10 +5,12 @@ import android.graphics.*
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.util.Base64
 import android.widget.Toast
 import com.example.moodle.R
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -197,6 +199,14 @@ class ExportManager(private val context: Context) {
                 shapesArray.put(shapeObjData)
             }
             currentPageData.put("shapeObjects", shapesArray)
+            
+            // Export image objects
+            val imagesArray = JSONArray()
+            for (imageObj in whiteboardView.getAllImageObjects()) {
+                val imageObjData = serializeImageObject(imageObj)
+                imagesArray.put(imageObjData)
+            }
+            currentPageData.put("imageObjects", imagesArray)
             
             // Export split mode data if enabled
             if (whiteboardView.isSplitModeEnabled()) {
@@ -394,6 +404,31 @@ class ExportManager(private val context: Context) {
     }
     
     /**
+     * Serialize ImageObject to JSON
+     * Bitmap is encoded as Base64 PNG
+     */
+    private fun serializeImageObject(imageObject: WhiteboardView.ImageObject): JSONObject {
+        val imageObj = JSONObject()
+        
+        // Encode bitmap to Base64
+        val outputStream = ByteArrayOutputStream()
+        imageObject.bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+        val bitmapBytes = outputStream.toByteArray()
+        val bitmapBase64 = Base64.encodeToString(bitmapBytes, Base64.DEFAULT)
+        
+        imageObj.put("bitmapData", bitmapBase64)
+        imageObj.put("x", imageObject.x.toDouble())
+        imageObj.put("y", imageObject.y.toDouble())
+        imageObj.put("width", imageObject.width.toDouble())
+        imageObj.put("height", imageObject.height.toDouble())
+        imageObj.put("rotation", imageObject.rotation.toDouble())
+        imageObj.put("scaleX", imageObject.scaleX.toDouble())
+        imageObj.put("scaleY", imageObject.scaleY.toDouble())
+        
+        return imageObj
+    }
+    
+    /**
      * Serialize Section to JSON
      */
     private fun serializeSection(section: SectionManager.Section): JSONObject {
@@ -457,6 +492,13 @@ class ExportManager(private val context: Context) {
             shapesArray.put(serializeShapeObject(shapeObj))
         }
         pageObj.put("shapeObjects", shapesArray)
+        
+        // Serialize image objects
+        val imagesArray = JSONArray()
+        for (imageObj in page.imageObjects) {
+            imagesArray.put(serializeImageObject(imageObj))
+        }
+        pageObj.put("imageObjects", imagesArray)
         
         return pageObj
     }

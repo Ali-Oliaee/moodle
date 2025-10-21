@@ -12,6 +12,7 @@ data class PageData(
     val undoStack: MutableList<WhiteboardView.DrawingPath> = mutableListOf(),
     val textObjects: MutableList<WhiteboardView.TextObject> = mutableListOf(),
     val shapeObjects: MutableList<WhiteboardView.ShapeObject> = mutableListOf(),
+    val imageObjects: MutableList<WhiteboardView.ImageObject> = mutableListOf(),
     var backgroundPattern: BackgroundPattern = BackgroundPattern.PLAIN
 ) {
     fun canUndo(): Boolean = paths.isNotEmpty()
@@ -22,6 +23,7 @@ data class PageData(
         undoStack.clear()
         textObjects.clear()
         shapeObjects.clear()
+        imageObjects.clear()
     }
     
     fun undo(): WhiteboardView.DrawingPath? {

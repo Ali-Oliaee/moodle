@@ -3,6 +3,7 @@ package com.example.moodle.ui.whiteboard
 import android.content.Context
 import android.graphics.*
 import android.net.Uri
+import android.util.Base64
 import android.widget.Toast
 import com.example.moodle.R
 import org.json.JSONArray
@@ -45,17 +46,10 @@ class ImportManager(private val context: Context) {
                 return
             }
             
-            // For now, we'll add the image as a text object with image info and instructions
+            // Add the image to the whiteboard
             val centerX = whiteboardView.width / 2f
             val centerY = whiteboardView.height / 2f
-            
-            // Create a more informative text about the imported image
-            val imageText = context.getString(R.string.imported_image_placeholder, bitmap.width, bitmap.height)
-            whiteboardView.addText(imageText, centerX, centerY)
-            
-            // Add instruction text below
-            val instructionText = context.getString(R.string.image_import_instruction)
-            whiteboardView.addText(instructionText, centerX, centerY + 60f)
+            whiteboardView.addImage(bitmap, centerX, centerY)
             
             onSuccess()
             Toast.makeText(context, context.getString(R.string.import_image_success), Toast.LENGTH_SHORT).show()
@@ -154,6 +148,7 @@ class ImportManager(private val context: Context) {
         val paths = mutableListOf<WhiteboardView.DrawingPath>()
         val textObjects = mutableListOf<WhiteboardView.TextObject>()
         val shapeObjects = mutableListOf<WhiteboardView.ShapeObject>()
+        val imageObjects = mutableListOf<WhiteboardView.ImageObject>()
         
         // Import paths
         if (pageData.has("paths")) {
@@ -194,8 +189,21 @@ class ImportManager(private val context: Context) {
             }
         }
         
+        // Import image objects
+        if (pageData.has("imageObjects")) {
+            val imagesArray = pageData.getJSONArray("imageObjects")
+            
+            for (i in 0 until imagesArray.length()) {
+                val imageObj = imagesArray.getJSONObject(i)
+                val imageObject = deserializeImageObject(imageObj)
+                if (imageObject != null) {
+                    imageObjects.add(imageObject)
+                }
+            }
+        }
+        
         // Load all data into whiteboard view
-        whiteboardView.loadPageData(paths, textObjects, shapeObjects)
+        whiteboardView.loadPageData(paths, textObjects, shapeObjects, imageObjects)
         
         // Import split mode data if present
         if (pageData.optBoolean("splitModeEnabled", false) && pageData.has("sections")) {
@@ -442,6 +450,36 @@ class ImportManager(private val context: Context) {
     }
     
     /**
+     * Deserialize ImageObject from JSON
+     * Bitmap data is decoded from Base64 PNG
+     */
+    private fun deserializeImageObject(imageObj: JSONObject): WhiteboardView.ImageObject? {
+        return try {
+            // Decode bitmap from Base64
+            val bitmapBase64 = imageObj.getString("bitmapData")
+            val bitmapBytes = Base64.decode(bitmapBase64, Base64.DEFAULT)
+            val bitmap = BitmapFactory.decodeByteArray(bitmapBytes, 0, bitmapBytes.size)
+            
+            if (bitmap == null) {
+                return null
+            }
+            
+            WhiteboardView.ImageObject(
+                bitmap = bitmap,
+                x = imageObj.optDouble("x", 0.0).toFloat(),
+                y = imageObj.optDouble("y", 0.0).toFloat(),
+                width = imageObj.optDouble("width", bitmap.width.toDouble()).toFloat(),
+                height = imageObj.optDouble("height", bitmap.height.toDouble()).toFloat(),
+                rotation = imageObj.optDouble("rotation", 0.0).toFloat(),
+                scaleX = imageObj.optDouble("scaleX", 1.0).toFloat(),
+                scaleY = imageObj.optDouble("scaleY", 1.0).toFloat()
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    /**
      * Deserialize Page from JSON
      */
     private fun deserializePage(pageObj: JSONObject): PageData {
@@ -483,6 +521,18 @@ class ImportManager(private val context: Context) {
                 val shapeObject = deserializeShapeObject(shapeData)
                 if (shapeObject != null) {
                     page.shapeObjects.add(shapeObject)
+                }
+            }
+        }
+        
+        // Deserialize image objects
+        if (pageObj.has("imageObjects")) {
+            val imagesArray = pageObj.getJSONArray("imageObjects")
+            for (i in 0 until imagesArray.length()) {
+                val imageData = imagesArray.getJSONObject(i)
+                val imageObject = deserializeImageObject(imageData)
+                if (imageObject != null) {
+                    page.imageObjects.add(imageObject)
                 }
             }
         }
