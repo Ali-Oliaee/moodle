@@ -105,12 +105,6 @@ class ImportManager(private val context: Context) {
                 whiteboardView.setBackgroundPattern(BackgroundPattern.fromId(backgroundPatternId))
             }
             
-            // Import current page data
-            if (importData.has("currentPage")) {
-                val currentPageData = importData.getJSONObject("currentPage")
-                importPageData(currentPageData, whiteboardView)
-            }
-            
             // Import all pages if available
             if (importData.has("allPages")) {
                 val allPagesArray = importData.getJSONArray("allPages")
@@ -125,7 +119,17 @@ class ImportManager(private val context: Context) {
                 
                 // Set current page if specified
                 val currentPageId = importData.optInt("currentPageId", 1)
-                pageManager.goToPage(currentPageId)
+                val pageLoaded = pageManager.goToPage(currentPageId)
+                
+                // If the specified page doesn't exist, go to the first available page
+                if (!pageLoaded && pageManager.getTotalPages() > 0) {
+                    val firstPageId = pageManager.getPageIds().firstOrNull() ?: 1
+                    pageManager.goToPage(firstPageId)
+                }
+            } else if (importData.has("currentPage")) {
+                // Import current page data only if we don't have allPages
+                val currentPageData = importData.getJSONObject("currentPage")
+                importPageData(currentPageData, whiteboardView)
             }
             
             onSuccess()
@@ -383,10 +387,11 @@ class ImportManager(private val context: Context) {
                     }
                 }
             } else {
-                // For freehand drawing, create a simple placeholder path
-                // In a full implementation, you would store and restore the actual path data
-                path.moveTo(0f, 0f)
-                path.lineTo(10f, 10f)
+                // For freehand drawing, deserialize path from pathData
+                val pathData = pathObj.optString("pathData", "")
+                if (pathData.isNotEmpty()) {
+                    deserializePath(pathData, path)
+                }
             }
             
             WhiteboardView.DrawingPath(
@@ -538,5 +543,38 @@ class ImportManager(private val context: Context) {
         }
         
         return page
+    }
+    
+    /**
+     * Deserialize path from string of points
+     * Format: "x1,y1;x2,y2;x3,y3;..."
+     */
+    private fun deserializePath(pathData: String, path: Path) {
+        if (pathData.isEmpty()) return
+        
+        try {
+            val pointPairs = pathData.split(";")
+            if (pointPairs.isEmpty()) return
+            
+            // Move to first point
+            val firstPoint = pointPairs[0].split(",")
+            if (firstPoint.size == 2) {
+                val x = firstPoint[0].toFloatOrNull() ?: return
+                val y = firstPoint[1].toFloatOrNull() ?: return
+                path.moveTo(x, y)
+            }
+            
+            // Draw lines to subsequent points
+            for (i in 1 until pointPairs.size) {
+                val point = pointPairs[i].split(",")
+                if (point.size == 2) {
+                    val x = point[0].toFloatOrNull() ?: continue
+                    val y = point[1].toFloatOrNull() ?: continue
+                    path.lineTo(x, y)
+                }
+            }
+        } catch (e: Exception) {
+            // If deserialization fails, leave path empty
+        }
     }
 }

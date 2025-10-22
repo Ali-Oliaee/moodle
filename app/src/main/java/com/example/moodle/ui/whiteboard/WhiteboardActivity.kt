@@ -336,6 +336,9 @@ class WhiteboardActivity : AppCompatActivity() {
         currentPage.shapeObjects.clear()
         currentPage.shapeObjects.addAll(whiteboardView.getAllShapeObjects())
         
+        currentPage.imageObjects.clear()
+        currentPage.imageObjects.addAll(whiteboardView.getAllImageObjects())
+        
         currentPage.backgroundPattern = whiteboardView.getBackgroundPattern()
     }
     
@@ -343,7 +346,7 @@ class WhiteboardActivity : AppCompatActivity() {
         val currentPage = pageManager.getCurrentPage()
         
         // Load page state to whiteboard
-        whiteboardView.loadPageData(currentPage.paths, currentPage.textObjects, currentPage.shapeObjects)
+        whiteboardView.loadPageData(currentPage.paths, currentPage.textObjects, currentPage.shapeObjects, currentPage.imageObjects)
         whiteboardView.setBackgroundPattern(currentPage.backgroundPattern)
         
         // Apply shared settings

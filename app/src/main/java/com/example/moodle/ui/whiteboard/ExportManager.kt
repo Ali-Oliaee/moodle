@@ -100,7 +100,7 @@ class ExportManager(private val context: Context) {
                 
                 if (page != null) {
                     // Load this page's data into the whiteboard view
-                    whiteboardView.loadPageData(page.paths, page.textObjects, page.shapeObjects)
+                    whiteboardView.loadPageData(page.paths, page.textObjects, page.shapeObjects, page.imageObjects)
                     whiteboardView.setBackgroundPattern(page.backgroundPattern)
                     whiteboardView.invalidate()
                     
@@ -151,7 +151,7 @@ class ExportManager(private val context: Context) {
     private fun restorePage(whiteboardView: WhiteboardView, pageManager: PageManager, pageId: Int) {
         pageManager.goToPage(pageId)
         val page = pageManager.getCurrentPage()
-        whiteboardView.loadPageData(page.paths, page.textObjects, page.shapeObjects)
+        whiteboardView.loadPageData(page.paths, page.textObjects, page.shapeObjects, page.imageObjects)
         whiteboardView.setBackgroundPattern(page.backgroundPattern)
         whiteboardView.invalidate()
     }
@@ -504,12 +504,27 @@ class ExportManager(private val context: Context) {
     }
     
     /**
-     * Serialize Path to string (simplified approach)
-     * Note: This is a basic implementation. For full fidelity, consider using SVG path format
+     * Serialize Path to string using PathMeasure to extract points
      */
     private fun serializePath(path: Path): String {
-        // For now, return a placeholder. In a full implementation, you would
-        // need to extract path segments and convert to a serializable format
-        return "PATH_DATA_PLACEHOLDER"
+        val pathMeasure = android.graphics.PathMeasure(path, false)
+        val length = pathMeasure.length
+        
+        if (length == 0f) {
+            return ""
+        }
+        
+        val points = mutableListOf<String>()
+        val numPoints = (length / 5f).toInt().coerceAtLeast(2).coerceAtMost(500) // Sample points every 5 pixels, max 500 points
+        val step = length / numPoints
+        
+        for (i in 0..numPoints) {
+            val distance = (i * step).coerceAtMost(length)
+            val coords = FloatArray(2)
+            pathMeasure.getPosTan(distance, coords, null)
+            points.add("${coords[0]},${coords[1]}")
+        }
+        
+        return points.joinToString(";")
     }
 }
