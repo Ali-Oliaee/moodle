@@ -2893,7 +2893,7 @@ class WhiteboardView @JvmOverloads constructor(
         
         val patternPaint = Paint().apply {
             color = Color.parseColor("#E0E0E0")
-            strokeWidth = 1f
+            strokeWidth = 1f / scaleFactor 
             style = Paint.Style.STROKE
         }
         
@@ -2902,7 +2902,7 @@ class WhiteboardView @JvmOverloads constructor(
         
         when (currentBackgroundPattern) {
             BackgroundPattern.GRID_SMALL -> {
-                val spacing = 30f
+                val spacing = 30f / scaleFactor
                 // Draw vertical lines
                 var x = 0f
                 while (x <= canvasWidth) {
@@ -2917,7 +2917,7 @@ class WhiteboardView @JvmOverloads constructor(
                 }
             }
             BackgroundPattern.GRID_LARGE -> {
-                val spacing = 60f
+                val spacing = 60f / scaleFactor
                 // Draw vertical lines
                 var x = 0f
                 while (x <= canvasWidth) {
@@ -2932,7 +2932,7 @@ class WhiteboardView @JvmOverloads constructor(
                 }
             }
             BackgroundPattern.LINES_HORIZONTAL -> {
-                val spacing = 40f
+                val spacing = 40f / scaleFactor
                 var y = 0f
                 while (y <= canvasHeight) {
                     canvas.drawLine(0f, y, canvasWidth, y, patternPaint)
@@ -2940,7 +2940,7 @@ class WhiteboardView @JvmOverloads constructor(
                 }
             }
             BackgroundPattern.LINES_VERTICAL -> {
-                val spacing = 40f
+                val spacing = 40f / scaleFactor
                 var x = 0f
                 while (x <= canvasWidth) {
                     canvas.drawLine(x, 0f, x, canvasHeight, patternPaint)
@@ -2948,7 +2948,7 @@ class WhiteboardView @JvmOverloads constructor(
                 }
             }
             BackgroundPattern.LINES_BOTH -> {
-                val spacing = 40f
+                val spacing = 40f / scaleFactor
                 // Draw vertical lines
                 var x = 0f
                 while (x <= canvasWidth) {
@@ -2963,8 +2963,8 @@ class WhiteboardView @JvmOverloads constructor(
                 }
             }
             BackgroundPattern.DOT_GRID -> {
-                val spacing = 30f
-                val dotRadius = 2f
+                val spacing = 30f / scaleFactor
+                val dotRadius = 2f / scaleFactor
                 patternPaint.style = Paint.Style.FILL
                 var y = 0f
                 while (y <= canvasHeight) {
@@ -2977,7 +2977,7 @@ class WhiteboardView @JvmOverloads constructor(
                 }
             }
             BackgroundPattern.RULED_PAPER -> {
-                val spacing = 40f
+                val spacing = 40f / scaleFactor
                 patternPaint.color = Color.parseColor("#B0BEC5")
                 var y = 0f
                 while (y <= canvasHeight) {
@@ -2986,12 +2986,12 @@ class WhiteboardView @JvmOverloads constructor(
                 }
             }
             BackgroundPattern.GRAPH_PAPER -> {
-                val smallSpacing = 20f
-                val largeSpacing = 100f
+                val smallSpacing = 20f / scaleFactor
+                val largeSpacing = 100f / scaleFactor
                 
                 // Draw small grid
                 patternPaint.color = Color.parseColor("#EEEEEE")
-                patternPaint.strokeWidth = 0.5f
+                patternPaint.strokeWidth = 0.5f / scaleFactor
                 var x = 0f
                 while (x <= canvasWidth) {
                     canvas.drawLine(x, 0f, x, canvasHeight, patternPaint)
@@ -3005,7 +3005,7 @@ class WhiteboardView @JvmOverloads constructor(
                 
                 // Draw large grid
                 patternPaint.color = Color.parseColor("#BDBDBD")
-                patternPaint.strokeWidth = 1.5f
+                patternPaint.strokeWidth = 1.5f / scaleFactor
                 x = 0f
                 while (x <= canvasWidth) {
                     canvas.drawLine(x, 0f, x, canvasHeight, patternPaint)
