@@ -896,8 +896,14 @@ class WhiteboardView @JvmOverloads constructor(
             }
             
             // Draw the bitmap with scaling
-            val destRect = RectF(x, y, x + width * scaleX, y + height * scaleY)
-            canvas.drawBitmap(bitmap, null, destRect, paint)
+            if (!bitmap.isRecycled && bitmap.width > 0 && bitmap.height > 0) {
+                try {
+                    val destRect = RectF(x, y, x + width * scaleX, y + height * scaleY)
+                    canvas.drawBitmap(bitmap, null, destRect, paint)
+                } catch (e: Exception) {
+                    android.util.Log.e("WhiteboardView", "Error drawing image object bitmap", e)
+                }
+            }
             
             canvas.restore()
             
@@ -1074,45 +1080,72 @@ class WhiteboardView @JvmOverloads constructor(
         if (w <= 0 || h <= 0) return
         
         try {
-            // Create a larger bitmap for extended canvas (3x screen size for better memory management)
-            val canvasWidth = w * 3
-            val canvasHeight = h * 3
+            // Use smaller canvas multiplier on Android 8+ to avoid hardware acceleration limits
+            // Android 13+ has stricter limits on bitmap size for hardware-accelerated rendering
+            val multiplier = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                2f  // 2x screen size for Android 8+
+            } else {
+                3f  // 3x for older versions
+            }
             
-            // Clean up previous bitmap
-            drawingBitmap?.recycle()
+            val canvasWidth = (w * multiplier).toInt()
+            val canvasHeight = (h * multiplier).toInt()
             
-            drawingBitmap = Bitmap.createBitmap(canvasWidth, canvasHeight, Bitmap.Config.ARGB_8888)
-            drawingCanvas = Canvas(drawingBitmap!!)
-            drawingCanvas?.drawColor(Color.WHITE)
+            // Calculate bitmap size in bytes (4 bytes per pixel for ARGB_8888)
+            val bitmapSizeBytes = canvasWidth.toLong() * canvasHeight.toLong() * 4L
+            val maxSizeBytes = 100_000_000L // 100MB limit for safety
             
-            // Center the initial view on the large canvas
-            focusX = (canvasWidth - w) / 2f
-            focusY = (canvasHeight - h) / 2f
-            
-            // Set maximum focus boundaries (bitmap size - view size)
-            maxFocusX = (canvasWidth - w).toFloat()
-            maxFocusY = (canvasHeight - h).toFloat()
-            
-            // Calculate minimum scale factor to prevent seeing empty space
-            // Min scale is when entire bitmap just fits in the view
-            minScaleFactor = max(
-                w.toFloat() / canvasWidth.toFloat(),
-                h.toFloat() / canvasHeight.toFloat()
-            )
+            // If bitmap would be too large, use screen size instead
+            if (bitmapSizeBytes > maxSizeBytes) {
+                android.util.Log.w("WhiteboardView", "Bitmap too large ($bitmapSizeBytes bytes), using screen size")
+                createScreenSizeBitmap(w, h)
+            } else {
+                // Clean up previous bitmap
+                drawingBitmap?.recycle()
+                
+                drawingBitmap = Bitmap.createBitmap(canvasWidth, canvasHeight, Bitmap.Config.ARGB_8888)
+                drawingCanvas = Canvas(drawingBitmap!!)
+                drawingCanvas?.drawColor(Color.WHITE)
+                
+                // Center the initial view on the large canvas
+                focusX = (canvasWidth - w) / 2f
+                focusY = (canvasHeight - h) / 2f
+                
+                // Set maximum focus boundaries (bitmap size - view size)
+                maxFocusX = (canvasWidth - w).toFloat()
+                maxFocusY = (canvasHeight - h).toFloat()
+                
+                // Calculate minimum scale factor to prevent seeing empty space
+                minScaleFactor = max(
+                    w.toFloat() / canvasWidth.toFloat(),
+                    h.toFloat() / canvasHeight.toFloat()
+                )
+                
+                android.util.Log.d("WhiteboardView", "Created bitmap: ${canvasWidth}x${canvasHeight} (${bitmapSizeBytes / 1_000_000}MB)")
+            }
         } catch (e: OutOfMemoryError) {
-            // Fallback to screen size if memory is insufficient
-            drawingBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-            drawingCanvas = Canvas(drawingBitmap!!)
-            drawingCanvas?.drawColor(Color.WHITE)
-            focusX = 0f
-            focusY = 0f
-            maxFocusX = 0f
-            maxFocusY = 0f
-            minScaleFactor = 1.0f  // No zoom out for fallback case
+            android.util.Log.e("WhiteboardView", "OutOfMemoryError creating bitmap, falling back to screen size", e)
+            createScreenSizeBitmap(w, h)
+        } catch (e: RuntimeException) {
+            android.util.Log.e("WhiteboardView", "RuntimeException creating bitmap, falling back to screen size", e)
+            createScreenSizeBitmap(w, h)
         }
         
         // Update section manager with new dimensions
         sectionManager.setBoardDimensions(w.toFloat(), h.toFloat())
+    }
+    
+    private fun createScreenSizeBitmap(w: Int, h: Int) {
+        // Fallback to screen size if memory/hardware is insufficient
+        drawingBitmap?.recycle()
+        drawingBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        drawingCanvas = Canvas(drawingBitmap!!)
+        drawingCanvas?.drawColor(Color.WHITE)
+        focusX = 0f
+        focusY = 0f
+        maxFocusX = 0f
+        maxFocusY = 0f
+        minScaleFactor = 1.0f  // No zoom out for fallback case
     }
 
     override fun onDraw(canvas: Canvas?) {
@@ -1199,8 +1232,15 @@ class WhiteboardView @JvmOverloads constructor(
                 drawBackgroundPattern(c)
                 
                 // Draw the infinite bitmap with all previous strokes
-                drawingBitmap?.let { bitmap ->
-                    c.drawBitmap(bitmap, 0f, 0f, null)
+                try {
+                    drawingBitmap?.let { bitmap ->
+                        if (!bitmap.isRecycled && bitmap.width > 0 && bitmap.height > 0) {
+                            c.drawBitmap(bitmap, 0f, 0f, null)
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("WhiteboardView", "Error drawing bitmap: ${e.javaClass.name}: ${e.message}")
+                    e.printStackTrace()
                 }
                 
                 // Draw current active paths being drawn
