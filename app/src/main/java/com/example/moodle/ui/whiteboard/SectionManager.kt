@@ -26,15 +26,15 @@ class SectionManager {
         val studentName: String = "Section $id",
         
         // Tool state for this section
-        var currentTool: WhiteboardView.DrawingTool = WhiteboardView.DrawingTool.PEN,
+        var currentTool: DrawingTool = DrawingTool.PEN,
         var currentColor: Int = Color.BLACK,
         var currentStrokeWidth: Float = 8f,
         
         // Drawing data for this section
-        val paths: MutableList<WhiteboardView.DrawingPath> = mutableListOf(),
-        val undoStack: MutableList<WhiteboardView.DrawingPath> = mutableListOf(),
-        val textObjects: MutableList<WhiteboardView.TextObject> = mutableListOf(),
-        var selectedTextObject: WhiteboardView.TextObject? = null
+        val paths: MutableList<DrawingPath> = mutableListOf(),
+        val undoStack: MutableList<DrawingPath> = mutableListOf(),
+        val textObjects: MutableList<TextObject> = mutableListOf(),
+        var selectedTextObject: TextObject? = null
     ) {
         fun canUndo(): Boolean = paths.isNotEmpty()
         fun canRedo(): Boolean = undoStack.isNotEmpty()

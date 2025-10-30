@@ -19,7 +19,7 @@ class SectionControllerView @JvmOverloads constructor(
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
     interface OnSectionToolChangeListener {
-        fun onToolChanged(sectionId: Int, tool: WhiteboardView.DrawingTool)
+        fun onToolChanged(sectionId: Int, tool: DrawingTool)
         fun onColorChanged(sectionId: Int, color: Int)
         fun onStrokeWidthChanged(sectionId: Int, width: Float)
         fun onUndoClicked(sectionId: Int)
@@ -45,7 +45,7 @@ class SectionControllerView @JvmOverloads constructor(
     private lateinit var strokeWidthLabel: TextView
     
     // State
-    private var currentTool = WhiteboardView.DrawingTool.PEN
+    private var currentTool = DrawingTool.PEN
     private var currentColor = Color.BLACK
     private var currentStrokeWidth = 8f
     private var isActive = false
@@ -85,9 +85,9 @@ class SectionControllerView @JvmOverloads constructor(
     
     private fun setupListeners() {
         // Tool selection
-        btnPen.setOnClickListener { selectTool(WhiteboardView.DrawingTool.PEN, btnPen) }
-        btnEraser.setOnClickListener { selectTool(WhiteboardView.DrawingTool.ERASER, btnEraser) }
-        btnText.setOnClickListener { selectTool(WhiteboardView.DrawingTool.TEXT, btnText) }
+        btnPen.setOnClickListener { selectTool(DrawingTool.PEN, btnPen) }
+        btnEraser.setOnClickListener { selectTool(DrawingTool.ERASER, btnEraser) }
+        btnText.setOnClickListener { selectTool(DrawingTool.TEXT, btnText) }
         
         // Actions
         btnUndo.setOnClickListener { 
@@ -124,7 +124,7 @@ class SectionControllerView @JvmOverloads constructor(
         }
     }
     
-    private fun selectTool(tool: WhiteboardView.DrawingTool, button: ImageButton) {
+    private fun selectTool(tool: DrawingTool, button: ImageButton) {
         // Update UI
         btnPen.isSelected = false
         btnEraser.isSelected = false
@@ -200,7 +200,7 @@ class SectionControllerView @JvmOverloads constructor(
         sectionLabel.setTextColor(Color.parseColor("#495057")) // Dark gray for readability
     }
     
-    fun getCurrentTool(): WhiteboardView.DrawingTool = currentTool
+    fun getCurrentTool(): DrawingTool = currentTool
     fun getCurrentColor(): Int = currentColor
     fun getCurrentStrokeWidth(): Float = currentStrokeWidth
     
@@ -209,10 +209,10 @@ class SectionControllerView @JvmOverloads constructor(
     fun updateFromSection(section: SectionManager.Section) {
         // Update tool selection
         when (section.currentTool) {
-            WhiteboardView.DrawingTool.PEN -> selectTool(WhiteboardView.DrawingTool.PEN, btnPen)
-            WhiteboardView.DrawingTool.ERASER -> selectTool(WhiteboardView.DrawingTool.ERASER, btnEraser)
-            WhiteboardView.DrawingTool.TEXT -> selectTool(WhiteboardView.DrawingTool.TEXT, btnText)
-            else -> selectTool(WhiteboardView.DrawingTool.PEN, btnPen)
+            DrawingTool.PEN -> selectTool(DrawingTool.PEN, btnPen)
+            DrawingTool.ERASER -> selectTool(DrawingTool.ERASER, btnEraser)
+            DrawingTool.TEXT -> selectTool(DrawingTool.TEXT, btnText)
+            else -> selectTool(DrawingTool.PEN, btnPen)
         }
         
         // Update color

@@ -50,7 +50,7 @@ android {
             versionNameSuffix = "-debug"
         }
         getByName("release") {
-            buildConfigField("boolean", "SKIP_LOGIN", "false")
+            buildConfigField("boolean", "SKIP_LOGIN", "true")
             if (signingConfigs.findByName("release") != null) {
                 signingConfig = signingConfigs.getByName("release")
             }

@@ -332,7 +332,7 @@ class ExportManager(private val context: Context) {
     /**
      * Serialize DrawingPath to JSON
      */
-    private fun serializeDrawingPath(drawingPath: WhiteboardView.DrawingPath): JSONObject {
+    private fun serializeDrawingPath(drawingPath: DrawingPath): JSONObject {
         val pathObj = JSONObject()
         
         // Serialize tool type
@@ -357,10 +357,10 @@ class ExportManager(private val context: Context) {
         
         // Serialize shape data if present
         if (drawingPath.tool in listOf(
-                WhiteboardView.DrawingTool.LINE,
-                WhiteboardView.DrawingTool.CIRCLE,
-                WhiteboardView.DrawingTool.TRIANGLE,
-                WhiteboardView.DrawingTool.RECTANGLE
+                DrawingTool.LINE,
+                DrawingTool.CIRCLE,
+                DrawingTool.TRIANGLE,
+                DrawingTool.RECTANGLE
             )) {
             pathObj.put("shapeStartX", drawingPath.shapeStartX.toDouble())
             pathObj.put("shapeStartY", drawingPath.shapeStartY.toDouble())
@@ -374,7 +374,7 @@ class ExportManager(private val context: Context) {
     /**
      * Serialize TextObject to JSON
      */
-    private fun serializeTextObject(textObject: WhiteboardView.TextObject): JSONObject {
+    private fun serializeTextObject(textObject: TextObject): JSONObject {
         val textObj = JSONObject()
         textObj.put("text", textObject.text)
         textObj.put("x", textObject.x.toDouble())
@@ -388,7 +388,7 @@ class ExportManager(private val context: Context) {
     /**
      * Serialize ShapeObject to JSON
      */
-    private fun serializeShapeObject(shapeObject: WhiteboardView.ShapeObject): JSONObject {
+    private fun serializeShapeObject(shapeObject: ShapeObject): JSONObject {
         val shapeObj = JSONObject()
         shapeObj.put("shapeType", shapeObject.shapeType.name)
         shapeObj.put("startX", shapeObject.startX.toDouble())
@@ -407,7 +407,7 @@ class ExportManager(private val context: Context) {
      * Serialize ImageObject to JSON
      * Bitmap is encoded as Base64 PNG
      */
-    private fun serializeImageObject(imageObject: WhiteboardView.ImageObject): JSONObject {
+    private fun serializeImageObject(imageObject: ImageObject): JSONObject {
         val imageObj = JSONObject()
         
         // Encode bitmap to Base64

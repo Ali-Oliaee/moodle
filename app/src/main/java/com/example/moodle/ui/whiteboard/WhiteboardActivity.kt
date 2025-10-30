@@ -1,1197 +1,380 @@
 package com.example.moodle.ui.whiteboard
 
-import android.Manifest
-import android.app.Activity
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
-import android.content.pm.PackageManager
-import android.graphics.Color
-import android.media.projection.MediaProjectionManager
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.support.v4.content.ContextCompat
-import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import android.widget.PopupWindow
 import com.example.moodle.R
 import com.example.moodle.ui.attendance.AttendanceActivity
 import com.example.moodle.data.datastore.UserPreferences
 import com.example.moodle.ui.login.LoginActivity
-import com.example.moodle.ui.whiteboard.ScreenRecordService
 import com.example.moodle.utils.FontHelper
 
+/**
+ * Main activity for the whiteboard functionality
+ * Delegates responsibilities to specialized controllers
+ */
 class WhiteboardActivity : AppCompatActivity() {
 
-    companion object {
-        private const val REQUEST_CODE_SCREEN_CAPTURE = 1000
-        private const val REQUEST_CODE_PERMISSIONS = 1001
-        private const val REQUEST_CODE_STORAGE_PERMISSIONS = 1002
-        private const val REQUEST_CODE_IMPORT_IMAGE = 2001
-        private const val REQUEST_CODE_IMPORT_MOODLE = 2002
-        private val REQUIRED_PERMISSIONS = arrayOf(
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.RECORD_AUDIO
-        )
-        private val STORAGE_PERMISSIONS = arrayOf(
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
-    }
-
     // UI Components
-    private lateinit var toggleRecordBtn: Button
     private lateinit var whiteboardView: WhiteboardView
     private lateinit var recordContainer: LinearLayout
+    private lateinit var toggleRecordBtn: Button
     private lateinit var btnAttendance: ImageButton
     private lateinit var btnLogout: ImageButton
-    
-    // Import/Export Components
     private lateinit var btnExport: ImageButton
     private lateinit var btnImport: ImageButton
-    
-    // Split mode components
-    private lateinit var btnEnableSplit: ImageButton
-    private lateinit var btnDisableSplit: ImageButton
-    private lateinit var bottomToolbar: LinearLayout
-    
-    private var isSplitMode = false
-    
-    // Tool buttons
-    private lateinit var btnPen: ImageButton
-    private lateinit var btnEraser: ImageButton
-    private lateinit var btnText: ImageButton
-    private lateinit var btnFormula: ImageButton
-    private lateinit var btnShapes: ImageButton
-    private lateinit var btnUndo: ImageButton
-    private lateinit var btnRedo: ImageButton
-    private lateinit var btnClear: ImageButton
-    private lateinit var btnModeToggle: ImageButton
     private lateinit var btnPinchMode: ImageButton
-    private lateinit var btnColorPicker: Button
-    private lateinit var btnStrokeWidth: ImageButton
-    private lateinit var btnBackground: ImageButton
     
-    // Pagination components
-    private lateinit var btnPreviousPage: ImageButton
-    private lateinit var btnNextPage: ImageButton
-    private lateinit var btnDeletePage: ImageButton
-    private lateinit var tvPageIndicator: TextView
+    // Controllers
+    private lateinit var recordingController: RecordingController
+    private lateinit var toolsController: ToolsController
+    private lateinit var popupController: PopupController
+    private lateinit var paginationController: PaginationController
+    private lateinit var importExportController: ImportExportController
+    private lateinit var splitModeController: SplitModeController
+    
+    // Managers
     private lateinit var pageManager: PageManager
-    
-    // Popup views
-    private var colorPopupWindow: PopupWindow? = null
-    private var strokePopupWindow: PopupWindow? = null
-    private var eraserModePopupWindow: PopupWindow? = null
-    private var formulaPopupWindow: PopupWindow? = null
-    private var backgroundPopupWindow: PopupWindow? = null
-    private var zoomPopupWindow: PopupWindow? = null
-    private var isUpdatingZoomFromSlider = false
-    private var currentStrokeWidth: Float = 8f
-    
-    // State
-    private var isRecording = false
-    private var isDrawingMode = true
-    private var currentSelectedTool: ImageButton? = null
-    private var currentSelectedColor: Int = Color.BLACK
-    private var isSelectiveEraserMode = false
-    private var isPenInSelectionMode = false
-    private lateinit var userPreferences: UserPreferences
-    
-    // Import/Export managers
     private lateinit var exportManager: ExportManager
     private lateinit var importManager: ImportManager
-    
-    private val mediaProjectionManager by lazy {
-        getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-    }
-
-    private val recordingStateReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            when (intent?.action) {
-                "RECORDING_STARTED" -> {
-                    isRecording = true
-                    updateButtonAppearance()
-                }
-                "RECORDING_STOPPED" -> {
-                    isRecording = false
-                    updateButtonAppearance()
-                }
-            }
-        }
-    }
+    private lateinit var userPreferences: UserPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Initialize UserPreferences
+        // Initialize preferences and managers
         userPreferences = UserPreferences(this)
-        
-        // Initialize PageManager
         pageManager = PageManager(userPreferences)
-        
-        // Initialize Import/Export managers
         exportManager = ExportManager(this)
         importManager = ImportManager(this)
         
-        // Set the split-enabled layout
+        // Set layout
         setContentView(R.layout.activity_whiteboard_split)
         
+        // Initialize views
         initializeViews()
+        
+        // Initialize controllers
+        initializeControllers()
+        
+        // Setup listeners
+        setupListeners()
+        
+        // Apply fonts
         applyFonts()
-        setupToolListeners()
-        setupPopupListeners()
-        setupWhiteboardListener()
-        registerRecordingStateReceiver()
-        updateButtonAppearance()
-        updateToolButtons()
-        loadSavedBackgroundPattern()
+        
+        // Load saved settings
+        toolsController.loadSavedBackgroundPattern()
     }
 
+    /**
+     * Initialize UI components
+     */
     private fun initializeViews() {
-        // Main UI components
         whiteboardView = findViewById(R.id.whiteboardView)
-        toggleRecordBtn = findViewById(R.id.toggleRecordBtn)
         recordContainer = findViewById(R.id.recordContainer)
+        toggleRecordBtn = findViewById(R.id.toggleRecordBtn)
         btnAttendance = findViewById(R.id.btnAttendance)
         btnLogout = findViewById(R.id.btnLogout)
-        
-        // Import/Export buttons
         btnExport = findViewById(R.id.btnExport)
         btnImport = findViewById(R.id.btnImport)
-        
-        // Tool buttons
-        btnPen = findViewById(R.id.btnPen)
-        btnEraser = findViewById(R.id.btnEraser)
-        btnText = findViewById(R.id.btnText)
-        btnFormula = findViewById(R.id.btnFormula)
-        btnShapes = findViewById(R.id.btnShapes)
-        btnUndo = findViewById(R.id.btnUndo)
-        btnRedo = findViewById(R.id.btnRedo)
-        btnClear = findViewById(R.id.btnClear)
-        btnModeToggle = findViewById(R.id.btnModeToggle)
         btnPinchMode = findViewById(R.id.btnPinchMode)
-        btnColorPicker = findViewById(R.id.btnColorPicker)
-        btnStrokeWidth = findViewById(R.id.btnStrokeWidth)
-        btnBackground = findViewById(R.id.btnBackground)
-        
-        // Pagination components
-        btnPreviousPage = findViewById(R.id.btnPreviousPage)
-        btnNextPage = findViewById(R.id.btnNextPage)
-        btnDeletePage = findViewById(R.id.btnDeletePage)
-        tvPageIndicator = findViewById(R.id.tvPageIndicator)
-        
-        // Split mode components
-        btnEnableSplit = findViewById(R.id.btnEnableSplit)
-        btnDisableSplit = findViewById(R.id.btnDisableSplit)
-        bottomToolbar = findViewById(R.id.bottomToolbar)
-        
-        setupSplitModeControls()
-        setupPaginationControls()
-        setupImportExportControls()
-        
-        // Set welcome message with username
-        val username = userPreferences.getUsername()
-        val welcomeMessage = if (!username.isNullOrBlank()) {
-            getString(R.string.welcome_user_message, username)
-        } else {
-            getString(R.string.welcome_default_message)
-        }
-        
-        // Set initial selections
-        currentSelectedColor = Color.BLACK
-        btnColorPicker.backgroundTintList = android.content.res.ColorStateList.valueOf(currentSelectedColor)
-        currentSelectedTool = btnPen
-        btnPen.isSelected = true
-        
-        // Set initial stroke width
-        whiteboardView.setStrokeWidth(currentStrokeWidth)
-        
-        setupTopBarListeners()
     }
     
-    private fun setupSplitModeControls() {
-        // Setup split mode listeners
-        btnEnableSplit.setOnClickListener {
-            showSplitModeDialog()
-        }
+    /**
+     * Initialize all controllers
+     */
+    private fun initializeControllers() {
+        // Initialize Recording Controller
+        recordingController = RecordingController(this)
+        recordingController.initialize(toggleRecordBtn)
         
-        btnDisableSplit.setOnClickListener {
-            disableSplitMode()
-        }
-    }
-    
-    private fun setupImportExportControls() {
-        // Setup export button listener
-        btnExport.setOnClickListener {
-            if (checkStoragePermissions()) {
-                showExportOptionsDialog()
-            } else {
-                requestStoragePermissions()
-            }
-        }
-        
-        // Setup import button listener
-        btnImport.setOnClickListener {
-            if (checkStoragePermissions()) {
-                showImportOptionsDialog()
-            } else {
-                requestStoragePermissions()
-            }
-        }
-    }
-    
-    private fun setupPaginationControls() {
-        // Setup page manager listener
-        pageManager.setOnPageChangeListener(object : PageManager.OnPageChangeListener {
-            override fun onPageChanged(pageId: Int, totalPages: Int) {
-                updatePaginationUI()
-                loadCurrentPageToWhiteboard()
-            }
-            
-            override fun onPageCreated(pageId: Int, totalPages: Int) {
-                updatePaginationUI()
-                loadCurrentPageToWhiteboard()
-            }
-        })
-        
-        // Setup pagination button listeners
-        btnPreviousPage.setOnClickListener {
-            saveCurrentPageFromWhiteboard()
-            pageManager.goToPreviousPage()
-        }
-        
-        btnNextPage.setOnClickListener {
-            saveCurrentPageFromWhiteboard()
-            if (pageManager.canGoToNextPage()) {
-                pageManager.goToNextPage()
-            } else if (pageManager.canCreateNewPage()) {
-                pageManager.createNewPage()
-            } else {
-                Toast.makeText(this, getString(R.string.max_pages_reached, PageManager.MAX_PAGES), Toast.LENGTH_SHORT).show()
-            }
-        }
-        
-        btnDeletePage.setOnClickListener {
-            showDeletePageConfirmDialog()
-        }
-        
-        // Initialize pagination UI
-        updatePaginationUI()
-        loadCurrentPageToWhiteboard()
-    }
-    
-    private fun updatePaginationUI() {
-        val currentPageId = pageManager.getCurrentPageId()
-        val totalPages = pageManager.getTotalPages()
-        val pageIds = pageManager.getPageIds()
-        val currentIndex = pageIds.indexOf(currentPageId) + 1
-        
-        // Update page indicator
-        tvPageIndicator.text = getString(R.string.page_indicator_format, currentIndex, totalPages)
-        
-        // Update previous button state
-        btnPreviousPage.isEnabled = pageManager.canGoToPreviousPage()
-        btnPreviousPage.alpha = if (pageManager.canGoToPreviousPage()) 1.0f else 0.5f
-        
-        // Update next button icon and state
-        if (pageManager.canGoToNextPage()) {
-            btnNextPage.setImageResource(R.drawable.ic_arrow_forward)
-            btnNextPage.contentDescription = getString(R.string.desc_next_page)
-        } else if (pageManager.canCreateNewPage()) {
-            btnNextPage.setImageResource(R.drawable.ic_add)
-            btnNextPage.contentDescription = getString(R.string.desc_add_page)
-        } else {
-            btnNextPage.setImageResource(R.drawable.ic_add)
-            btnNextPage.contentDescription = getString(R.string.desc_add_page)
-            btnNextPage.alpha = 0.5f
-        }
-        
-        if (pageManager.canGoToNextPage() || pageManager.canCreateNewPage()) {
-            btnNextPage.alpha = 1.0f
-        }
-        
-        // Update delete button state (disable if only one page)
-        btnDeletePage.isEnabled = pageManager.getTotalPages() > 1
-        btnDeletePage.alpha = if (pageManager.getTotalPages() > 1) 1.0f else 0.5f
-    }
-    
-    private fun saveCurrentPageFromWhiteboard() {
-        val currentPage = pageManager.getCurrentPage()
-        
-        // Save current whiteboard state to the page
-        currentPage.paths.clear()
-        currentPage.paths.addAll(whiteboardView.getAllPaths())
-        
-        currentPage.textObjects.clear()
-        currentPage.textObjects.addAll(whiteboardView.getAllTextObjects())
-        
-        currentPage.shapeObjects.clear()
-        currentPage.shapeObjects.addAll(whiteboardView.getAllShapeObjects())
-        
-        currentPage.imageObjects.clear()
-        currentPage.imageObjects.addAll(whiteboardView.getAllImageObjects())
-        
-        currentPage.backgroundPattern = whiteboardView.getBackgroundPattern()
-    }
-    
-    private fun loadCurrentPageToWhiteboard() {
-        val currentPage = pageManager.getCurrentPage()
-        
-        // Load page state to whiteboard
-        whiteboardView.loadPageData(currentPage.paths, currentPage.textObjects, currentPage.shapeObjects, currentPage.imageObjects)
-        whiteboardView.setBackgroundPattern(currentPage.backgroundPattern)
-        
-        // Apply shared settings
-        whiteboardView.setColor(pageManager.sharedColor)
-        whiteboardView.setStrokeWidth(pageManager.sharedStrokeWidth)
-        
-        // Update UI to reflect shared settings
-        currentSelectedColor = pageManager.sharedColor
-        btnColorPicker.backgroundTintList = android.content.res.ColorStateList.valueOf(currentSelectedColor)
-        currentStrokeWidth = pageManager.sharedStrokeWidth
-    }
-    
-    private fun showSplitModeDialog() {
-        val sectionCounts = arrayOf(
-            getString(R.string.section_count_2),
-            getString(R.string.section_count_3),
-            getString(R.string.section_count_4)
+        // Initialize Tools Controller
+        toolsController = ToolsController(this, whiteboardView, userPreferences)
+        toolsController.initialize(
+            pen = findViewById(R.id.btnPen),
+            eraser = findViewById(R.id.btnEraser),
+            text = findViewById(R.id.btnText),
+            formula = findViewById(R.id.btnFormula),
+            shapes = findViewById(R.id.btnShapes),
+            undo = findViewById(R.id.btnUndo),
+            redo = findViewById(R.id.btnRedo),
+            clear = findViewById(R.id.btnClear),
+            modeToggle = findViewById(R.id.btnModeToggle),
+            colorPicker = findViewById(R.id.btnColorPicker),
+            strokeWidth = findViewById(R.id.btnStrokeWidth),
+            background = findViewById(R.id.btnBackground)
         )
         
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.choose_section_count))
-            .setItems(sectionCounts) { _, which ->
-                val sectionCount = when (which) {
-                    0 -> 2
-                    1 -> 3
-                    2 -> 4
-                    else -> 2
-                }
-                enableSplitMode(sectionCount)
-            }
-            .setNegativeButton(getString(R.string.cancel), null)
-            .show()
+        // Initialize Popup Controller
+        popupController = PopupController(this, whiteboardView)
+        
+        // Initialize Pagination Controller
+        paginationController = PaginationController(this, whiteboardView, pageManager)
+        paginationController.initialize(
+            previousPage = findViewById(R.id.btnPreviousPage),
+            nextPage = findViewById(R.id.btnNextPage),
+            deletePage = findViewById(R.id.btnDeletePage),
+            pageIndicator = findViewById(R.id.tvPageIndicator)
+        )
+        
+        // Initialize Import/Export Controller
+        importExportController = ImportExportController(this, whiteboardView, exportManager, importManager)
+        
+        // Initialize Split Mode Controller
+        splitModeController = SplitModeController(this, whiteboardView)
+        splitModeController.initialize(
+            enableSplit = findViewById(R.id.btnEnableSplit),
+            disableSplit = findViewById(R.id.btnDisableSplit),
+            toolbar = findViewById(R.id.bottomToolbar)
+        )
     }
     
-    private fun setupTopBarListeners() {
-        // Record button listener
-        recordContainer.setOnClickListener {
-            if (isRecording) stopRecording()
-            else startRecording()
-        }
-
-        // Attendance button listener
-        btnAttendance.setOnClickListener {
-            openAttendanceScreen()
-        }
-
-        // Logout button listener
-        btnLogout.setOnClickListener {
-            logout()
+    /**
+     * Setup all listeners and callbacks
+     */
+    private fun setupListeners() {
+        // Top bar listeners
+        recordContainer.setOnClickListener { recordingController.toggleRecording() }
+        btnAttendance.setOnClickListener { openAttendanceScreen() }
+        btnLogout.setOnClickListener { logout() }
+        btnExport.setOnClickListener { importExportController.showExportOptionsDialog() }
+        btnImport.setOnClickListener { importExportController.showImportOptionsDialog() }
+        
+        // Tool listeners
+        setupToolListeners()
+        
+        // Popup controller callbacks
+        setupPopupControllerCallbacks()
+        
+        // Tools controller callbacks
+        setupToolsControllerCallbacks()
+        
+        // Pagination controller callbacks
+        setupPaginationControllerCallbacks()
+        
+        // Import/Export controller callbacks
+        setupImportExportControllerCallbacks()
+        
+        // Split mode controller callbacks
+        setupSplitModeControllerCallbacks()
+        
+        // Whiteboard listeners
+        setupWhiteboardListeners()
+        
+        // Zoom button
+        btnPinchMode.setOnClickListener { 
+            popupController.showZoomPopup(btnPinchMode)
         }
     }
-
+    
+    /**
+     * Setup tool button listeners
+     */
+    private fun setupToolListeners() {
+        toolsController.getPenButton().setOnClickListener {
+            toolsController.togglePenSelectionMode()
+        }
+        
+        toolsController.getEraserButton().setOnClickListener {
+            popupController.showEraserModePopup(toolsController.getEraserButton())
+        }
+        
+        toolsController.getTextButton().setOnClickListener {
+            toolsController.selectTool(DrawingTool.TEXT, toolsController.getTextButton())
+        }
+        
+        toolsController.getFormulaButton().setOnClickListener {
+            popupController.showFormulaPopup()
+        }
+        
+        toolsController.getShapesButton().setOnClickListener {
+            popupController.showShapesPopup(toolsController.getShapesButton())
+        }
+        
+        findViewById<ImageButton>(R.id.btnUndo).setOnClickListener {
+            paginationController.undoCurrentPage()
+            updateToolButtons()
+        }
+        
+        findViewById<ImageButton>(R.id.btnRedo).setOnClickListener {
+            paginationController.redoCurrentPage()
+                updateToolButtons()
+            }
+        
+        findViewById<ImageButton>(R.id.btnClear).setOnClickListener {
+            toolsController.showClearConfirmDialog()
+        }
+        
+        findViewById<ImageButton>(R.id.btnModeToggle).setOnClickListener {
+            toolsController.toggleMode()
+        }
+        
+        toolsController.getColorPickerButton().setOnClickListener {
+            popupController.showColorPickerPopup(
+                toolsController.getColorPickerButton(),
+                toolsController.getCurrentColor()
+            )
+        }
+        
+        toolsController.getStrokeWidthButton().setOnClickListener {
+            popupController.showStrokeWidthPopup(
+                toolsController.getStrokeWidthButton(),
+                toolsController.getCurrentStrokeWidth()
+            )
+        }
+        
+        toolsController.getBackgroundButton().setOnClickListener {
+            popupController.showBackgroundPatternPopup()
+        }
+    }
+    
+    /**
+     * Setup popup controller callbacks
+     */
+    private fun setupPopupControllerCallbacks() {
+        popupController.onColorSelected = { color ->
+            toolsController.selectColor(color)
+            pageManager.updateSharedColor(color)
+        }
+        
+        popupController.onStrokeWidthChanged = { width ->
+            toolsController.setStrokeWidth(width)
+            pageManager.updateSharedStrokeWidth(width)
+        }
+        
+        popupController.onBackgroundPatternSelected = { pattern ->
+            toolsController.selectBackgroundPattern(pattern)
+            pageManager.updateSharedBackgroundPattern(pattern)
+        }
+        
+        popupController.onToolSelected = { tool ->
+            val button = when (tool) {
+                DrawingTool.ERASER -> toolsController.getEraserButton()
+                DrawingTool.SELECTIVE_ERASER -> toolsController.getEraserButton()
+                DrawingTool.LINE,
+                DrawingTool.CIRCLE,
+                DrawingTool.TRIANGLE,
+                DrawingTool.RECTANGLE -> toolsController.getShapesButton()
+                else -> toolsController.getPenButton()
+            }
+            toolsController.selectTool(tool, button)
+        }
+        
+        popupController.onEraserModeSelected = { isSelective ->
+            toolsController.setSelectiveEraserMode(isSelective)
+        }
+    }
+    
+    /**
+     * Setup tools controller callbacks
+     */
+    private fun setupToolsControllerCallbacks() {
+        toolsController.onClearRequested = {
+            paginationController.clearCurrentPage()
+            updateToolButtons()
+        }
+        
+        toolsController.onColorChanged = { color ->
+            pageManager.updateSharedColor(color)
+        }
+        
+        toolsController.onStrokeWidthChanged = { width ->
+            pageManager.updateSharedStrokeWidth(width)
+        }
+    }
+    
+    /**
+     * Setup pagination controller callbacks
+     */
+    private fun setupPaginationControllerCallbacks() {
+        paginationController.onPageChanged = {
+            // Update shared settings when page changes
+            whiteboardView.setColor(pageManager.sharedColor)
+            whiteboardView.setStrokeWidth(pageManager.sharedStrokeWidth)
+            toolsController.selectColor(pageManager.sharedColor)
+            toolsController.setStrokeWidth(pageManager.sharedStrokeWidth)
+            updateToolButtons()
+        }
+    }
+    
+    /**
+     * Setup import/export controller callbacks
+     */
+    private fun setupImportExportControllerCallbacks() {
+        importExportController.onPageSaveRequired = {
+            paginationController.saveCurrentPageFromWhiteboard()
+        }
+        
+        importExportController.getPageManager = {
+            pageManager
+        }
+        
+        importExportController.onImportSuccess = {
+            paginationController.updatePaginationUI()
+            paginationController.loadCurrentPageToWhiteboard()
+            updateToolButtons()
+        }
+    }
+    
+    /**
+     * Setup split mode controller callbacks
+     */
+    private fun setupSplitModeControllerCallbacks() {
+        splitModeController.onSplitModeChanged = { enabled ->
+            if (enabled) {
+                popupController.dismissZoomPopup()
+            }
+        }
+    }
+    
+    /**
+     * Setup whiteboard listeners
+     */
+    private fun setupWhiteboardListeners() {
+        whiteboardView.setOnDrawingChangeListener(object : OnDrawingChangeListener {
+            override fun onDrawingChanged() {
+                paginationController.saveCurrentPageFromWhiteboard()
+        updateToolButtons()
+    }
+        })
+        
+        whiteboardView.setOnTextInputListener(object : OnTextInputListener {
+            override fun onTextInputRequested(x: Float, y: Float) {
+                toolsController.showTextInputDialog(x, y)
+            }
+        })
+    }
+    
+    /**
+     * Update tool button states
+     */
+    private fun updateToolButtons() {
+        val (canUndo, canRedo) = paginationController.getCurrentPageUndoRedoState()
+        toolsController.updateUndoRedoButtons(canUndo, canRedo)
+    }
+    
+    /**
+     * Apply custom fonts to all views
+     */
     private fun applyFonts() {
         val rootView = findViewById<ViewGroup>(android.R.id.content)
         FontHelper.applyFontToViewGroup(this, rootView)
     }
     
-    private fun setupToolListeners() {
-        // Tool selection listeners
-        btnPen.setOnClickListener { togglePenSelectionMode() }
-        btnEraser.setOnClickListener { showEraserModePopup() }
-        btnText.setOnClickListener { selectTool(WhiteboardView.DrawingTool.TEXT, btnText) }
-        btnFormula.setOnClickListener { showFormulaPopup() }
-        btnShapes.setOnClickListener { showShapesPopup() }
-        
-        // Action listeners
-        btnUndo.setOnClickListener { 
-            if (pageManager.undoCurrentPage()) {
-                loadCurrentPageToWhiteboard()
-            }
-        }
-        btnRedo.setOnClickListener { 
-            if (pageManager.redoCurrentPage()) {
-                loadCurrentPageToWhiteboard()
-            }
-        }
-        btnClear.setOnClickListener { showClearConfirmDialog() }
-        btnModeToggle.setOnClickListener { toggleMode() }
-        btnPinchMode.setOnClickListener { showZoomPopup() }
-    }
-    
-    private fun setupPopupListeners() {
-        // Color picker popup
-        btnColorPicker.setOnClickListener {
-            showColorPickerPopup()
-        }
-        
-        // Stroke width popup
-        btnStrokeWidth.setOnClickListener {
-            showStrokeWidthPopup()
-        }
-        
-        // Background pattern popup
-        btnBackground.setOnClickListener {
-            showBackgroundPatternPopup()
-        }
-    }
-    
-    private fun showColorPickerPopup() {
-        val inflater = LayoutInflater.from(this)
-        val popupView = inflater.inflate(R.layout.popup_color_picker, null)
-        
-        colorPopupWindow = PopupWindow(
-            popupView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-        
-        // Set up color buttons in popup
-        val colors = mapOf(
-            R.id.colorBlack to Color.BLACK,
-            R.id.colorRed to Color.parseColor("#F44336"),
-            R.id.colorBlue to Color.parseColor("#2196F3"),
-            R.id.colorGreen to Color.parseColor("#4CAF50"),
-            R.id.colorYellow to Color.parseColor("#FFEB3B"),
-            R.id.colorPurple to Color.parseColor("#9C27B0"),
-            R.id.colorOrange to Color.parseColor("#FF9800"),
-            R.id.colorWhite to Color.WHITE
-        )
-        
-        colors.forEach { (buttonId, color) ->
-            popupView.findViewById<Button>(buttonId)?.setOnClickListener {
-                selectColor(color)
-                colorPopupWindow?.dismiss()
-            }
-        }
-        
-        // Show popup above the color picker button
-        colorPopupWindow?.showAsDropDown(btnColorPicker, 0, -btnColorPicker.height - 200, Gravity.CENTER)
-    }
-    
-    private fun showStrokeWidthPopup() {
-        val inflater = LayoutInflater.from(this)
-        val popupView = inflater.inflate(R.layout.popup_stroke_width, null)
-        
-        strokePopupWindow = PopupWindow(
-            popupView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-        
-        val seekBar = popupView.findViewById<SeekBar>(R.id.strokeWidthSeekBar)
-        
-        // Set current values
-        seekBar.progress = (currentStrokeWidth - 1).toInt()
-        
-        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val strokeWidth = (progress + 1).toFloat() // Min 1, Max 21
-                
-                if (fromUser) {
-                    currentStrokeWidth = strokeWidth
-                    pageManager.updateSharedStrokeWidth(strokeWidth)
-                    whiteboardView.setStrokeWidth(strokeWidth)
-                }
-            }
-            
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        
-        // Show popup above the stroke width button
-        strokePopupWindow?.showAsDropDown(btnStrokeWidth, 0, -btnStrokeWidth.height - 150, Gravity.CENTER)
-    }
-    
-    private fun showZoomPopup() {
-        val inflater = LayoutInflater.from(this)
-        val popupView = inflater.inflate(R.layout.popup_zoom_slider, null)
-        
-        zoomPopupWindow = PopupWindow(
-            popupView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-        
-        val zoomSlider = popupView.findViewById<SeekBar>(R.id.zoomSlider)
-        val btnResetZoom = popupView.findViewById<Button>(R.id.btnResetZoom)
-        
-        // Get current zoom level and range
-        val currentZoom = whiteboardView.getZoomLevel()
-        val minZoom = whiteboardView.getMinZoomLevel()
-        val maxZoom = whiteboardView.getMaxZoomLevel()
-        
-        // Convert zoom level to progress (0-100)
-        val progress = ((currentZoom - minZoom) / (maxZoom - minZoom) * 100f).toInt()
-        zoomSlider.progress = progress
-        
-        // Setup slider listener
-        zoomSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser && !isUpdatingZoomFromSlider) {
-                    // Convert progress (0-100) to zoom level (minZoom-maxZoom)
-                    val zoomLevel = minZoom + (progress / 100f) * (maxZoom - minZoom)
-                    
-                    isUpdatingZoomFromSlider = true
-                    whiteboardView.setZoomLevel(zoomLevel)
-                    
-                    // Update percentage text
-                    val percentage = (zoomLevel * 100).toInt()
-                    
-                    isUpdatingZoomFromSlider = false
-                }
-            }
-            
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        
-        // Setup reset button
-        btnResetZoom.setOnClickListener {
-            whiteboardView.setZoomLevel(1.0f)
-            
-            // Update slider
-            val resetProgress = ((1.0f - minZoom) / (maxZoom - minZoom) * 100f).toInt()
-            zoomSlider.progress = resetProgress
-            
-        }
-        
-        // Show popup above the pinch mode button
-        zoomPopupWindow?.showAsDropDown(btnPinchMode, 0, -btnPinchMode.height - 150, Gravity.CENTER)
-    }
-    
-    private fun showBackgroundPatternPopup() {
-        val inflater = LayoutInflater.from(this)
-        val popupView = inflater.inflate(R.layout.popup_background_patterns, null)
-        
-        backgroundPopupWindow = PopupWindow(
-            popupView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-        
-        // Set up preview views
-        val previewGridSmall = popupView.findViewById<BackgroundPreviewView>(R.id.previewGridSmall)
-        val previewGridLarge = popupView.findViewById<BackgroundPreviewView>(R.id.previewGridLarge)
-        val previewLinesHorizontal = popupView.findViewById<BackgroundPreviewView>(R.id.previewLinesHorizontal)
-        val previewLinesVertical = popupView.findViewById<BackgroundPreviewView>(R.id.previewLinesVertical)
-        val previewLinesBoth = popupView.findViewById<BackgroundPreviewView>(R.id.previewLinesBoth)
-        val previewDotGrid = popupView.findViewById<BackgroundPreviewView>(R.id.previewDotGrid)
-        val previewGraphPaper = popupView.findViewById<BackgroundPreviewView>(R.id.previewGraphPaper)
-        
-        // Set patterns for preview views
-        previewGridSmall.setBackgroundPattern(BackgroundPattern.GRID_SMALL)
-        previewGridLarge.setBackgroundPattern(BackgroundPattern.GRID_LARGE)
-        previewLinesHorizontal.setBackgroundPattern(BackgroundPattern.LINES_HORIZONTAL)
-        previewLinesVertical.setBackgroundPattern(BackgroundPattern.LINES_VERTICAL)
-        previewLinesBoth.setBackgroundPattern(BackgroundPattern.LINES_BOTH)
-        previewDotGrid.setBackgroundPattern(BackgroundPattern.DOT_GRID)
-        previewGraphPaper.setBackgroundPattern(BackgroundPattern.GRAPH_PAPER)
-        
-        // Set up click listeners
-        popupView.findViewById<FrameLayout>(R.id.backgroundPlain).setOnClickListener {
-            selectBackgroundPattern(BackgroundPattern.PLAIN)
-            backgroundPopupWindow?.dismiss()
-        }
-        
-        popupView.findViewById<FrameLayout>(R.id.backgroundGridSmall).setOnClickListener {
-            selectBackgroundPattern(BackgroundPattern.GRID_SMALL)
-            backgroundPopupWindow?.dismiss()
-        }
-        
-        popupView.findViewById<FrameLayout>(R.id.backgroundGridLarge).setOnClickListener {
-            selectBackgroundPattern(BackgroundPattern.GRID_LARGE)
-            backgroundPopupWindow?.dismiss()
-        }
-        
-        popupView.findViewById<FrameLayout>(R.id.backgroundLinesHorizontal).setOnClickListener {
-            selectBackgroundPattern(BackgroundPattern.LINES_HORIZONTAL)
-            backgroundPopupWindow?.dismiss()
-        }
-        
-        popupView.findViewById<FrameLayout>(R.id.backgroundLinesVertical).setOnClickListener {
-            selectBackgroundPattern(BackgroundPattern.LINES_VERTICAL)
-            backgroundPopupWindow?.dismiss()
-        }
-        
-        popupView.findViewById<FrameLayout>(R.id.backgroundLinesBoth).setOnClickListener {
-            selectBackgroundPattern(BackgroundPattern.LINES_BOTH)
-            backgroundPopupWindow?.dismiss()
-        }
-        
-        popupView.findViewById<FrameLayout>(R.id.backgroundDotGrid).setOnClickListener {
-            selectBackgroundPattern(BackgroundPattern.DOT_GRID)
-            backgroundPopupWindow?.dismiss()
-        }
-        
-        popupView.findViewById<FrameLayout>(R.id.backgroundGraphPaper).setOnClickListener {
-            selectBackgroundPattern(BackgroundPattern.GRAPH_PAPER)
-            backgroundPopupWindow?.dismiss()
-        }
-        
-        backgroundPopupWindow?.showAtLocation(whiteboardView, Gravity.CENTER, 0, 0)
-    }
-    
-    private fun selectBackgroundPattern(pattern: BackgroundPattern) {
-        pageManager.updateSharedBackgroundPattern(pattern)
-        whiteboardView.setBackgroundPattern(pattern)
-        userPreferences.saveBackgroundPattern(pattern.id)
-    }
-    
-    private fun loadSavedBackgroundPattern() {
-        val savedPatternId = userPreferences.getBackgroundPattern()
-        val pattern = BackgroundPattern.fromId(savedPatternId)
-        whiteboardView.setBackgroundPattern(pattern)
-    }
-    
-    private fun setupWhiteboardListener() {
-        whiteboardView.setOnDrawingChangeListener(object : WhiteboardView.OnDrawingChangeListener {
-            override fun onDrawingChanged() {
-                // Save current drawing state to the current page
-                saveCurrentPageFromWhiteboard()
-                updateToolButtons()
-            }
-        })
-        
-        whiteboardView.setOnTextInputListener(object : WhiteboardView.OnTextInputListener {
-            override fun onTextInputRequested(x: Float, y: Float) {
-                showTextInputDialog(x, y)
-            }
-        })
-    }
-    
-    private fun showTextInputDialog(x: Float, y: Float) {
-        val editText = EditText(this)
-        editText.hint = "متن خود را وارد کنید"
-        editText.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
-        
-        val dialog = AlertDialog.Builder(this)
-            .setTitle("افزودن متن")
-            .setView(editText)
-            .setPositiveButton("تایید") { _, _ ->
-                val text = editText.text.toString().trim()
-                if (text.isNotEmpty()) {
-                    whiteboardView.addText(text, x, y)
-                }
-            }
-            .setNegativeButton("لغو", null)
-            .create()
-            
-        dialog.show()
-        
-        // Show keyboard automatically
-        editText.requestFocus()
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-        imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-    }
-    
-    private fun showEraserModePopup() {
-        val inflater = LayoutInflater.from(this)
-        val popupView = inflater.inflate(R.layout.popup_eraser_mode, null)
-        
-        eraserModePopupWindow = PopupWindow(
-            popupView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-        
-        // Normal eraser option
-        val normalEraserOption = popupView.findViewById<ImageButton>(R.id.normalEraserOption)
-        normalEraserOption.setOnClickListener {
-            selectTool(WhiteboardView.DrawingTool.ERASER, btnEraser)
-            isSelectiveEraserMode = false
-            eraserModePopupWindow?.dismiss()
-            Toast.makeText(this, "پاک کن معمولی انتخاب شد", Toast.LENGTH_SHORT).show()
-        }
-        
-        // Selective eraser option
-        val selectiveEraserOption = popupView.findViewById<ImageButton>(R.id.selectiveEraserOption)
-        selectiveEraserOption.setOnClickListener {
-            selectTool(WhiteboardView.DrawingTool.SELECTIVE_ERASER, btnEraser)
-            isSelectiveEraserMode = true
-            eraserModePopupWindow?.dismiss()
-            Toast.makeText(this, "پاک کن انتخابی انتخاب شد", Toast.LENGTH_SHORT).show()
-        }
-        
-        // Show popup above the eraser button
-        eraserModePopupWindow?.showAsDropDown(btnEraser, 0, -btnEraser.height - 200, Gravity.CENTER)
-    }
-
-    // Data class for formula templates
-    data class FormulaTemplate(
-        val name: String,
-        val template: String,
-        val variables: List<String>,
-        val descriptions: List<String>
-    )
-
-    private fun getFormulaTemplates(): List<FormulaTemplate> {
-        return listOf(
-            FormulaTemplate(
-                "Quadratic Formula",
-                "x = (-{b} ± √({b}²-4{a}{c})) / 2{a}",
-                listOf("a", "b", "c"),
-                listOf("ضریب x²", "ضریب x", "عدد ثابت")
-            ),
-            FormulaTemplate(
-                "Pythagorean Theorem",
-                "{a}² + {b}² = {c}²",
-                listOf("a", "b", "c"),
-                listOf("ضلع اول", "ضلع دوم", "وتر")
-            ),
-            FormulaTemplate(
-                "Circle Area",
-                "A = π{r}²",
-                listOf("r"),
-                listOf("شعاع")
-            ),
-            FormulaTemplate(
-                "Distance Formula",
-                "d = √(({x2}-{x1})² + ({y2}-{y1})²)",
-                listOf("x1", "y1", "x2", "y2"),
-                listOf("x نقطه اول", "y نقطه اول", "x نقطه دوم", "y نقطه دوم")
-            ),
-            FormulaTemplate(
-                "Slope Formula",
-                "m = ({y2}-{y1}) / ({x2}-{x1})",
-                listOf("x1", "y1", "x2", "y2"),
-                listOf("x نقطه اول", "y نقطه اول", "x نقطه دوم", "y نقطه دوم")
-            ),
-            FormulaTemplate(
-                "Sphere Volume",
-                "V = (4/3)π{r}³",
-                listOf("r"),
-                listOf("شعاع")
-            ),
-            FormulaTemplate(
-                "Compound Interest",
-                "A = {P}(1 + {r}/{n})^({n}{t})",
-                listOf("P", "r", "n", "t"),
-                listOf("سرمایه اولیه", "نرخ بهره", "تعداد دفعات", "زمان")
-            ),
-            FormulaTemplate(
-                "Law of Cosines",
-                "{c}² = {a}² + {b}² - 2{a}{b} cos({C})",
-                listOf("a", "b", "c", "C"),
-                listOf("ضلع اول", "ضلع دوم", "ضلع سوم", "زاویه")
-            )
-        )
-    }
-
-    private fun showFormulaPopup() {
-        val inflater = LayoutInflater.from(this)
-        val popupView = inflater.inflate(R.layout.popup_math_formulas, null)
-        
-        formulaPopupWindow = PopupWindow(
-            popupView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-        
-        val formulas = getFormulaTemplates()
-        
-        // Set up formula option listeners - add formulas directly to board
-        popupView.findViewById<LinearLayout>(R.id.formulaQuadratic).setOnClickListener {
-            formulaPopupWindow?.dismiss()
-            addFormulaToBoard(formulas[0])
-        }
-        
-        popupView.findViewById<LinearLayout>(R.id.formulaPythagorean).setOnClickListener {
-            formulaPopupWindow?.dismiss()
-            addFormulaToBoard(formulas[1])
-        }
-        
-        popupView.findViewById<LinearLayout>(R.id.formulaCircleArea).setOnClickListener {
-            formulaPopupWindow?.dismiss()
-            addFormulaToBoard(formulas[2])
-        }
-        
-        popupView.findViewById<LinearLayout>(R.id.formulaDistance).setOnClickListener {
-            formulaPopupWindow?.dismiss()
-            addFormulaToBoard(formulas[3])
-        }
-        
-        popupView.findViewById<LinearLayout>(R.id.formulaSlope).setOnClickListener {
-            formulaPopupWindow?.dismiss()
-            addFormulaToBoard(formulas[4])
-        }
-        
-        popupView.findViewById<LinearLayout>(R.id.formulaSphereVolume).setOnClickListener {
-            formulaPopupWindow?.dismiss()
-            addFormulaToBoard(formulas[5])
-        }
-        
-        popupView.findViewById<LinearLayout>(R.id.formulaCompoundInterest).setOnClickListener {
-            formulaPopupWindow?.dismiss()
-            addFormulaToBoard(formulas[6])
-        }
-        
-        popupView.findViewById<LinearLayout>(R.id.formulaCosines).setOnClickListener {
-            formulaPopupWindow?.dismiss()
-            addFormulaToBoard(formulas[7])
-        }
-        
-        // Show popup at center of screen
-        formulaPopupWindow?.showAtLocation(
-            findViewById(android.R.id.content),
-            Gravity.CENTER,
-            0,
-            0
-        )
-    }
-
-    private fun addFormulaToBoard(formula: FormulaTemplate) {
-        // Replace placeholders with empty spaces (boxes) for manual filling
-        var formulaText = formula.template
-        
-        // Replace each variable placeholder with empty box symbol ☐
-        for (variable in formula.variables) {
-            formulaText = formulaText.replace("{$variable}", "☐")
-        }
-        
-        // Post to ensure view is measured and positioned correctly
-        whiteboardView.post {
-            // Add the formula as text to the whiteboard at center of current view
-            val centerX = whiteboardView.getVisibleCanvasCenterX()
-            val centerY = whiteboardView.getVisibleCanvasCenterY()
-            whiteboardView.addText(formulaText, centerX, centerY)
-            
-            Toast.makeText(this, "فرمول به تخته اضافه شد - با قلم اعداد را پر کنید", Toast.LENGTH_SHORT).show()
-        }
-    }
-    
-    private fun showShapesPopup() {
-        val inflater = LayoutInflater.from(this)
-        val popupView = inflater.inflate(R.layout.popup_shapes, null)
-        
-        val popupWindow = PopupWindow(
-            popupView,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            true
-        )
-        
-        // Shape buttons in popup
-        val btnLinePopup = popupView.findViewById<ImageButton>(R.id.btnLinePopup)
-        val btnCirclePopup = popupView.findViewById<ImageButton>(R.id.btnCirclePopup)
-        val btnTrianglePopup = popupView.findViewById<ImageButton>(R.id.btnTrianglePopup)
-        val btnRectanglePopup = popupView.findViewById<ImageButton>(R.id.btnRectanglePopup)
-        
-        // Set click listeners
-        btnLinePopup.setOnClickListener {
-            selectTool(WhiteboardView.DrawingTool.LINE, btnShapes)
-            popupWindow.dismiss()
-        }
-        
-        btnCirclePopup.setOnClickListener {
-            selectTool(WhiteboardView.DrawingTool.CIRCLE, btnShapes)
-            popupWindow.dismiss()
-        }
-        
-        btnTrianglePopup.setOnClickListener {
-            selectTool(WhiteboardView.DrawingTool.TRIANGLE, btnShapes)
-            popupWindow.dismiss()
-        }
-        
-        btnRectanglePopup.setOnClickListener {
-            selectTool(WhiteboardView.DrawingTool.RECTANGLE, btnShapes)
-            popupWindow.dismiss()
-        }
-        
-        // Show popup at center of screen
-        popupWindow.showAtLocation(btnShapes, Gravity.CENTER, 0, 0)
-    }
-    
-    private fun selectTool(tool: WhiteboardView.DrawingTool, button: ImageButton) {
-        // Update tool selection
-        btnPen.isSelected = false
-        btnEraser.isSelected = false
-        btnText.isSelected = false
-        btnShapes.isSelected = false
-        button.isSelected = true
-        currentSelectedTool = button
-        
-        // Reset pen selection mode when selecting other tools
-        if (button != btnPen && isPenInSelectionMode) {
-            isPenInSelectionMode = false
-            btnPen.setImageResource(R.drawable.ic_pen) // Reset to pen icon
-        }
-        
-        // Update whiteboard view
-        whiteboardView.setDrawingTool(tool)
-        
-        // Ensure drawing mode is enabled when selecting a tool
-        if (!isDrawingMode) {
-            toggleMode()
-        }
-        
-        // Update button states
-        updateToolButtons()
-    }
-    
-    private fun selectColor(color: Int) {
-        // Update color selection
-        currentSelectedColor = color
-        btnColorPicker.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
-        
-        // Update shared settings in page manager
-        pageManager.updateSharedColor(color)
-        
-        // Update whiteboard view
-        whiteboardView.setColor(color)
-    }
-    
-    private fun togglePenSelectionMode() {
-        isPenInSelectionMode = !isPenInSelectionMode
-        
-        if (isPenInSelectionMode) {
-            // Switch to selection mode
-            btnPen.setImageResource(R.drawable.ic_hand)
-            selectTool(WhiteboardView.DrawingTool.SELECTION, btnPen)
-            Toast.makeText(this, getString(R.string.selection_mode), Toast.LENGTH_SHORT).show()
-        } else {
-            // Switch back to pen mode
-            btnPen.setImageResource(R.drawable.ic_pen)
-            selectTool(WhiteboardView.DrawingTool.PEN, btnPen)
-            Toast.makeText(this, getString(R.string.pen_mode), Toast.LENGTH_SHORT).show()
-        }
-    }
-    
-    private fun toggleMode() {
-        isDrawingMode = !isDrawingMode
-        whiteboardView.setDrawingMode(isDrawingMode)
-        
-        // Update button selected state (selected = pan mode, not selected = drawing mode)
-        btnModeToggle.isSelected = !isDrawingMode
-        
-        // Show toast to indicate mode
-        val modeText = if (isDrawingMode) {
-            getString(R.string.drawing_mode)
-        } else {
-            getString(R.string.pan_mode)
-        }
-        Toast.makeText(this, modeText, Toast.LENGTH_SHORT).show()
-    }
-    
-    private fun togglePinchMode() {
-        val isPinchEnabled = whiteboardView.isPinchModeEnabled()
-        whiteboardView.setPinchModeEnabled(!isPinchEnabled)
-        
-        // Update button state
-        btnPinchMode.isSelected = !isPinchEnabled
-        
-        // Show toast to indicate mode
-        val modeText = if (!isPinchEnabled) {
-            getString(R.string.pinch_mode_enabled)
-        } else {
-            getString(R.string.pinch_mode_disabled)
-        }
-        Toast.makeText(this, modeText, Toast.LENGTH_SHORT).show()
-    }
-    
-    private fun updateToolButtons() {
-        // Update undo/redo button states using page manager
-        val currentPage = pageManager.getCurrentPage()
-        btnUndo.isEnabled = currentPage.canUndo()
-        btnRedo.isEnabled = currentPage.canRedo()
-        btnUndo.alpha = if (currentPage.canUndo()) 1.0f else 0.5f
-        btnRedo.alpha = if (currentPage.canRedo()) 1.0f else 0.5f
-    }
-    
-    private fun showClearConfirmDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.clear_all))
-            .setMessage(getString(R.string.clear_confirm))
-            .setPositiveButton(getString(R.string.yes)) { _, _ ->
-                pageManager.clearCurrentPage()
-                loadCurrentPageToWhiteboard()
-            }
-            .setNegativeButton(getString(R.string.no), null)
-            .show()
-    }
-    
-    private fun showDeletePageConfirmDialog() {
-        if (pageManager.getTotalPages() <= 1) {
-            Toast.makeText(this, getString(R.string.cannot_delete_last_page), Toast.LENGTH_SHORT).show()
-            return
-        }
-        
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.delete_page_title))
-            .setMessage(getString(R.string.delete_page_confirm))
-            .setPositiveButton(getString(R.string.yes)) { _, _ ->
-                val currentPageId = pageManager.getCurrentPageId()
-                if (pageManager.deletePage(currentPageId)) {
-                    updatePaginationUI()
-                    loadCurrentPageToWhiteboard()
-                    Toast.makeText(this, getString(R.string.page_deleted), Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton(getString(R.string.no), null)
-            .show()
-    }
-
+    /**
+     * Open attendance screen
+     */
     private fun openAttendanceScreen() {
         val intent = Intent(this, AttendanceActivity::class.java)
         startActivity(intent)
     }
 
-    private fun startRecording() {
-        if (checkPermissions()) requestScreenCapture()
-        else requestPermissions()
-    }
-
-    private fun stopRecording() {
-        val intent = Intent(this, ScreenRecordService::class.java).apply {
-            action = ScreenRecordService.ACTION_STOP
-        }
-        startService(intent)
-        Toast.makeText(this, getString(R.string.recording_stopped), Toast.LENGTH_SHORT).show()
-    }
-
-    private fun requestScreenCapture() {
-        val captureIntent = mediaProjectionManager.createScreenCaptureIntent()
-        startActivityForResult(captureIntent, REQUEST_CODE_SCREEN_CAPTURE)
-    }
-
-    private fun checkPermissions(): Boolean {
-        return REQUIRED_PERMISSIONS.all { permission ->
-            ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
-        }
-    }
-
-    private fun requestPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            requestPermissions(REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        
-        when (requestCode) {
-            REQUEST_CODE_PERMISSIONS -> {
-                if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                    Toast.makeText(this, getString(R.string.permissions_granted), Toast.LENGTH_SHORT).show()
-                    startRecording()
-                } else {
-                    Toast.makeText(this, getString(R.string.permissions_denied), Toast.LENGTH_LONG).show()
-                }
-            }
-            REQUEST_CODE_STORAGE_PERMISSIONS -> {
-                if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                    Toast.makeText(this, getString(R.string.permissions_granted), Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, getString(R.string.storage_permission_denied), Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        
-        when (requestCode) {
-            REQUEST_CODE_SCREEN_CAPTURE -> {
-                if (resultCode == Activity.RESULT_OK && data != null) {
-                    startRecordingService(resultCode, data)
-                    Toast.makeText(this, getString(R.string.recording_started), Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, getString(R.string.screen_capture_denied), Toast.LENGTH_SHORT).show()
-                }
-            }
-            REQUEST_CODE_IMPORT_IMAGE -> {
-                if (resultCode == Activity.RESULT_OK && data != null) {
-                    data.data?.let { uri ->
-                        importImage(uri)
-                    }
-                }
-            }
-            REQUEST_CODE_IMPORT_MOODLE -> {
-                if (resultCode == Activity.RESULT_OK && data != null) {
-                    data.data?.let { uri ->
-                        importMoodleFile(uri)
-                    }
-                }
-            }
-        }
-    }
-    
-    private fun importImage(uri: Uri) {
-        importManager.importImage(
-            uri,
-            whiteboardView,
-            onSuccess = {
-                // Success handled by ImportManager toast
-                updateToolButtons()
-            },
-            onError = { error ->
-                Toast.makeText(this, error, Toast.LENGTH_LONG).show()
-            }
-        )
-    }
-    
-    private fun importMoodleFile(uri: Uri) {
-        importManager.importCustomFormat(
-            uri,
-            whiteboardView,
-            pageManager,
-            onSuccess = {
-                // Success handled by ImportManager toast
-                updatePaginationUI()
-                loadCurrentPageToWhiteboard()
-                updateToolButtons()
-            },
-            onError = { error ->
-                Toast.makeText(this, error, Toast.LENGTH_LONG).show()
-            }
-        )
-    }
-
-    private fun startRecordingService(resultCode: Int, data: Intent) {
-        val intent = Intent(this, ScreenRecordService::class.java).apply {
-            action = ScreenRecordService.ACTION_START
-            putExtra(ScreenRecordService.EXTRA_RESULT_CODE, resultCode)
-            putExtra(ScreenRecordService.EXTRA_DATA_INTENT, data)
-        }
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) 
-            startForegroundService(intent)
-        else startService(intent)
-    }
-
-    private fun updateButtonAppearance() {
-        if (isRecording) toggleRecordBtn.setBackgroundResource(R.drawable.square_button)
-        else toggleRecordBtn.setBackgroundResource(R.drawable.circle_button)
-    }
-
-    private fun registerRecordingStateReceiver() {
-        val filter = IntentFilter().apply {
-            addAction("RECORDING_STARTED")
-            addAction("RECORDING_STOPPED")
-        }
-        registerReceiver(recordingStateReceiver, filter)
-    }
-
+    /**
+     * Logout user
+     */
     private fun logout() {
         userPreferences.clearAllData()
         Toast.makeText(this, getString(R.string.logged_out_successfully), Toast.LENGTH_SHORT).show()
@@ -1201,256 +384,35 @@ class WhiteboardActivity : AppCompatActivity() {
         startActivity(intent)
         finish()
     }
-    
-    private fun enableSplitMode(sectionCount: Int) {
-        // Enable split mode in whiteboard
-        whiteboardView.enableSplitMode(sectionCount)
-        isSplitMode = true
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         
-        // Update UI
-        btnEnableSplit.visibility = View.GONE
-        btnDisableSplit.visibility = View.VISIBLE
-        bottomToolbar.visibility = View.GONE
-        
-        // Dismiss zoom popup if open
-        zoomPopupWindow?.dismiss()
-        
-        Toast.makeText(this, getString(R.string.split_mode_enabled), Toast.LENGTH_SHORT).show()
-    }
-    
-    private fun disableSplitMode() {
-        // Disable split mode in whiteboard
-        whiteboardView.disableSplitMode()
-        isSplitMode = false
-        
-        // Update UI
-        btnEnableSplit.visibility = View.VISIBLE
-        btnDisableSplit.visibility = View.GONE
-        bottomToolbar.visibility = View.VISIBLE
-        
-        Toast.makeText(this, getString(R.string.split_mode_disabled), Toast.LENGTH_SHORT).show()
-    }
-    
-    // Import/Export functionality
-    private fun showExportOptionsDialog() {
-        val inflater = LayoutInflater.from(this)
-        val dialogView = inflater.inflate(R.layout.dialog_export_options, null)
-        
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .create()
-        
-        // Export PNG option
-        dialogView.findViewById<LinearLayout>(R.id.exportPngOption).setOnClickListener {
-            dialog.dismiss()
-            exportToPNG()
-        }
-        
-        // Export Moodle format option
-        dialogView.findViewById<LinearLayout>(R.id.exportMoodleOption).setOnClickListener {
-            dialog.dismiss()
-            exportToMoodleFormat()
-        }
-        
-        // Cancel button
-        dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
-            dialog.dismiss()
-        }
-        
-        dialog.show()
-    }
-    
-    private fun showImportOptionsDialog() {
-        val inflater = LayoutInflater.from(this)
-        val dialogView = inflater.inflate(R.layout.dialog_import_options, null)
-        
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .create()
-        
-        // Import image option
-        dialogView.findViewById<LinearLayout>(R.id.importImageOption).setOnClickListener {
-            dialog.dismiss()
-            openImagePicker()
-        }
-        
-        // Import Moodle file option
-        dialogView.findViewById<LinearLayout>(R.id.importMoodleOption).setOnClickListener {
-            dialog.dismiss()
-            showImportMoodleConfirmDialog()
-        }
-        
-        // Cancel button
-        dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
-            dialog.dismiss()
-        }
-        
-        dialog.show()
-    }
-    
-    private fun exportToPNG() {
-        // Save current page state first
-        saveCurrentPageFromWhiteboard()
-        
-        // Check if there are multiple pages
-        if (pageManager.getTotalPages() > 1) {
-            showPageSelectionDialog()
-        } else {
-            // Only one page, export directly
-            exportCurrentPageToPNG()
+        // Delegate to controllers
+        if (!recordingController.handlePermissionsResult(requestCode, grantResults)) {
+            importExportController.handlePermissionsResult(requestCode, grantResults)
         }
     }
-    
-    private fun showPageSelectionDialog() {
-        val inflater = LayoutInflater.from(this)
-        val dialogView = inflater.inflate(R.layout.dialog_page_selection, null)
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
         
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .create()
-        
-        val totalPages = pageManager.getTotalPages()
-        
-        // Update the description for all pages option with the actual count
-        val tvAllPagesDescription = dialogView.findViewById<TextView>(R.id.tvAllPagesDescription)
-        tvAllPagesDescription.text = getString(R.string.export_all_pages_description, totalPages)
-        
-        // Export current page option
-        dialogView.findViewById<LinearLayout>(R.id.exportCurrentPageOption).setOnClickListener {
-            dialog.dismiss()
-            exportCurrentPageToPNG()
-        }
-        
-        // Export all pages option
-        dialogView.findViewById<LinearLayout>(R.id.exportAllPagesOption).setOnClickListener {
-            dialog.dismiss()
-            exportAllPagesToPNG()
-        }
-        
-        // Cancel button
-        dialogView.findViewById<Button>(R.id.btnCancelPageSelection).setOnClickListener {
-            dialog.dismiss()
-        }
-        
-        dialog.show()
-    }
-    
-    private fun exportCurrentPageToPNG() {
-        exportManager.exportToPNG(
-            whiteboardView,
-            onSuccess = { file ->
-                // Success handled by ExportManager toast
-            },
-            onError = { error ->
-                Toast.makeText(this, error, Toast.LENGTH_LONG).show()
-            }
-        )
-    }
-    
-    private fun exportAllPagesToPNG() {
-        exportManager.exportAllPagesToPNG(
-            whiteboardView,
-            pageManager,
-            onSuccess = { files ->
-                // Success handled by ExportManager toast
-            },
-            onError = { error ->
-                Toast.makeText(this, error, Toast.LENGTH_LONG).show()
-            }
-        )
-    }
-    
-    private fun exportToMoodleFormat() {
-        // Save current page state first
-        saveCurrentPageFromWhiteboard()
-        
-        exportManager.exportToCustomFormat(
-            whiteboardView,
-            pageManager,
-            onSuccess = { file ->
-                // Success handled by ExportManager toast
-            },
-            onError = { error ->
-                Toast.makeText(this, error, Toast.LENGTH_LONG).show()
-            }
-        )
-    }
-    
-    private fun openImagePicker() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-            type = "image/*"
-            addCategory(Intent.CATEGORY_OPENABLE)
-        }
-        
-        try {
-            startActivityForResult(
-                Intent.createChooser(intent, getString(R.string.select_image_file)),
-                REQUEST_CODE_IMPORT_IMAGE
-            )
-        } catch (e: Exception) {
-            Toast.makeText(this, getString(R.string.no_file_manager), Toast.LENGTH_SHORT).show()
-        }
-    }
-    
-    private fun showImportMoodleConfirmDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.import_moodle_file))
-            .setMessage(getString(R.string.import_will_clear_board))
-            .setPositiveButton(getString(R.string.continue_import)) { _, _ ->
-                openMoodleFilePicker()
-            }
-            .setNegativeButton(getString(R.string.cancel), null)
-            .show()
-    }
-    
-    private fun openMoodleFilePicker() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-            type = "*/*"
-            addCategory(Intent.CATEGORY_OPENABLE)
-            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/octet-stream", "text/plain"))
-        }
-        
-        try {
-            startActivityForResult(
-                Intent.createChooser(intent, getString(R.string.select_moodle_file)),
-                REQUEST_CODE_IMPORT_MOODLE
-            )
-        } catch (e: Exception) {
-            Toast.makeText(this, getString(R.string.no_file_manager), Toast.LENGTH_SHORT).show()
-        }
-    }
-    
-    private fun checkStoragePermissions(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            STORAGE_PERMISSIONS.all { permission ->
-                ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
-            }
-        } else {
-            true
-        }
-    }
-    
-    private fun requestStoragePermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            requestPermissions(STORAGE_PERMISSIONS, REQUEST_CODE_STORAGE_PERMISSIONS)
+        // Delegate to controllers
+        if (!recordingController.handleActivityResult(requestCode, resultCode, data)) {
+            importExportController.handleActivityResult(requestCode, resultCode, data)
         }
     }
     
     override fun onDestroy() {
         super.onDestroy()
-        try {
-            unregisterReceiver(recordingStateReceiver)
-        } catch (e: Exception) {
-            // Receiver might not be registered
-        }
         
-        // Clean up popup windows
-        colorPopupWindow?.dismiss()
-        strokePopupWindow?.dismiss()
-        backgroundPopupWindow?.dismiss()
-        zoomPopupWindow?.dismiss()
-        
-        // Clean up whiteboard resources
+        // Clean up all controllers
+        recordingController.cleanup()
+        popupController.cleanup()
         whiteboardView.cleanup()
     }
 }
