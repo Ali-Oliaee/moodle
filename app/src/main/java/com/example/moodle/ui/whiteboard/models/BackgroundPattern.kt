@@ -1,4 +1,4 @@
-package com.example.moodle.ui.whiteboard
+package com.example.moodle.ui.whiteboard.models
 
 enum class BackgroundPattern(val id: Int, val nameResId: Int) {
     PLAIN(0, com.example.moodle.R.string.background_plain),

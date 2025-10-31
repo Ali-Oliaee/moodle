@@ -1,19 +1,33 @@
 package com.example.moodle.ui.whiteboard
 
+import android.arch.lifecycle.Observer
+import android.arch.lifecycle.ViewModelProviders
+import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
+import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.view.ViewGroup
 import android.widget.*
 import com.example.moodle.R
-import com.example.moodle.ui.attendance.AttendanceActivity
 import com.example.moodle.data.datastore.UserPreferences
+import com.example.moodle.ui.attendance.AttendanceActivity
 import com.example.moodle.ui.login.LoginActivity
+import com.example.moodle.ui.whiteboard.controllers.PopupController
+import com.example.moodle.ui.whiteboard.controllers.RecordingController
+import com.example.moodle.ui.whiteboard.controllers.SplitModeController
+import com.example.moodle.ui.whiteboard.listeners.OnDrawingChangeListener
+import com.example.moodle.ui.whiteboard.listeners.OnTextInputListener
+import com.example.moodle.ui.whiteboard.managers.PageManager
+import com.example.moodle.ui.whiteboard.models.DrawingTool
+import com.example.moodle.ui.whiteboard.views.WhiteboardView
 import com.example.moodle.utils.FontHelper
 
 /**
  * Main activity for the whiteboard functionality
- * Delegates responsibilities to specialized controllers
+ * Uses MVVM architecture with WhiteboardViewModel
+ * Keeps UI-specific controllers for Android components
  */
 class WhiteboardActivity : AppCompatActivity() {
 
@@ -27,28 +41,45 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnImport: ImageButton
     private lateinit var btnPinchMode: ImageButton
     
-    // Controllers
+    // Tool Buttons
+    private lateinit var btnPen: ImageButton
+    private lateinit var btnEraser: ImageButton
+    private lateinit var btnText: ImageButton
+    private lateinit var btnFormula: ImageButton
+    private lateinit var btnShapes: ImageButton
+    private lateinit var btnUndo: ImageButton
+    private lateinit var btnRedo: ImageButton
+    private lateinit var btnClear: ImageButton
+    private lateinit var btnModeToggle: ImageButton
+    private lateinit var btnColorPicker: Button
+    private lateinit var btnStrokeWidth: ImageButton
+    private lateinit var btnBackground: ImageButton
+    
+    // Pagination Buttons
+    private lateinit var btnPreviousPage: ImageButton
+    private lateinit var btnNextPage: ImageButton
+    private lateinit var btnDeletePage: ImageButton
+    private lateinit var tvPageIndicator: TextView
+    
+    // ViewModel - Single source of truth for state
+    private lateinit var viewModel: WhiteboardViewModel
+    
+    // UI-specific controllers (Android components)
     private lateinit var recordingController: RecordingController
-    private lateinit var toolsController: ToolsController
     private lateinit var popupController: PopupController
-    private lateinit var paginationController: PaginationController
-    private lateinit var importExportController: ImportExportController
     private lateinit var splitModeController: SplitModeController
     
-    // Managers
-    private lateinit var pageManager: PageManager
-    private lateinit var exportManager: ExportManager
-    private lateinit var importManager: ImportManager
+    // User preferences
     private lateinit var userPreferences: UserPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Initialize preferences and managers
+        // Initialize ViewModel
+        viewModel = ViewModelProviders.of(this).get(WhiteboardViewModel::class.java)
+        
+        // Initialize preferences
         userPreferences = UserPreferences(this)
-        pageManager = PageManager(userPreferences)
-        exportManager = ExportManager(this)
-        importManager = ImportManager(this)
         
         // Set layout
         setContentView(R.layout.activity_whiteboard_split)
@@ -56,17 +87,20 @@ class WhiteboardActivity : AppCompatActivity() {
         // Initialize views
         initializeViews()
         
-        // Initialize controllers
-        initializeControllers()
+        // Initialize UI controllers
+        initializeUIControllers()
         
         // Setup listeners
         setupListeners()
         
+        // Observe ViewModel
+        observeViewModel()
+        
         // Apply fonts
         applyFonts()
         
-        // Load saved settings
-        toolsController.loadSavedBackgroundPattern()
+        // Load initial page
+        loadCurrentPageFromViewModel()
     }
 
     /**
@@ -81,55 +115,56 @@ class WhiteboardActivity : AppCompatActivity() {
         btnExport = findViewById(R.id.btnExport)
         btnImport = findViewById(R.id.btnImport)
         btnPinchMode = findViewById(R.id.btnPinchMode)
+        
+        // Tool buttons
+        btnPen = findViewById(R.id.btnPen)
+        btnEraser = findViewById(R.id.btnEraser)
+        btnText = findViewById(R.id.btnText)
+        btnFormula = findViewById(R.id.btnFormula)
+        btnShapes = findViewById(R.id.btnShapes)
+        btnUndo = findViewById(R.id.btnUndo)
+        btnRedo = findViewById(R.id.btnRedo)
+        btnClear = findViewById(R.id.btnClear)
+        btnModeToggle = findViewById(R.id.btnModeToggle)
+        btnColorPicker = findViewById(R.id.btnColorPicker)
+        btnStrokeWidth = findViewById(R.id.btnStrokeWidth)
+        btnBackground = findViewById(R.id.btnBackground)
+        
+        // Pagination buttons
+        btnPreviousPage = findViewById(R.id.btnPreviousPage)
+        btnNextPage = findViewById(R.id.btnNextPage)
+        btnDeletePage = findViewById(R.id.btnDeletePage)
+        tvPageIndicator = findViewById(R.id.tvPageIndicator)
+        
+        // Set initial tool selection
+        btnPen.isSelected = true
     }
     
     /**
-     * Initialize all controllers
+     * Initialize UI-specific controllers
      */
-    private fun initializeControllers() {
-        // Initialize Recording Controller
+    private fun initializeUIControllers() {
+        // Recording Controller - handles permissions and MediaProjection
         recordingController = RecordingController(this)
         recordingController.initialize(toggleRecordBtn)
         
-        // Initialize Tools Controller
-        toolsController = ToolsController(this, whiteboardView, userPreferences)
-        toolsController.initialize(
-            pen = findViewById(R.id.btnPen),
-            eraser = findViewById(R.id.btnEraser),
-            text = findViewById(R.id.btnText),
-            formula = findViewById(R.id.btnFormula),
-            shapes = findViewById(R.id.btnShapes),
-            undo = findViewById(R.id.btnUndo),
-            redo = findViewById(R.id.btnRedo),
-            clear = findViewById(R.id.btnClear),
-            modeToggle = findViewById(R.id.btnModeToggle),
-            colorPicker = findViewById(R.id.btnColorPicker),
-            strokeWidth = findViewById(R.id.btnStrokeWidth),
-            background = findViewById(R.id.btnBackground)
-        )
-        
-        // Initialize Popup Controller
+        // Popup Controller - manages PopupWindows
         popupController = PopupController(this, whiteboardView)
+        setupPopupCallbacks()
         
-        // Initialize Pagination Controller
-        paginationController = PaginationController(this, whiteboardView, pageManager)
-        paginationController.initialize(
-            previousPage = findViewById(R.id.btnPreviousPage),
-            nextPage = findViewById(R.id.btnNextPage),
-            deletePage = findViewById(R.id.btnDeletePage),
-            pageIndicator = findViewById(R.id.tvPageIndicator)
-        )
-        
-        // Initialize Import/Export Controller
-        importExportController = ImportExportController(this, whiteboardView, exportManager, importManager)
-        
-        // Initialize Split Mode Controller
+        // Split Mode Controller - manages split screen UI
         splitModeController = SplitModeController(this, whiteboardView)
         splitModeController.initialize(
             enableSplit = findViewById(R.id.btnEnableSplit),
             disableSplit = findViewById(R.id.btnDisableSplit),
             toolbar = findViewById(R.id.bottomToolbar)
         )
+        
+        splitModeController.onSplitModeChanged = { enabled ->
+            if (enabled) {
+                popupController.dismissZoomPopup()
+            }
+        }
     }
     
     /**
@@ -140,193 +175,124 @@ class WhiteboardActivity : AppCompatActivity() {
         recordContainer.setOnClickListener { recordingController.toggleRecording() }
         btnAttendance.setOnClickListener { openAttendanceScreen() }
         btnLogout.setOnClickListener { logout() }
-        btnExport.setOnClickListener { importExportController.showExportOptionsDialog() }
-        btnImport.setOnClickListener { importExportController.showImportOptionsDialog() }
+        btnExport.setOnClickListener { showExportOptionsDialog() }
+        btnImport.setOnClickListener { showImportOptionsDialog() }
+        btnPinchMode.setOnClickListener { popupController.showZoomPopup(btnPinchMode) }
         
-        // Tool listeners
+        // Tool button listeners
         setupToolListeners()
         
-        // Popup controller callbacks
-        setupPopupControllerCallbacks()
-        
-        // Tools controller callbacks
-        setupToolsControllerCallbacks()
-        
-        // Pagination controller callbacks
-        setupPaginationControllerCallbacks()
-        
-        // Import/Export controller callbacks
-        setupImportExportControllerCallbacks()
-        
-        // Split mode controller callbacks
-        setupSplitModeControllerCallbacks()
+        // Pagination button listeners
+        setupPaginationListeners()
         
         // Whiteboard listeners
         setupWhiteboardListeners()
-        
-        // Zoom button
-        btnPinchMode.setOnClickListener { 
-            popupController.showZoomPopup(btnPinchMode)
-        }
     }
     
     /**
      * Setup tool button listeners
      */
     private fun setupToolListeners() {
-        toolsController.getPenButton().setOnClickListener {
-            toolsController.togglePenSelectionMode()
+        btnPen.setOnClickListener {
+            viewModel.togglePenSelectionMode()
         }
         
-        toolsController.getEraserButton().setOnClickListener {
-            popupController.showEraserModePopup(toolsController.getEraserButton())
+        btnEraser.setOnClickListener {
+            popupController.showEraserModePopup(btnEraser)
         }
         
-        toolsController.getTextButton().setOnClickListener {
-            toolsController.selectTool(DrawingTool.TEXT, toolsController.getTextButton())
+        btnText.setOnClickListener {
+            viewModel.selectTool(DrawingTool.TEXT)
         }
         
-        toolsController.getFormulaButton().setOnClickListener {
+        btnFormula.setOnClickListener {
             popupController.showFormulaPopup()
         }
         
-        toolsController.getShapesButton().setOnClickListener {
-            popupController.showShapesPopup(toolsController.getShapesButton())
+        btnShapes.setOnClickListener {
+            popupController.showShapesPopup(btnShapes)
         }
         
-        findViewById<ImageButton>(R.id.btnUndo).setOnClickListener {
-            paginationController.undoCurrentPage()
-            updateToolButtons()
+        btnUndo.setOnClickListener {
+            whiteboardView.undo()
+            saveCurrentPageToViewModel()
+            updateUndoRedoState()
         }
         
-        findViewById<ImageButton>(R.id.btnRedo).setOnClickListener {
-            paginationController.redoCurrentPage()
-                updateToolButtons()
-            }
-        
-        findViewById<ImageButton>(R.id.btnClear).setOnClickListener {
-            toolsController.showClearConfirmDialog()
+        btnRedo.setOnClickListener {
+            whiteboardView.redo()
+            saveCurrentPageToViewModel()
+            updateUndoRedoState()
         }
         
-        findViewById<ImageButton>(R.id.btnModeToggle).setOnClickListener {
-            toolsController.toggleMode()
+        btnClear.setOnClickListener {
+            showClearConfirmDialog()
         }
         
-        toolsController.getColorPickerButton().setOnClickListener {
+        btnModeToggle.setOnClickListener {
+            viewModel.toggleDrawingMode()
+        }
+        
+        btnColorPicker.setOnClickListener {
             popupController.showColorPickerPopup(
-                toolsController.getColorPickerButton(),
-                toolsController.getCurrentColor()
+                btnColorPicker,
+                viewModel.currentColor.value ?: Color.BLACK
             )
         }
         
-        toolsController.getStrokeWidthButton().setOnClickListener {
+        btnStrokeWidth.setOnClickListener {
             popupController.showStrokeWidthPopup(
-                toolsController.getStrokeWidthButton(),
-                toolsController.getCurrentStrokeWidth()
+                btnStrokeWidth,
+                viewModel.currentStrokeWidth.value ?: 8f
             )
         }
         
-        toolsController.getBackgroundButton().setOnClickListener {
+        btnBackground.setOnClickListener {
             popupController.showBackgroundPatternPopup()
+        }
+    }
+    
+    /**
+     * Setup pagination button listeners
+     */
+    private fun setupPaginationListeners() {
+        btnPreviousPage.setOnClickListener {
+            saveCurrentPageToViewModel()
+            viewModel.previousPage()
+        }
+        
+        btnNextPage.setOnClickListener {
+            saveCurrentPageToViewModel()
+            viewModel.nextPageOrCreate()
+        }
+        
+        btnDeletePage.setOnClickListener {
+            showDeletePageConfirmDialog()
         }
     }
     
     /**
      * Setup popup controller callbacks
      */
-    private fun setupPopupControllerCallbacks() {
+    private fun setupPopupCallbacks() {
         popupController.onColorSelected = { color ->
-            toolsController.selectColor(color)
-            pageManager.updateSharedColor(color)
+            viewModel.selectColor(color)
         }
         
         popupController.onStrokeWidthChanged = { width ->
-            toolsController.setStrokeWidth(width)
-            pageManager.updateSharedStrokeWidth(width)
+            viewModel.setStrokeWidth(width)
         }
         
         popupController.onBackgroundPatternSelected = { pattern ->
-            toolsController.selectBackgroundPattern(pattern)
-            pageManager.updateSharedBackgroundPattern(pattern)
+            viewModel.selectBackgroundPattern(pattern)
         }
         
         popupController.onToolSelected = { tool ->
-            val button = when (tool) {
-                DrawingTool.ERASER -> toolsController.getEraserButton()
-                DrawingTool.SELECTIVE_ERASER -> toolsController.getEraserButton()
-                DrawingTool.LINE,
-                DrawingTool.CIRCLE,
-                DrawingTool.TRIANGLE,
-                DrawingTool.RECTANGLE -> toolsController.getShapesButton()
-                else -> toolsController.getPenButton()
-            }
-            toolsController.selectTool(tool, button)
+            viewModel.selectTool(tool)
         }
         
         popupController.onEraserModeSelected = { isSelective ->
-            toolsController.setSelectiveEraserMode(isSelective)
-        }
-    }
-    
-    /**
-     * Setup tools controller callbacks
-     */
-    private fun setupToolsControllerCallbacks() {
-        toolsController.onClearRequested = {
-            paginationController.clearCurrentPage()
-            updateToolButtons()
-        }
-        
-        toolsController.onColorChanged = { color ->
-            pageManager.updateSharedColor(color)
-        }
-        
-        toolsController.onStrokeWidthChanged = { width ->
-            pageManager.updateSharedStrokeWidth(width)
-        }
-    }
-    
-    /**
-     * Setup pagination controller callbacks
-     */
-    private fun setupPaginationControllerCallbacks() {
-        paginationController.onPageChanged = {
-            // Update shared settings when page changes
-            whiteboardView.setColor(pageManager.sharedColor)
-            whiteboardView.setStrokeWidth(pageManager.sharedStrokeWidth)
-            toolsController.selectColor(pageManager.sharedColor)
-            toolsController.setStrokeWidth(pageManager.sharedStrokeWidth)
-            updateToolButtons()
-        }
-    }
-    
-    /**
-     * Setup import/export controller callbacks
-     */
-    private fun setupImportExportControllerCallbacks() {
-        importExportController.onPageSaveRequired = {
-            paginationController.saveCurrentPageFromWhiteboard()
-        }
-        
-        importExportController.getPageManager = {
-            pageManager
-        }
-        
-        importExportController.onImportSuccess = {
-            paginationController.updatePaginationUI()
-            paginationController.loadCurrentPageToWhiteboard()
-            updateToolButtons()
-        }
-    }
-    
-    /**
-     * Setup split mode controller callbacks
-     */
-    private fun setupSplitModeControllerCallbacks() {
-        splitModeController.onSplitModeChanged = { enabled ->
-            if (enabled) {
-                popupController.dismissZoomPopup()
-            }
+            viewModel.setSelectiveEraserMode(isSelective)
         }
     }
     
@@ -336,24 +302,445 @@ class WhiteboardActivity : AppCompatActivity() {
     private fun setupWhiteboardListeners() {
         whiteboardView.setOnDrawingChangeListener(object : OnDrawingChangeListener {
             override fun onDrawingChanged() {
-                paginationController.saveCurrentPageFromWhiteboard()
-        updateToolButtons()
-    }
+                saveCurrentPageToViewModel()
+                updateUndoRedoState()
+            }
         })
         
         whiteboardView.setOnTextInputListener(object : OnTextInputListener {
             override fun onTextInputRequested(x: Float, y: Float) {
-                toolsController.showTextInputDialog(x, y)
+                viewModel.requestTextInput(x, y)
             }
         })
     }
     
     /**
-     * Update tool button states
+     * Observe ViewModel LiveData
+     * This is the core of MVVM - UI reacts to state changes
      */
-    private fun updateToolButtons() {
-        val (canUndo, canRedo) = paginationController.getCurrentPageUndoRedoState()
-        toolsController.updateUndoRedoButtons(canUndo, canRedo)
+    private fun observeViewModel() {
+        // Observe tool changes
+        viewModel.currentTool.observe(this, Observer { tool ->
+            tool?.let { 
+                whiteboardView.setDrawingTool(it)
+                updateToolButtonSelection(it)
+            }
+        })
+        
+        // Observe color changes
+        viewModel.currentColor.observe(this, Observer { color ->
+            color?.let {
+                whiteboardView.setColor(it)
+                btnColorPicker.backgroundTintList = android.content.res.ColorStateList.valueOf(it)
+            }
+        })
+        
+        // Observe stroke width changes
+        viewModel.currentStrokeWidth.observe(this, Observer { width ->
+            width?.let { whiteboardView.setStrokeWidth(it) }
+        })
+        
+        // Observe drawing mode
+        viewModel.isDrawingMode.observe(this, Observer { isDrawing ->
+            isDrawing?.let {
+                whiteboardView.setDrawingMode(it)
+                btnModeToggle.isSelected = !it
+            }
+        })
+        
+        // Observe pen selection mode
+        viewModel.isPenInSelectionMode.observe(this, Observer { isSelection ->
+            val iconRes = if (isSelection == true) R.drawable.ic_hand else R.drawable.ic_pen
+            btnPen.setImageResource(iconRes)
+        })
+        
+        // Observe undo/redo state
+        viewModel.canUndo.observe(this, Observer { canUndo ->
+            btnUndo.isEnabled = canUndo == true
+            btnUndo.alpha = if (canUndo == true) 1.0f else 0.5f
+        })
+        
+        viewModel.canRedo.observe(this, Observer { canRedo ->
+            btnRedo.isEnabled = canRedo == true
+            btnRedo.alpha = if (canRedo == true) 1.0f else 0.5f
+        })
+        
+        // Observe pagination state
+        viewModel.currentPageNumber.observe(this, Observer { pageNum ->
+            updatePageIndicator()
+        })
+        
+        viewModel.totalPages.observe(this, Observer { total ->
+            updatePageIndicator()
+        })
+        
+        viewModel.canGoToPreviousPage.observe(this, Observer { canGoPrev ->
+            btnPreviousPage.isEnabled = canGoPrev == true
+            btnPreviousPage.alpha = if (canGoPrev == true) 1.0f else 0.5f
+        })
+        
+        viewModel.canGoToNextPage.observe(this, Observer { canGoNext ->
+            updateNextPageButton()
+        })
+        
+        viewModel.canCreateNewPage.observe(this, Observer { canCreate ->
+            updateNextPageButton()
+        })
+        
+        viewModel.canDeletePage.observe(this, Observer { canDelete ->
+            btnDeletePage.isEnabled = canDelete == true
+            btnDeletePage.alpha = if (canDelete == true) 1.0f else 0.5f
+        })
+        
+        // Observe background pattern
+        viewModel.backgroundPattern.observe(this, Observer { pattern ->
+            pattern?.let { whiteboardView.setBackgroundPattern(it) }
+        })
+        
+        // Observe page change events
+        viewModel.pageChangeEvent.observe(this, Observer { changed ->
+            if (changed == true) {
+                loadCurrentPageFromViewModel()
+                updateUndoRedoState()
+                viewModel.clearPageChangeEvent()
+            }
+        })
+        
+        // Observe one-time events
+        viewModel.showTextInputDialog.observe(this, Observer { coords ->
+            coords?.let {
+                showTextInputDialog(it.first, it.second)
+                viewModel.clearTextInputDialogEvent()
+            }
+        })
+        
+        viewModel.showToastMessage.observe(this, Observer { messageKey ->
+            messageKey?.let {
+                showToastByKey(it)
+                viewModel.clearToastMessageEvent()
+            }
+        })
+        
+        viewModel.errorMessage.observe(this, Observer { error ->
+            error?.let {
+                Toast.makeText(this, it, Toast.LENGTH_LONG).show()
+                viewModel.clearErrorMessageEvent()
+            }
+        })
+        
+        viewModel.exportSuccess.observe(this, Observer { message ->
+            message?.let {
+                showExportSuccessMessage(it)
+                viewModel.clearExportSuccessEvent()
+            }
+        })
+    }
+    
+    /**
+     * Update tool button selection state
+     */
+    private fun updateToolButtonSelection(tool: DrawingTool) {
+        btnPen.isSelected = false
+        btnEraser.isSelected = false
+        btnText.isSelected = false
+        btnShapes.isSelected = false
+        
+        when (tool) {
+            DrawingTool.PEN, DrawingTool.SELECTION -> btnPen.isSelected = true
+            DrawingTool.ERASER, DrawingTool.SELECTIVE_ERASER -> btnEraser.isSelected = true
+            DrawingTool.TEXT -> btnText.isSelected = true
+            DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> btnShapes.isSelected = true
+        }
+    }
+    
+    /**
+     * Update page indicator text
+     */
+    private fun updatePageIndicator() {
+        val pageNum = viewModel.currentPageNumber.value ?: 1
+        val total = viewModel.totalPages.value ?: 1
+        tvPageIndicator.text = getString(R.string.page_indicator_format, pageNum, total)
+    }
+    
+    /**
+     * Update next page button icon and state
+     */
+    private fun updateNextPageButton() {
+        val canGoNext = viewModel.canGoToNextPage.value ?: false
+        val canCreate = viewModel.canCreateNewPage.value ?: false
+        
+        if (canGoNext) {
+            btnNextPage.setImageResource(R.drawable.ic_arrow_forward)
+            btnNextPage.contentDescription = getString(R.string.desc_next_page)
+            btnNextPage.alpha = 1.0f
+        } else if (canCreate) {
+            btnNextPage.setImageResource(R.drawable.ic_add)
+            btnNextPage.contentDescription = getString(R.string.desc_add_page)
+            btnNextPage.alpha = 1.0f
+        } else {
+            btnNextPage.setImageResource(R.drawable.ic_add)
+            btnNextPage.contentDescription = getString(R.string.desc_add_page)
+            btnNextPage.alpha = 0.5f
+        }
+    }
+    
+    /**
+     * Update undo/redo state from whiteboard
+     */
+    private fun updateUndoRedoState() {
+        val currentPage = viewModel.getCurrentPage()
+        viewModel.updateUndoRedoState(currentPage.canUndo(), currentPage.canRedo())
+    }
+    
+    /**
+     * Save current page data to ViewModel
+     */
+    private fun saveCurrentPageToViewModel() {
+        val currentPage = viewModel.getCurrentPage()
+        currentPage.paths.clear()
+        currentPage.paths.addAll(whiteboardView.getAllPaths())
+        
+        currentPage.textObjects.clear()
+        currentPage.textObjects.addAll(whiteboardView.getAllTextObjects())
+        
+        currentPage.shapeObjects.clear()
+        currentPage.shapeObjects.addAll(whiteboardView.getAllShapeObjects())
+        
+        currentPage.imageObjects.clear()
+        currentPage.imageObjects.addAll(whiteboardView.getAllImageObjects())
+        
+        currentPage.backgroundPattern = whiteboardView.getBackgroundPattern()
+    }
+    
+    /**
+     * Load current page data from ViewModel
+     */
+    private fun loadCurrentPageFromViewModel() {
+        val currentPage = viewModel.getCurrentPage()
+        whiteboardView.loadPageData(
+            currentPage.paths,
+            currentPage.textObjects,
+            currentPage.shapeObjects,
+            currentPage.imageObjects
+        )
+        whiteboardView.setBackgroundPattern(currentPage.backgroundPattern)
+    }
+    
+    /**
+     * Show text input dialog
+     */
+    private fun showTextInputDialog(x: Float, y: Float) {
+        val editText = EditText(this)
+        editText.hint = getString(R.string.enter_text)
+        editText.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+        
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.add_text))
+            .setView(editText)
+            .setPositiveButton(getString(R.string.ok)) { _, _ ->
+                val text = editText.text.toString().trim()
+                if (text.isNotEmpty()) {
+                    whiteboardView.addText(text, x, y)
+                }
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+        
+        // Show keyboard automatically
+        editText.requestFocus()
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+    }
+    
+    /**
+     * Show clear confirmation dialog
+     */
+    private fun showClearConfirmDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.clear_all))
+            .setMessage(getString(R.string.clear_confirm))
+            .setPositiveButton(getString(R.string.yes)) { _, _ ->
+                viewModel.clearCurrentPage()
+                loadCurrentPageFromViewModel()
+                updateUndoRedoState()
+            }
+            .setNegativeButton(getString(R.string.no), null)
+            .show()
+    }
+    
+    /**
+     * Show delete page confirmation dialog
+     */
+    private fun showDeletePageConfirmDialog() {
+        if (viewModel.totalPages.value ?: 1 <= 1) {
+            Toast.makeText(this, getString(R.string.cannot_delete_last_page), Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.delete_page_title))
+            .setMessage(getString(R.string.delete_page_confirm))
+            .setPositiveButton(getString(R.string.yes)) { _, _ ->
+                viewModel.deleteCurrentPage()
+                loadCurrentPageFromViewModel()
+                updateUndoRedoState()
+            }
+            .setNegativeButton(getString(R.string.no), null)
+            .show()
+    }
+    
+    /**
+     * Show export options dialog
+     */
+    private fun showExportOptionsDialog() {
+        saveCurrentPageToViewModel()
+        
+        val options = arrayOf(
+            getString(R.string.export_png),
+            getString(R.string.export_moodle_format)
+        )
+        
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.export_title))
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showPNGExportOptions()
+                    1 -> viewModel.exportToMoodleFormat(whiteboardView)
+                }
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+    
+    /**
+     * Show PNG export options (current page or all pages)
+     */
+    private fun showPNGExportOptions() {
+        if (viewModel.totalPages.value ?: 1 > 1) {
+            val options = arrayOf(
+                getString(R.string.export_current_page),
+                getString(R.string.export_all_pages)
+            )
+            
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.export_png))
+                .setItems(options) { _, which ->
+                    when (which) {
+                        0 -> viewModel.exportCurrentPageToPNG(whiteboardView)
+                        1 -> viewModel.exportAllPagesToPNG(whiteboardView)
+                    }
+                }
+                .setNegativeButton(getString(R.string.cancel), null)
+                .show()
+        } else {
+            viewModel.exportCurrentPageToPNG(whiteboardView)
+        }
+    }
+    
+    /**
+     * Show import options dialog
+     */
+    private fun showImportOptionsDialog() {
+        val options = arrayOf(
+            getString(R.string.import_image),
+            getString(R.string.import_moodle_file)
+        )
+        
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.import_title))
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> openImagePicker()
+                    1 -> showImportMoodleConfirmDialog()
+                }
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+    
+    /**
+     * Open image picker
+     */
+    private fun openImagePicker() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "image/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        
+        try {
+            startActivityForResult(
+                Intent.createChooser(intent, getString(R.string.select_image_file)),
+                REQUEST_CODE_IMPORT_IMAGE
+            )
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.no_file_manager), Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    /**
+     * Show import Moodle file confirmation dialog
+     */
+    private fun showImportMoodleConfirmDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.import_moodle_file))
+            .setMessage(getString(R.string.import_will_clear_board))
+            .setPositiveButton(getString(R.string.continue_import)) { _, _ ->
+                openMoodleFilePicker()
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+    
+    /**
+     * Open Moodle file picker
+     */
+    private fun openMoodleFilePicker() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "*/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/octet-stream", "text/plain"))
+        }
+        
+        try {
+            startActivityForResult(
+                Intent.createChooser(intent, getString(R.string.select_moodle_file)),
+                REQUEST_CODE_IMPORT_MOODLE
+            )
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.no_file_manager), Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    /**
+     * Show toast message by resource key
+     */
+    private fun showToastByKey(key: String) {
+        val stringRes = when (key) {
+            "selection_mode" -> R.string.selection_mode
+            "pen_mode" -> R.string.pen_mode
+            "drawing_mode" -> R.string.drawing_mode
+            "pan_mode" -> R.string.pan_mode
+            "max_pages_reached" -> {
+                Toast.makeText(this, getString(R.string.max_pages_reached, PageManager.MAX_PAGES), Toast.LENGTH_SHORT).show()
+                return
+            }
+            "cannot_delete_last_page" -> R.string.cannot_delete_last_page
+            "page_deleted" -> R.string.page_deleted
+            else -> return
+        }
+        Toast.makeText(this, getString(stringRes), Toast.LENGTH_SHORT).show()
+    }
+    
+    /**
+     * Show export success message
+     */
+    private fun showExportSuccessMessage(message: String) {
+        if (message.startsWith("exported_") && message.endsWith("_pages")) {
+            val count = message.substringAfter("exported_").substringBefore("_pages")
+            Toast.makeText(this, getString(R.string.exported_pages, count), Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, getString(R.string.export_success), Toast.LENGTH_SHORT).show()
+        }
     }
     
     /**
@@ -368,8 +755,7 @@ class WhiteboardActivity : AppCompatActivity() {
      * Open attendance screen
      */
     private fun openAttendanceScreen() {
-        val intent = Intent(this, AttendanceActivity::class.java)
-        startActivity(intent)
+        startActivity(Intent(this, AttendanceActivity::class.java))
     }
 
     /**
@@ -391,28 +777,47 @@ class WhiteboardActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        
-        // Delegate to controllers
-        if (!recordingController.handlePermissionsResult(requestCode, grantResults)) {
-            importExportController.handlePermissionsResult(requestCode, grantResults)
-        }
+        recordingController.handlePermissionsResult(requestCode, grantResults)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         
-        // Delegate to controllers
         if (!recordingController.handleActivityResult(requestCode, resultCode, data)) {
-            importExportController.handleActivityResult(requestCode, resultCode, data)
+            when (requestCode) {
+                REQUEST_CODE_IMPORT_IMAGE -> {
+                    if (resultCode == RESULT_OK && data != null) {
+                        data.data?.let { uri ->
+                            viewModel.importImage(uri, whiteboardView) {
+                                loadCurrentPageFromViewModel()
+                                updateUndoRedoState()
+                            }
+                        }
+                    }
+                }
+                REQUEST_CODE_IMPORT_MOODLE -> {
+                    if (resultCode == RESULT_OK && data != null) {
+                        data.data?.let { uri ->
+                            viewModel.importMoodleFile(uri, whiteboardView) {
+                                loadCurrentPageFromViewModel()
+                                updateUndoRedoState()
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     
     override fun onDestroy() {
         super.onDestroy()
-        
-        // Clean up all controllers
         recordingController.cleanup()
         popupController.cleanup()
         whiteboardView.cleanup()
+    }
+    
+    companion object {
+        private const val REQUEST_CODE_IMPORT_IMAGE = 2001
+        private const val REQUEST_CODE_IMPORT_MOODLE = 2002
     }
 }

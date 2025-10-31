@@ -47,7 +47,7 @@
             android:focusable="true"
             android:layout_margin="4dp">
 
-            <com.example.moodle.ui.whiteboard.BackgroundPreviewView
+            <com.example.moodle.ui.whiteboard.views.BackgroundPreviewView
                 android:id="@+id/previewGridSmall"
                 android:layout_width="60dp"
                 android:layout_height="60dp"
@@ -67,7 +67,7 @@
             android:focusable="true"
             android:layout_margin="4dp">
 
-            <com.example.moodle.ui.whiteboard.BackgroundPreviewView
+            <com.example.moodle.ui.whiteboard.views.BackgroundPreviewView
                 android:id="@+id/previewGridLarge"
                 android:layout_width="60dp"
                 android:layout_height="60dp"
@@ -87,7 +87,7 @@
             android:focusable="true"
             android:layout_margin="4dp">
 
-            <com.example.moodle.ui.whiteboard.BackgroundPreviewView
+            <com.example.moodle.ui.whiteboard.views.BackgroundPreviewView
                 android:id="@+id/previewLinesHorizontal"
                 android:layout_width="60dp"
                 android:layout_height="60dp"
@@ -107,7 +107,7 @@
             android:focusable="true"
             android:layout_margin="4dp">
 
-            <com.example.moodle.ui.whiteboard.BackgroundPreviewView
+            <com.example.moodle.ui.whiteboard.views.BackgroundPreviewView
                 android:id="@+id/previewLinesVertical"
                 android:layout_width="60dp"
                 android:layout_height="60dp"
@@ -127,7 +127,7 @@
             android:focusable="true"
             android:layout_margin="4dp">
 
-            <com.example.moodle.ui.whiteboard.BackgroundPreviewView
+            <com.example.moodle.ui.whiteboard.views.BackgroundPreviewView
                 android:id="@+id/previewLinesBoth"
                 android:layout_width="60dp"
                 android:layout_height="60dp"
@@ -147,7 +147,7 @@
             android:focusable="true"
             android:layout_margin="4dp">
 
-            <com.example.moodle.ui.whiteboard.BackgroundPreviewView
+            <com.example.moodle.ui.whiteboard.views.BackgroundPreviewView
                 android:id="@+id/previewDotGrid"
                 android:layout_width="60dp"
                 android:layout_height="60dp"
@@ -167,7 +167,7 @@
             android:focusable="true"
             android:layout_margin="4dp">
 
-            <com.example.moodle.ui.whiteboard.BackgroundPreviewView
+            <com.example.moodle.ui.whiteboard.views.BackgroundPreviewView
                 android:id="@+id/previewGraphPaper"
                 android:layout_width="60dp"
                 android:layout_height="60dp"

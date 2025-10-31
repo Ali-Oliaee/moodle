@@ -1,4 +1,10 @@
-package com.example.moodle.ui.whiteboard
+package com.example.moodle.ui.whiteboard.controllers
+import com.example.moodle.ui.whiteboard.models.*
+import com.example.moodle.ui.whiteboard.views.*
+
+import com.example.moodle.ui.whiteboard.models.BackgroundPattern
+import com.example.moodle.ui.whiteboard.models.DrawingTool
+import com.example.moodle.ui.whiteboard.views.WhiteboardView
 
 import android.content.Context
 import android.graphics.Color

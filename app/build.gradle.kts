@@ -73,11 +73,10 @@ dependencies {
     implementation("android.arch.lifecycle:runtime:1.1.1")
     implementation("android.arch.lifecycle:viewmodel:1.1.1")
     implementation("android.arch.lifecycle:livedata:1.1.1")
+    implementation("android.arch.lifecycle:extensions:1.1.1")
     // If you use @OnLifecycleEvent or need generated code:
     kapt("android.arch.lifecycle:compiler:1.1.1")
 
-    // NOTE: Remove AndroidX KTX libs (core-ktx, activity-ktx, fragment-ktx) – not available pre-AndroidX
-    // NOTE: Replace DataStore (AndroidX) with SharedPreferences on SDK 26
 
     // Networking (unchanged)
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

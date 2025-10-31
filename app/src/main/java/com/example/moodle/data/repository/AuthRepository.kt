@@ -31,7 +31,7 @@ class AuthRepository(
                         Result.failure(Exception("Empty response from server"))
                     }
                     !body.token.isNullOrBlank() -> {
-                        prefs.saveAuthToken(body.token!!)
+                        prefs.saveAuthToken(body.token)
                         prefs.saveUsername(username)
                         
                         Result.success(body)
@@ -46,7 +46,7 @@ class AuthRepository(
                     }
                 }
             } else {
-                val errorBody = response.errorBody()?.string()
+                // val errorBody = response.errorBody()?.string()
                 val errorMsg = "HTTP ${response.code()}: ${response.message()}"
                 Result.failure(Exception(errorMsg))
             }

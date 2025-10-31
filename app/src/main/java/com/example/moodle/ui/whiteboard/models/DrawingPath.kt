@@ -1,4 +1,4 @@
-package com.example.moodle.ui.whiteboard
+package com.example.moodle.ui.whiteboard.models
 
 import android.graphics.Paint
 import android.graphics.Path

@@ -1,4 +1,4 @@
-package com.example.moodle.ui.whiteboard
+package com.example.moodle.ui.whiteboard.controllers
 
 import android.content.Context
 import android.view.MotionEvent
