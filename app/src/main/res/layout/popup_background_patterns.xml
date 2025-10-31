@@ -1,177 +1,252 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="320dp"
-    android:layout_height="320dp"
+    android:layout_width="340dp"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/popup_background"
     android:padding="10dp">
+    
+    <!-- Title for Background Colors -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/background_colors"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:paddingBottom="8dp"
+        android:gravity="right" />
+    
+    <!-- Grid Layout for Background Colors -->
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:columnCount="6"
+        android:rowCount="1"
+        android:alignmentMode="alignBounds"
+        android:useDefaultMargins="true"
+        android:gravity="right"
+        android:layout_gravity="right"
+        android:layout_marginBottom="16dp">
+
+        <!-- White Color -->
+        <View
+            android:id="@+id/backgroundColorWhite"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_color_white"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_margin="4dp" />
+
+        <!-- Light Gray Color -->
+        <View
+            android:id="@+id/backgroundColorLightGray"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_color_light_gray"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_margin="4dp" />
+
+        <!-- Light Blue Color -->
+        <View
+            android:id="@+id/backgroundColorLightBlue"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_color_light_blue"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_margin="4dp" />
+
+        <!-- Light Green Color -->
+        <View
+            android:id="@+id/backgroundColorLightGreen"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_color_light_green"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_margin="4dp" />
+
+        <!-- Light Yellow Color -->
+        <View
+            android:id="@+id/backgroundColorLightYellow"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_color_light_yellow"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_margin="4dp" />
+
+        <!-- Light Pink Color -->
+        <View
+            android:id="@+id/backgroundColorLightPink"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_color_light_pink"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_margin="4dp" />
+
+    </GridLayout>
+    
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E0E0E0"
+        android:layout_marginBottom="12dp" />
+    
+    <!-- Title for Background Patterns -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/background_patterns"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:paddingBottom="8dp"
+        android:gravity="right" />
   
     <!-- Grid Layout for Background Patterns -->
     <GridLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:columnCount="4"
-        android:rowCount="4"
+        android:columnCount="6"
+        android:rowCount="1"
         android:alignmentMode="alignBounds"
-        android:useDefaultMargins="true">
+        android:useDefaultMargins="true"
+        android:gravity="right"
+        android:layout_gravity="right"
+        android:layout_marginBottom="16dp">
 
         <!-- Plain Background -->
         <FrameLayout
             android:id="@+id/backgroundPlain"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_columnWeight="1"
-            android:layout_rowWeight="1"
-            android:background="@drawable/drawer_item_background"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_background"
             android:clickable="true"
             android:focusable="true"
-            android:layout_margin="4dp">
-
-            <View
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_gravity="center"
-                android:background="#FFFFFF" />
-
-        </FrameLayout>
+            android:layout_margin="4dp" />
 
         <!-- Grid Small -->
         <FrameLayout
             android:id="@+id/backgroundGridSmall"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_columnWeight="1"
-            android:layout_rowWeight="1"
-            android:background="@drawable/drawer_item_background"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_background"
             android:clickable="true"
             android:focusable="true"
             android:layout_margin="4dp">
 
             <com.example.moodle.ui.whiteboard.views.BackgroundPreviewView
                 android:id="@+id/previewGridSmall"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_gravity="center" />
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
 
         </FrameLayout>
 
         <!-- Grid Large -->
         <FrameLayout
             android:id="@+id/backgroundGridLarge"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_columnWeight="1"
-            android:layout_rowWeight="1"
-            android:background="@drawable/drawer_item_background"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_background"
             android:clickable="true"
             android:focusable="true"
             android:layout_margin="4dp">
 
             <com.example.moodle.ui.whiteboard.views.BackgroundPreviewView
                 android:id="@+id/previewGridLarge"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_gravity="center" />
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
 
         </FrameLayout>
 
         <!-- Lines Horizontal -->
         <FrameLayout
             android:id="@+id/backgroundLinesHorizontal"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_columnWeight="1"
-            android:layout_rowWeight="1"
-            android:background="@drawable/drawer_item_background"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_background"
             android:clickable="true"
             android:focusable="true"
             android:layout_margin="4dp">
 
             <com.example.moodle.ui.whiteboard.views.BackgroundPreviewView
                 android:id="@+id/previewLinesHorizontal"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_gravity="center" />
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
 
         </FrameLayout>
 
         <!-- Lines Vertical -->
         <FrameLayout
             android:id="@+id/backgroundLinesVertical"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_columnWeight="1"
-            android:layout_rowWeight="1"
-            android:background="@drawable/drawer_item_background"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_background"
             android:clickable="true"
             android:focusable="true"
             android:layout_margin="4dp">
 
             <com.example.moodle.ui.whiteboard.views.BackgroundPreviewView
                 android:id="@+id/previewLinesVertical"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_gravity="center" />
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
 
         </FrameLayout>
 
         <!-- Lines Both -->
         <FrameLayout
             android:id="@+id/backgroundLinesBoth"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_columnWeight="1"
-            android:layout_rowWeight="1"
-            android:background="@drawable/drawer_item_background"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_background"
             android:clickable="true"
             android:focusable="true"
             android:layout_margin="4dp">
 
             <com.example.moodle.ui.whiteboard.views.BackgroundPreviewView
                 android:id="@+id/previewLinesBoth"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_gravity="center" />
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
 
         </FrameLayout>
 
         <!-- Dot Grid -->
         <FrameLayout
             android:id="@+id/backgroundDotGrid"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_columnWeight="1"
-            android:layout_rowWeight="1"
-            android:background="@drawable/drawer_item_background"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_background"
             android:clickable="true"
             android:focusable="true"
             android:layout_margin="4dp">
 
             <com.example.moodle.ui.whiteboard.views.BackgroundPreviewView
                 android:id="@+id/previewDotGrid"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_gravity="center" />
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
 
         </FrameLayout>
 
         <!-- Graph Paper -->
         <FrameLayout
             android:id="@+id/backgroundGraphPaper"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_columnWeight="1"
-            android:layout_rowWeight="1"
-            android:background="@drawable/drawer_item_background"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_background"
             android:clickable="true"
             android:focusable="true"
             android:layout_margin="4dp">
 
             <com.example.moodle.ui.whiteboard.views.BackgroundPreviewView
                 android:id="@+id/previewGraphPaper"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_gravity="center" />
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
 
         </FrameLayout>
 

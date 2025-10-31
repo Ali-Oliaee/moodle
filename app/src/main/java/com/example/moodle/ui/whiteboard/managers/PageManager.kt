@@ -29,6 +29,8 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
         private set
     var sharedBackgroundPattern: BackgroundPattern = BackgroundPattern.PLAIN
         private set
+    var sharedBackgroundColor: BackgroundColor = BackgroundColor.WHITE
+        private set
     
     // Listener for page changes
     interface OnPageChangeListener {
@@ -49,8 +51,8 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
     
     fun getCurrentPage(): PageData {
         return pages[currentPageId] ?: run {
-            // If current page doesn't exist, create it
-            val newPage = PageData(currentPageId, backgroundPattern = sharedBackgroundPattern)
+            // If current page doesn't exist, create it with default background
+            val newPage = PageData(currentPageId)
             pages[currentPageId] = newPage
             newPage
         }
@@ -104,7 +106,7 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
         if (!canCreateNewPage()) return false
         
         val newPageId = nextPageId++
-        val newPage = PageData(newPageId, backgroundPattern = sharedBackgroundPattern)
+        val newPage = PageData(newPageId)
         pages[newPageId] = newPage
         currentPageId = newPageId
         
@@ -141,6 +143,15 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
         }
     }
     
+    fun updateSharedBackgroundColor(color: BackgroundColor) {
+        sharedBackgroundColor = color
+        userPreferences?.saveSharedBackgroundColor(color.id)
+        // Update background color for all existing pages
+        pages.values.forEach { page ->
+            page.backgroundColor = color
+        }
+    }
+    
     fun deletePage(pageId: Int): Boolean {
         if (pages.size <= 1 || !pages.containsKey(pageId)) return false
         
@@ -166,8 +177,8 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
         pages.clear()
         currentPageId = DEFAULT_PAGE_ID
         nextPageId = DEFAULT_PAGE_ID + 1
-        // Create default first page
-        pages[DEFAULT_PAGE_ID] = PageData(DEFAULT_PAGE_ID, backgroundPattern = sharedBackgroundPattern)
+        // Create default first page with default background
+        pages[DEFAULT_PAGE_ID] = PageData(DEFAULT_PAGE_ID)
         saveState()
         pageChangeListener?.onPageChanged(currentPageId, getTotalPages())
     }
@@ -201,6 +212,8 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
             sharedStrokeWidth = userPreferences.getSharedStrokeWidth()
             val savedPatternId = userPreferences.getSharedBackgroundPattern()
             sharedBackgroundPattern = BackgroundPattern.fromId(savedPatternId)
+            val savedColorId = userPreferences.getSharedBackgroundColor()
+            sharedBackgroundColor = BackgroundColor.fromId(savedColorId)
             
             // Load page state
             currentPageId = userPreferences.getCurrentPageId()
@@ -208,7 +221,8 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
             
             val savedPageIds = userPreferences.getPageIds().map { it.toInt() }.toSet()
             savedPageIds.forEach { pageId ->
-                pages[pageId] = PageData(pageId, backgroundPattern = sharedBackgroundPattern)
+                // Create pages with default background (per-page settings)
+                pages[pageId] = PageData(pageId)
             }
         } else {
             // Create default first page
@@ -224,6 +238,7 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
             prefs.saveSharedColor(sharedColor)
             prefs.saveSharedStrokeWidth(sharedStrokeWidth)
             prefs.saveSharedBackgroundPattern(sharedBackgroundPattern.id)
+            prefs.saveSharedBackgroundColor(sharedBackgroundColor.id)
         }
     }
     

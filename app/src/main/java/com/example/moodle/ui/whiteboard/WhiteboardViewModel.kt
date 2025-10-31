@@ -10,6 +10,7 @@ import com.example.moodle.data.datastore.UserPreferences
 import com.example.moodle.ui.whiteboard.managers.ExportManager
 import com.example.moodle.ui.whiteboard.managers.ImportManager
 import com.example.moodle.ui.whiteboard.managers.PageManager
+import com.example.moodle.ui.whiteboard.models.BackgroundColor
 import com.example.moodle.ui.whiteboard.models.BackgroundPattern
 import com.example.moodle.ui.whiteboard.models.DrawingTool
 import com.example.moodle.ui.whiteboard.models.PageData
@@ -79,6 +80,9 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
     private val _backgroundPattern = MutableLiveData<BackgroundPattern>()
     val backgroundPattern: LiveData<BackgroundPattern> = _backgroundPattern
     
+    private val _backgroundColor = MutableLiveData<BackgroundColor>()
+    val backgroundColor: LiveData<BackgroundColor> = _backgroundColor
+    
     // ========== Events (one-time actions) ==========
     
     private val _showTextInputDialog = MutableLiveData<Pair<Float, Float>?>()
@@ -119,9 +123,10 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
         _canUndo.value = false
         _canRedo.value = false
         
-        // Load saved background pattern
-        val savedPatternId = userPreferences.getBackgroundPattern()
-        _backgroundPattern.value = BackgroundPattern.fromId(savedPatternId)
+        // Load current page's background pattern and color
+        val currentPage = pageManager.getCurrentPage()
+        _backgroundPattern.value = currentPage.backgroundPattern
+        _backgroundColor.value = currentPage.backgroundColor
         
         // Initialize pagination state
         updatePaginationState()
@@ -135,11 +140,19 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
             override fun onPageChanged(pageId: Int, totalPages: Int) {
                 updatePaginationState()
                 loadSharedSettings()
+                // Load the current page's background settings
+                val currentPage = pageManager.getCurrentPage()
+                _backgroundPattern.value = currentPage.backgroundPattern
+                _backgroundColor.value = currentPage.backgroundColor
                 _pageChangeEvent.value = true
             }
             
             override fun onPageCreated(pageId: Int, totalPages: Int) {
                 updatePaginationState()
+                // Load the new page's background settings
+                val currentPage = pageManager.getCurrentPage()
+                _backgroundPattern.value = currentPage.backgroundPattern
+                _backgroundColor.value = currentPage.backgroundColor
                 _pageChangeEvent.value = true
             }
         })
@@ -224,12 +237,21 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
     }
     
     /**
-     * Select background pattern
+     * Select background pattern for current page
      */
     fun selectBackgroundPattern(pattern: BackgroundPattern) {
         _backgroundPattern.value = pattern
-        userPreferences.saveBackgroundPattern(pattern.id)
-        pageManager.updateSharedBackgroundPattern(pattern)
+        val currentPage = pageManager.getCurrentPage()
+        currentPage.backgroundPattern = pattern
+    }
+    
+    /**
+     * Select background color for current page
+     */
+    fun selectBackgroundColor(color: BackgroundColor) {
+        _backgroundColor.value = color
+        val currentPage = pageManager.getCurrentPage()
+        currentPage.backgroundColor = color
     }
     
     /**

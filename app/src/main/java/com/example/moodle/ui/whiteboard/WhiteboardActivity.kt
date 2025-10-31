@@ -20,6 +20,8 @@ import com.example.moodle.ui.whiteboard.controllers.SplitModeController
 import com.example.moodle.ui.whiteboard.listeners.OnDrawingChangeListener
 import com.example.moodle.ui.whiteboard.listeners.OnTextInputListener
 import com.example.moodle.ui.whiteboard.managers.PageManager
+import com.example.moodle.ui.whiteboard.models.BackgroundColor
+import com.example.moodle.ui.whiteboard.models.BackgroundPattern
 import com.example.moodle.ui.whiteboard.models.DrawingTool
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
 import com.example.moodle.utils.FontHelper
@@ -164,6 +166,9 @@ class WhiteboardActivity : AppCompatActivity() {
             if (enabled) {
                 popupController.dismissZoomPopup()
             }
+            // Disable background button in split mode, enable in normal mode
+            btnBackground.isEnabled = !enabled
+            btnBackground.alpha = if (enabled) 0.5f else 1.0f
         }
     }
     
@@ -287,6 +292,10 @@ class WhiteboardActivity : AppCompatActivity() {
             viewModel.selectBackgroundPattern(pattern)
         }
         
+        popupController.onBackgroundColorSelected = { color ->
+            viewModel.selectBackgroundColor(color)
+        }
+        
         popupController.onToolSelected = { tool ->
             viewModel.selectTool(tool)
         }
@@ -395,6 +404,11 @@ class WhiteboardActivity : AppCompatActivity() {
         // Observe background pattern
         viewModel.backgroundPattern.observe(this, Observer { pattern ->
             pattern?.let { whiteboardView.setBackgroundPattern(it) }
+        })
+        
+        // Observe background color
+        viewModel.backgroundColor.observe(this, Observer { color ->
+            color?.let { whiteboardView.setBackgroundColor(it) }
         })
         
         // Observe page change events

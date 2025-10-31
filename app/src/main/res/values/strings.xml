@@ -145,6 +145,15 @@
     <string name="background_graph_paper">کاغذ نموداری</string>
     <string name="desc_background_button">تغییر پس‌زمینه</string>
     
+    <!-- Background Colors -->
+    <string name="background_colors">رنگ‌های پس‌زمینه</string>
+    <string name="background_color_white">سفید</string>
+    <string name="background_color_light_gray">خاکستری روشن</string>
+    <string name="background_color_light_blue">آبی روشن</string>
+    <string name="background_color_light_green">سبز روشن</string>
+    <string name="background_color_light_yellow">زرد روشن</string>
+    <string name="background_color_light_pink">صورتی روشن</string>
+    
     <!-- Pagination -->
     <string name="desc_previous_page">صفحه قبلی</string>
     <string name="desc_next_page">صفحه بعدی</string>

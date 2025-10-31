@@ -211,6 +211,15 @@ class WhiteboardView @JvmOverloads constructor(
     
     fun getBackgroundPattern(): BackgroundPattern = renderManager.getBackgroundPattern()
     
+    // Background color
+    fun setBackgroundColor(color: BackgroundColor) {
+        renderManager.setBackgroundColor(color)
+        renderManager.redrawCanvas()
+        invalidate()
+    }
+    
+    fun getBackgroundColor(): BackgroundColor = renderManager.getBackgroundColor()
+    
     // Zoom controls
     fun setZoomLevel(zoomLevel: Float) {
         zoomPanController.setZoomLevel(zoomLevel)

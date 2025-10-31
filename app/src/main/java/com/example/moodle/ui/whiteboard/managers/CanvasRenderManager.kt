@@ -18,8 +18,9 @@ class CanvasRenderManager(
     private val bitmapManager: BitmapManager,
     private val sectionManager: SectionManager
 ) {
-    // Background pattern
+    // Background pattern and color
     private var currentBackgroundPattern = BackgroundPattern.PLAIN
+    private var currentBackgroundColor = BackgroundColor.WHITE
     
     // Selection paint for selective eraser
     private val selectionPaint = Paint().apply {
@@ -101,6 +102,9 @@ class CanvasRenderManager(
         canvas.translate(-zoomPanController.focusX, -zoomPanController.focusY)
         canvas.scale(zoomPanController.scaleFactor, zoomPanController.scaleFactor)
         
+        // Draw background color
+        drawBackgroundColor(canvas)
+        
         // Draw background pattern
         drawBackgroundPattern(canvas)
         
@@ -150,6 +154,20 @@ class CanvasRenderManager(
         }
         
         canvas.restore()
+    }
+    
+    private fun drawBackgroundColor(canvas: Canvas) {
+        val bitmapWidth = bitmapManager.drawingBitmap?.width?.toFloat() ?: 0f
+        val bitmapHeight = bitmapManager.drawingBitmap?.height?.toFloat() ?: 0f
+        
+        if (bitmapWidth == 0f || bitmapHeight == 0f) return
+        
+        val backgroundPaint = Paint().apply {
+            color = currentBackgroundColor.colorValue
+            style = Paint.Style.FILL
+        }
+        
+        canvas.drawRect(0f, 0f, bitmapWidth, bitmapHeight, backgroundPaint)
     }
     
     fun drawBackgroundPattern(canvas: Canvas) {
@@ -412,9 +430,16 @@ class CanvasRenderManager(
     
     fun getBackgroundPattern(): BackgroundPattern = currentBackgroundPattern
     
+    fun setBackgroundColor(color: BackgroundColor) {
+        currentBackgroundColor = color
+    }
+    
+    fun getBackgroundColor(): BackgroundColor = currentBackgroundColor
+    
     fun redrawCanvas() {
         bitmapManager.drawingCanvas?.let { canvas ->
             canvas.drawColor(Color.WHITE, PorterDuff.Mode.SRC)
+            drawBackgroundColor(canvas)
             drawBackgroundPattern(canvas)
             
             for (drawingPath in stateManager.paths) {

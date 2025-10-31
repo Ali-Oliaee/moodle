@@ -40,6 +40,7 @@ class PopupController(
     var onColorSelected: ((Int) -> Unit)? = null
     var onStrokeWidthChanged: ((Float) -> Unit)? = null
     var onBackgroundPatternSelected: ((BackgroundPattern) -> Unit)? = null
+    var onBackgroundColorSelected: ((BackgroundColor) -> Unit)? = null
     var onToolSelected: ((DrawingTool) -> Unit)? = null
     var onEraserModeSelected: ((Boolean) -> Unit)? = null
     
@@ -204,6 +205,14 @@ class PopupController(
         previewDotGrid.setBackgroundPattern(BackgroundPattern.DOT_GRID)
         previewGraphPaper.setBackgroundPattern(BackgroundPattern.GRAPH_PAPER)
         
+        // Set up click listeners for background colors
+        setupBackgroundColorClickListener(popupView, R.id.backgroundColorWhite, BackgroundColor.WHITE)
+        setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightGray, BackgroundColor.LIGHT_GRAY)
+        setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightBlue, BackgroundColor.LIGHT_BLUE)
+        setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightGreen, BackgroundColor.LIGHT_GREEN)
+        setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightYellow, BackgroundColor.LIGHT_YELLOW)
+        setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightPink, BackgroundColor.LIGHT_PINK)
+        
         // Set up click listeners for all patterns
         setupBackgroundPatternClickListener(popupView, R.id.backgroundPlain, BackgroundPattern.PLAIN)
         setupBackgroundPatternClickListener(popupView, R.id.backgroundGridSmall, BackgroundPattern.GRID_SMALL)
@@ -218,12 +227,20 @@ class PopupController(
     }
     
     /**
+     * Helper to setup background color click listener
+     */
+    private fun setupBackgroundColorClickListener(popupView: View, viewId: Int, color: BackgroundColor) {
+        popupView.findViewById<View>(viewId)?.setOnClickListener {
+            onBackgroundColorSelected?.invoke(color)
+        }
+    }
+    
+    /**
      * Helper to setup background pattern click listener
      */
     private fun setupBackgroundPatternClickListener(popupView: View, viewId: Int, pattern: BackgroundPattern) {
         popupView.findViewById<FrameLayout>(viewId)?.setOnClickListener {
             onBackgroundPatternSelected?.invoke(pattern)
-            backgroundPopupWindow?.dismiss()
         }
     }
     

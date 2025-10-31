@@ -13,7 +13,8 @@ data class PageData(
     val textObjects: MutableList<TextObject> = mutableListOf(),
     val shapeObjects: MutableList<ShapeObject> = mutableListOf(),
     val imageObjects: MutableList<ImageObject> = mutableListOf(),
-    var backgroundPattern: BackgroundPattern = BackgroundPattern.PLAIN
+    var backgroundPattern: BackgroundPattern = BackgroundPattern.PLAIN,
+    var backgroundColor: BackgroundColor = BackgroundColor.WHITE
 ) {
     fun canUndo(): Boolean = paths.isNotEmpty()
     fun canRedo(): Boolean = undoStack.isNotEmpty()
