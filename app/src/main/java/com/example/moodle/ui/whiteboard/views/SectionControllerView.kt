@@ -11,6 +11,7 @@ import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import com.example.moodle.R
 
 /**
@@ -163,7 +164,7 @@ class SectionControllerView @JvmOverloads constructor(
             context.getString(R.string.color_white)
         )
         
-        val builder = android.support.v7.app.AlertDialog.Builder(context)
+        val builder = AlertDialog.Builder(context)
         builder.setTitle(context.getString(R.string.colors))
         builder.setItems(colorNames) { _, which ->
             selectColor(colors[which])

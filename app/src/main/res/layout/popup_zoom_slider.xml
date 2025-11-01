@@ -24,7 +24,7 @@
             android:layout_marginEnd="8dp" />
         
         <!-- Horizontal Zoom Slider -->
-        <android.support.v7.widget.AppCompatSeekBar
+        <androidx.appcompat.widget.AppCompatSeekBar
             android:id="@+id/zoomSlider"
             android:layout_width="200dp"
             android:layout_height="wrap_content"

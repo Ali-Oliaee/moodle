@@ -4,12 +4,12 @@ import com.example.moodle.ui.whiteboard.views.*
 
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
 
-import android.support.v7.app.AlertDialog
-import android.support.v7.app.AppCompatActivity
 import android.view.View
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import com.example.moodle.R
 
 /**

@@ -11,9 +11,14 @@
     <!-- Recording -->
     <string name="recording_started">ضبط شروع شد</string>
     <string name="recording_stopped">ضبط متوقف شد</string>
-    <string name="permissions_granted">اجازه ها داده شد. حالا می توانید ضبط کنید.</string>
-    <string name="permissions_denied">اجازه ها رد شد. ضبط تصویر ممکن نیست.</string>
-    <string name="screen_capture_denied">اجازه ضبط تصویر رد شد</string>
+    <string name="start_recording">شروع ضبط</string>
+    <string name="stop_recording">توقف ضبط</string>
+    <string name="screen_capture_denied">دسترسی ضبط صفحه رد شد</string>
+    <string name="notification_permission_required">دسترسی نمایش اعلان برای ضبط صفحه لازم است (اندروید 13+)</string>
+    <string name="audio_permission_required">دسترسی ضبط صدا برای ضبط صفحه لازم است</string>
+    <string name="storage_permission_required">دسترسی ذخیره‌سازی برای ذخیره فایل لازم است</string>
+    <string name="permissions_granted">دسترسی‌ها اعطا شد</string>
+    <string name="permissions_denied">دسترسی‌های لازم داده نشد</string>
     
     <!-- Drawing Tools -->
     <string name="tool_pen">قلم</string>
@@ -88,8 +93,6 @@
     <string name="current_width">عرض فعلی:</string>
     <string name="recording">ضبط</string>
     <string name="account">حساب کاربری</string>
-    <string name="start_recording">شروع ضبط</string>
-    <string name="stop_recording">توقف ضبط</string>
     
     <!-- Tool names -->
     <string name="tool_eraser_corrected">پاک کن</string>
@@ -220,7 +223,6 @@
     <string name="no_file_manager">هیچ مدیر فایلی یافت نشد</string>
     
     <!-- Permissions -->
-    <string name="storage_permission_required">اجازه دسترسی به حافظه مورد نیاز است</string>
     <string name="storage_permission_denied">اجازه دسترسی به حافظه رد شد</string>
     <string name="grant_permission">اعطای اجازه</string>
     

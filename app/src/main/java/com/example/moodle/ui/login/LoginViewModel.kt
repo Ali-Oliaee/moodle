@@ -1,9 +1,10 @@
 package com.example.moodle.ui.login
 
 import android.app.Application
-import android.arch.lifecycle.AndroidViewModel
-import android.arch.lifecycle.MutableLiveData
-import android.arch.lifecycle.LiveData
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
 import com.example.moodle.data.repository.AuthRepository
 import com.example.moodle.data.datastore.UserPreferences
 import kotlinx.coroutines.*
@@ -11,8 +12,6 @@ import kotlinx.coroutines.*
 class LoginViewModel(application: Application) : AndroidViewModel(application) {
     
     private val authRepository = AuthRepository(UserPreferences(application))
-    private val viewModelJob = SupervisorJob()
-    private val viewModelScope = CoroutineScope(Dispatchers.Main + viewModelJob)
     
     // UI State
     private val _isLoading = MutableLiveData<Boolean>()
@@ -89,10 +88,5 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     
     fun clearError() {
         _errorMessage.value = ""
-    }
-    
-    override fun onCleared() {
-        super.onCleared()
-        viewModelJob.cancel()
     }
 }

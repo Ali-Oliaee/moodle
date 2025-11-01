@@ -1,11 +1,11 @@
 package com.example.moodle.ui.whiteboard
 
 import android.app.Application
-import android.arch.lifecycle.AndroidViewModel
-import android.arch.lifecycle.MutableLiveData
-import android.arch.lifecycle.LiveData
 import android.graphics.Color
 import android.net.Uri
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import com.example.moodle.data.datastore.UserPreferences
 import com.example.moodle.ui.whiteboard.managers.ExportManager
 import com.example.moodle.ui.whiteboard.managers.ImportManager

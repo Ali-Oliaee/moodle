@@ -82,18 +82,16 @@ class WhiteboardView @JvmOverloads constructor(
         sectionManager.setBoardDimensions(w.toFloat(), h.toFloat())
     }
 
-    override fun onDraw(canvas: Canvas?) {
+    override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        canvas?.let { c ->
-            renderManager.drawCanvas(
-                c,
-                touchHandler.getActivePaths(),
-                touchHandler.selectionPath,
-                touchHandler.previewPath,
-                emptyMap(), // pointerSectionMap - managed internally
-                touchHandler.currentActiveSection
-            )
-        }
+        renderManager.drawCanvas(
+            canvas,
+            touchHandler.getActivePaths(),
+            touchHandler.selectionPath,
+            touchHandler.previewPath,
+            emptyMap(), // pointerSectionMap - managed internally
+            touchHandler.currentActiveSection
+        )
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

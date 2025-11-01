@@ -1,15 +1,15 @@
 package com.example.moodle.ui.whiteboard
 
-import android.arch.lifecycle.Observer
-import android.arch.lifecycle.ViewModelProviders
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
-import android.support.v7.app.AlertDialog
-import android.support.v7.app.AppCompatActivity
 import android.view.ViewGroup
 import android.widget.*
+import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
 import com.example.moodle.R
 import com.example.moodle.data.datastore.UserPreferences
 import com.example.moodle.ui.attendance.AttendanceActivity
@@ -64,7 +64,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var tvPageIndicator: TextView
     
     // ViewModel - Single source of truth for state
-    private lateinit var viewModel: WhiteboardViewModel
+    private val viewModel: WhiteboardViewModel by viewModels()
     
     // UI-specific controllers (Android components)
     private lateinit var recordingController: RecordingController
@@ -76,9 +76,6 @@ class WhiteboardActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Initialize ViewModel
-        viewModel = ViewModelProviders.of(this).get(WhiteboardViewModel::class.java)
         
         // Initialize preferences
         userPreferences = UserPreferences(this)
