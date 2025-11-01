@@ -1,20 +1,5 @@
-// Root build.gradle.kts (Gradle 6.7.1 / AGP 4.2.2 / Kotlin 1.5.31)
-buildscript {
-    val kotlin_version by extra("1.5.31")
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath("com.android.tools.build:gradle:4.2.2")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
-    }
-}
-
-// Needed in Gradle 6.x so subprojects (like :app) can resolve dependencies
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
+// Root build.gradle.kts (Gradle 8.5 / AGP 8.2.2 / Kotlin 1.9.22)
+plugins {
+    id("com.android.application") version "8.2.2" apply false
+    id("org.jetbrains.kotlin.android") version "1.9.22" apply false
 }
