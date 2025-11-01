@@ -47,6 +47,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnPen: ImageButton
     private lateinit var btnEraser: ImageButton
     private lateinit var btnText: ImageButton
+    private lateinit var btnTextRecognition: ImageButton
     private lateinit var btnFormula: ImageButton
     private lateinit var btnShapes: ImageButton
     private lateinit var btnUndo: ImageButton
@@ -70,6 +71,9 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var recordingController: RecordingController
     private lateinit var popupController: PopupController
     private lateinit var splitModeController: SplitModeController
+    
+    // Text recognition manager
+    private lateinit var textRecognitionManager: com.example.moodle.ui.whiteboard.managers.TextRecognitionManager
     
     // User preferences
     private lateinit var userPreferences: UserPreferences
@@ -119,6 +123,7 @@ class WhiteboardActivity : AppCompatActivity() {
         btnPen = findViewById(R.id.btnPen)
         btnEraser = findViewById(R.id.btnEraser)
         btnText = findViewById(R.id.btnText)
+        btnTextRecognition = findViewById(R.id.btnTextRecognition)
         btnFormula = findViewById(R.id.btnFormula)
         btnShapes = findViewById(R.id.btnShapes)
         btnUndo = findViewById(R.id.btnUndo)
@@ -167,6 +172,9 @@ class WhiteboardActivity : AppCompatActivity() {
             btnBackground.isEnabled = !enabled
             btnBackground.alpha = if (enabled) 0.5f else 1.0f
         }
+        
+        // Text Recognition Manager - handles ML Kit text recognition
+        textRecognitionManager = com.example.moodle.ui.whiteboard.managers.TextRecognitionManager(this)
     }
     
     /**
@@ -205,6 +213,10 @@ class WhiteboardActivity : AppCompatActivity() {
         
         btnText.setOnClickListener {
             viewModel.selectTool(DrawingTool.TEXT)
+        }
+        
+        btnTextRecognition.setOnClickListener {
+            performTextRecognition()
         }
         
         btnFormula.setOnClickListener {
@@ -820,11 +832,135 @@ class WhiteboardActivity : AppCompatActivity() {
         }
     }
     
+    /**
+     * Perform text recognition on drawn strokes
+     */
+    private fun performTextRecognition() {
+        // Save current page first
+        saveCurrentPageToViewModel()
+        
+        val paths = whiteboardView.getAllPaths()
+        
+        if (paths.isEmpty()) {
+            Toast.makeText(this, getString(R.string.text_recognition_no_strokes), Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        // Show progress
+        Toast.makeText(this, getString(R.string.text_recognition_processing), Toast.LENGTH_SHORT).show()
+        
+        textRecognitionManager.recognizeTextFromPaths(
+            paths,
+            object : com.example.moodle.ui.whiteboard.managers.TextRecognitionManager.TextRecognitionCallback {
+                override fun onRecognitionSuccess(
+                    textObjects: List<com.example.moodle.ui.whiteboard.models.TextObject>,
+                    recognizedCount: Int
+                ) {
+                    runOnUiThread {
+                        showTextRecognitionResultDialog(textObjects, recognizedCount)
+                    }
+                }
+                
+                override fun onRecognitionFailure(error: String) {
+                    runOnUiThread {
+                        Toast.makeText(
+                            this@WhiteboardActivity,
+                            getString(R.string.text_recognition_failed) + ": $error",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                
+                override fun onRecognitionProgress(message: String) {
+                    // Progress already shown
+                }
+            }
+        )
+    }
+    
+    /**
+     * Show dialog with text recognition results
+     */
+    private fun showTextRecognitionResultDialog(
+        textObjects: List<com.example.moodle.ui.whiteboard.models.TextObject>,
+        recognizedCount: Int
+    ) {
+        if (textObjects.isEmpty()) {
+            Toast.makeText(this, getString(R.string.text_recognition_no_text), Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val message = getString(R.string.text_recognition_success, recognizedCount)
+        
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.text_recognition))
+            .setMessage("$message\n\n${getString(R.string.text_recognition_replace_confirm)}")
+            .setPositiveButton(getString(R.string.text_recognition_replace)) { _, _ ->
+                replaceDrawingWithRecognizedText(textObjects)
+            }
+            .setNegativeButton(getString(R.string.text_recognition_keep_both)) { _, _ ->
+                addRecognizedTextToDrawing(textObjects)
+            }
+            .setNeutralButton(getString(R.string.cancel), null)
+            .show()
+    }
+    
+    /**
+     * Replace drawn strokes with recognized text
+     */
+    private fun replaceDrawingWithRecognizedText(
+        textObjects: List<com.example.moodle.ui.whiteboard.models.TextObject>
+    ) {
+        // Clear the drawing paths
+        val currentPage = viewModel.getCurrentPage()
+        currentPage.paths.clear()
+        
+        // Add recognized text objects
+        for (textObject in textObjects) {
+            currentPage.textObjects.add(textObject)
+        }
+        
+        // Reload the page
+        loadCurrentPageFromViewModel()
+        updateUndoRedoState()
+        
+        Toast.makeText(
+            this,
+            getString(R.string.text_recognition_success, textObjects.size),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+    
+    /**
+     * Add recognized text without removing drawn strokes
+     */
+    private fun addRecognizedTextToDrawing(
+        textObjects: List<com.example.moodle.ui.whiteboard.models.TextObject>
+    ) {
+        val currentPage = viewModel.getCurrentPage()
+        
+        // Add recognized text objects
+        for (textObject in textObjects) {
+            currentPage.textObjects.add(textObject)
+        }
+        
+        // Reload the page
+        loadCurrentPageFromViewModel()
+        updateUndoRedoState()
+        
+        Toast.makeText(
+            this,
+            getString(R.string.text_recognition_success, textObjects.size),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+    
     override fun onDestroy() {
         super.onDestroy()
         recordingController.cleanup()
         popupController.cleanup()
         whiteboardView.cleanup()
+        textRecognitionManager.cleanup()
     }
     
     companion object {

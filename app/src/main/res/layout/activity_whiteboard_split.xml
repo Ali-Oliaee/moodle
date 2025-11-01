@@ -191,6 +191,15 @@
             android:contentDescription="@string/desc_text_tool" />
 
         <ImageButton
+            android:id="@+id/btnTextRecognition"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_text_recognition"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_text_recognition_button" />
+
+        <ImageButton
             android:id="@+id/btnFormula"
             android:layout_width="36dp"
             android:layout_height="36dp"

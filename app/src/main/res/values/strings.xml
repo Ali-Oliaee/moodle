@@ -235,6 +235,19 @@
     <string name="add_text">افزودن متن</string>
     <string name="ok">تایید</string>
     
+    <!-- Text Recognition -->
+    <string name="text_recognition">تشخیص دست‌نویس فارسی</string>
+    <string name="text_recognition_desc">تبدیل دست‌نویس به متن دیجیتال</string>
+    <string name="text_recognition_processing">در حال تشخیص دست‌نویس...</string>
+    <string name="text_recognition_success">%1$d متن شناسایی شد</string>
+    <string name="text_recognition_failed">تشخیص دست‌نویس ناموفق بود</string>
+    <string name="text_recognition_no_text">متنی شناسایی نشد. لطفاً با خط واضح‌تر بنویسید</string>
+    <string name="text_recognition_replace_confirm">آیا می‌خواهید رسم‌ها را با متن شناسایی شده جایگزین کنید؟</string>
+    <string name="text_recognition_keep_both">نگه داشتن هر دو</string>
+    <string name="text_recognition_replace">جایگزینی</string>
+    <string name="text_recognition_no_strokes">رسمی برای تشخیص وجود ندارد</string>
+    <string name="desc_text_recognition_button">تشخیص دست‌نویس فارسی</string>
+    
     <!-- Export/Import Titles and Messages -->
     <string name="export_png">خروج PNG</string>
     <string name="export_moodle_format">خروج فرمت Moodle</string>
