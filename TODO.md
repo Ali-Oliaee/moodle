@@ -1,0 +1,29 @@
+**TODO List**
+
+- Login api
+- Attendants api
+- Audio record
+- Upload file api
+- undo/redo
+- image background
+- pattern background
+- zoom/drag gesture
+- 3d shapes
+- table
+- auto correct
+- highlighter
+- more colors
+- area eraser
+- emojie
+- guides
+- color picker
+- selector
+- web search
+- khatkesh
+- 3d shapes
+- split screen fix
+- mind map
+- sticky note
+- browser search
+- share
+- hide/show toolbars

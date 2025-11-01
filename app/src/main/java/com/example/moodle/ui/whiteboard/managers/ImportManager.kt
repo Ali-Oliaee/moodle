@@ -1,4 +1,9 @@
-package com.example.moodle.ui.whiteboard
+package com.example.moodle.ui.whiteboard.managers
+import com.example.moodle.ui.whiteboard.models.*
+import com.example.moodle.ui.whiteboard.views.*
+import com.example.moodle.ui.whiteboard.listeners.*
+import com.example.moodle.ui.whiteboard.controllers.*
+import com.example.moodle.ui.whiteboard.utils.*
 
 import android.content.Context
 import android.graphics.*
@@ -105,12 +110,6 @@ class ImportManager(private val context: Context) {
                 whiteboardView.setBackgroundPattern(BackgroundPattern.fromId(backgroundPatternId))
             }
             
-            // Import current page data
-            if (importData.has("currentPage")) {
-                val currentPageData = importData.getJSONObject("currentPage")
-                importPageData(currentPageData, whiteboardView)
-            }
-            
             // Import all pages if available
             if (importData.has("allPages")) {
                 val allPagesArray = importData.getJSONArray("allPages")
@@ -125,7 +124,17 @@ class ImportManager(private val context: Context) {
                 
                 // Set current page if specified
                 val currentPageId = importData.optInt("currentPageId", 1)
-                pageManager.goToPage(currentPageId)
+                val pageLoaded = pageManager.goToPage(currentPageId)
+                
+                // If the specified page doesn't exist, go to the first available page
+                if (!pageLoaded && pageManager.getTotalPages() > 0) {
+                    val firstPageId = pageManager.getPageIds().firstOrNull() ?: 1
+                    pageManager.goToPage(firstPageId)
+                }
+            } else if (importData.has("currentPage")) {
+                // Import current page data only if we don't have allPages
+                val currentPageData = importData.getJSONObject("currentPage")
+                importPageData(currentPageData, whiteboardView)
             }
             
             onSuccess()
@@ -145,10 +154,10 @@ class ImportManager(private val context: Context) {
         whiteboardView.setBackgroundPattern(BackgroundPattern.fromId(backgroundPatternId))
         
         // Collect all imported data
-        val paths = mutableListOf<WhiteboardView.DrawingPath>()
-        val textObjects = mutableListOf<WhiteboardView.TextObject>()
-        val shapeObjects = mutableListOf<WhiteboardView.ShapeObject>()
-        val imageObjects = mutableListOf<WhiteboardView.ImageObject>()
+        val paths = mutableListOf<DrawingPath>()
+        val textObjects = mutableListOf<TextObject>()
+        val shapeObjects = mutableListOf<ShapeObject>()
+        val imageObjects = mutableListOf<ImageObject>()
         
         // Import paths
         if (pageData.has("paths")) {
@@ -228,9 +237,9 @@ class ImportManager(private val context: Context) {
         // Set section tool and properties
         val toolName = sectionData.optString("currentTool", "PEN")
         val tool = try {
-            WhiteboardView.DrawingTool.valueOf(toolName)
+            DrawingTool.valueOf(toolName)
         } catch (e: IllegalArgumentException) {
-            WhiteboardView.DrawingTool.PEN
+            DrawingTool.PEN
         }
         
         val color = sectionData.optInt("currentColor", Color.BLACK)
@@ -293,11 +302,11 @@ class ImportManager(private val context: Context) {
     /**
      * Deserialize DrawingPath from JSON
      */
-    private fun deserializeDrawingPath(pathObj: JSONObject): WhiteboardView.DrawingPath? {
+    private fun deserializeDrawingPath(pathObj: JSONObject): DrawingPath? {
         return try {
             // Deserialize tool
             val toolName = pathObj.optString("tool", "PEN")
-            val tool = WhiteboardView.DrawingTool.valueOf(toolName)
+            val tool = DrawingTool.valueOf(toolName)
             
             // Deserialize paint
             val paintObj = pathObj.optJSONObject("paint")
@@ -330,25 +339,25 @@ class ImportManager(private val context: Context) {
             
             // If it's a shape, recreate the shape path
             if (tool in listOf(
-                    WhiteboardView.DrawingTool.LINE,
-                    WhiteboardView.DrawingTool.CIRCLE,
-                    WhiteboardView.DrawingTool.TRIANGLE,
-                    WhiteboardView.DrawingTool.RECTANGLE
+                    DrawingTool.LINE,
+                    DrawingTool.CIRCLE,
+                    DrawingTool.TRIANGLE,
+                    DrawingTool.RECTANGLE
                 )) {
                 // Recreate shape path from stored coordinates
                 when (tool) {
-                    WhiteboardView.DrawingTool.LINE -> {
+                    DrawingTool.LINE -> {
                         path.moveTo(shapeStartX, shapeStartY)
                         path.lineTo(shapeEndX, shapeEndY)
                     }
-                    WhiteboardView.DrawingTool.RECTANGLE -> {
+                    DrawingTool.RECTANGLE -> {
                         val left = kotlin.math.min(shapeStartX, shapeEndX)
                         val top = kotlin.math.min(shapeStartY, shapeEndY)
                         val right = kotlin.math.max(shapeStartX, shapeEndX)
                         val bottom = kotlin.math.max(shapeStartY, shapeEndY)
                         path.addRect(left, top, right, bottom, Path.Direction.CW)
                     }
-                    WhiteboardView.DrawingTool.CIRCLE -> {
+                    DrawingTool.CIRCLE -> {
                         val centerX = (shapeStartX + shapeEndX) / 2
                         val centerY = (shapeStartY + shapeEndY) / 2
                         val radius = kotlin.math.sqrt(
@@ -357,7 +366,7 @@ class ImportManager(private val context: Context) {
                         ).toFloat() / 2
                         path.addCircle(centerX, centerY, radius, Path.Direction.CW)
                     }
-                    WhiteboardView.DrawingTool.TRIANGLE -> {
+                    DrawingTool.TRIANGLE -> {
                         val centerX = (shapeStartX + shapeEndX) / 2
                         val centerY = (shapeStartY + shapeEndY) / 2
                         val width = kotlin.math.abs(shapeEndX - shapeStartX)
@@ -383,13 +392,14 @@ class ImportManager(private val context: Context) {
                     }
                 }
             } else {
-                // For freehand drawing, create a simple placeholder path
-                // In a full implementation, you would store and restore the actual path data
-                path.moveTo(0f, 0f)
-                path.lineTo(10f, 10f)
+                // For freehand drawing, deserialize path from pathData
+                val pathData = pathObj.optString("pathData", "")
+                if (pathData.isNotEmpty()) {
+                    deserializePath(pathData, path)
+                }
             }
             
-            WhiteboardView.DrawingPath(
+            DrawingPath(
                 path = path,
                 paint = paint,
                 tool = tool,
@@ -409,9 +419,9 @@ class ImportManager(private val context: Context) {
     /**
      * Deserialize TextObject from JSON
      */
-    private fun deserializeTextObject(textObj: JSONObject): WhiteboardView.TextObject? {
+    private fun deserializeTextObject(textObj: JSONObject): TextObject? {
         return try {
-            WhiteboardView.TextObject(
+            TextObject(
                 text = textObj.getString("text"),
                 x = textObj.optDouble("x", 0.0).toFloat(),
                 y = textObj.optDouble("y", 0.0).toFloat(),
@@ -427,12 +437,12 @@ class ImportManager(private val context: Context) {
     /**
      * Deserialize ShapeObject from JSON
      */
-    private fun deserializeShapeObject(shapeObj: JSONObject): WhiteboardView.ShapeObject? {
+    private fun deserializeShapeObject(shapeObj: JSONObject): ShapeObject? {
         return try {
             val toolName = shapeObj.getString("shapeType")
-            val tool = WhiteboardView.DrawingTool.valueOf(toolName)
+            val tool = DrawingTool.valueOf(toolName)
             
-            WhiteboardView.ShapeObject(
+            ShapeObject(
                 shapeType = tool,
                 startX = shapeObj.optDouble("startX", 0.0).toFloat(),
                 startY = shapeObj.optDouble("startY", 0.0).toFloat(),
@@ -453,7 +463,7 @@ class ImportManager(private val context: Context) {
      * Deserialize ImageObject from JSON
      * Bitmap data is decoded from Base64 PNG
      */
-    private fun deserializeImageObject(imageObj: JSONObject): WhiteboardView.ImageObject? {
+    private fun deserializeImageObject(imageObj: JSONObject): ImageObject? {
         return try {
             // Decode bitmap from Base64
             val bitmapBase64 = imageObj.getString("bitmapData")
@@ -464,7 +474,7 @@ class ImportManager(private val context: Context) {
                 return null
             }
             
-            WhiteboardView.ImageObject(
+            ImageObject(
                 bitmap = bitmap,
                 x = imageObj.optDouble("x", 0.0).toFloat(),
                 y = imageObj.optDouble("y", 0.0).toFloat(),
@@ -538,5 +548,38 @@ class ImportManager(private val context: Context) {
         }
         
         return page
+    }
+    
+    /**
+     * Deserialize path from string of points
+     * Format: "x1,y1;x2,y2;x3,y3;..."
+     */
+    private fun deserializePath(pathData: String, path: Path) {
+        if (pathData.isEmpty()) return
+        
+        try {
+            val pointPairs = pathData.split(";")
+            if (pointPairs.isEmpty()) return
+            
+            // Move to first point
+            val firstPoint = pointPairs[0].split(",")
+            if (firstPoint.size == 2) {
+                val x = firstPoint[0].toFloatOrNull() ?: return
+                val y = firstPoint[1].toFloatOrNull() ?: return
+                path.moveTo(x, y)
+            }
+            
+            // Draw lines to subsequent points
+            for (i in 1 until pointPairs.size) {
+                val point = pointPairs[i].split(",")
+                if (point.size == 2) {
+                    val x = point[0].toFloatOrNull() ?: continue
+                    val y = point[1].toFloatOrNull() ?: continue
+                    path.lineTo(x, y)
+                }
+            }
+        } catch (e: Exception) {
+            // If deserialization fails, leave path empty
+        }
     }
 }

@@ -145,6 +145,15 @@
     <string name="background_graph_paper">کاغذ نموداری</string>
     <string name="desc_background_button">تغییر پس‌زمینه</string>
     
+    <!-- Background Colors -->
+    <string name="background_colors">رنگ‌های پس‌زمینه</string>
+    <string name="background_color_white">سفید</string>
+    <string name="background_color_light_gray">خاکستری روشن</string>
+    <string name="background_color_light_blue">آبی روشن</string>
+    <string name="background_color_light_green">سبز روشن</string>
+    <string name="background_color_light_yellow">زرد روشن</string>
+    <string name="background_color_light_pink">صورتی روشن</string>
+    
     <!-- Pagination -->
     <string name="desc_previous_page">صفحه قبلی</string>
     <string name="desc_next_page">صفحه بعدی</string>
@@ -218,4 +227,17 @@
     <!-- Confirmation Dialogs -->
     <string name="import_will_clear_board">ورود فایل Moodle محتوای فعلی تخته را پاک خواهد کرد. ادامه می‌دهید؟</string>
     <string name="continue_import">ادامه ورود</string>
+    
+    <!-- Text Input Dialog -->
+    <string name="enter_text">متن خود را وارد کنید</string>
+    <string name="add_text">افزودن متن</string>
+    <string name="ok">تایید</string>
+    
+    <!-- Export/Import Titles and Messages -->
+    <string name="export_png">خروج PNG</string>
+    <string name="export_moodle_format">خروج فرمت Moodle</string>
+    <string name="export_title">خروج</string>
+    <string name="import_title">ورود</string>
+    <string name="export_success">خروج با موفقیت انجام شد</string>
+    <string name="exported_pages">%1$s صفحه خروجی گرفته شد</string>
 </resources>

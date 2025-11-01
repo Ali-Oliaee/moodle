@@ -16,6 +16,7 @@ class UserPreferences(private val context: Context) {
         private const val KEY_SHARED_COLOR = "shared_color"
         private const val KEY_SHARED_STROKE_WIDTH = "shared_stroke_width"
         private const val KEY_SHARED_BACKGROUND_PATTERN = "shared_background_pattern"
+        private const val KEY_SHARED_BACKGROUND_COLOR = "shared_background_color"
     }
 
     private val sharedPrefs: SharedPreferences by lazy {
@@ -122,6 +123,16 @@ class UserPreferences(private val context: Context) {
     fun saveSharedBackgroundPattern(patternId: Int) {
         sharedPrefs.edit()
             .putInt(KEY_SHARED_BACKGROUND_PATTERN, patternId)
+            .apply()
+    }
+    
+    fun getSharedBackgroundColor(): Int {
+        return sharedPrefs.getInt(KEY_SHARED_BACKGROUND_COLOR, 0)
+    }
+    
+    fun saveSharedBackgroundColor(colorId: Int) {
+        sharedPrefs.edit()
+            .putInt(KEY_SHARED_BACKGROUND_COLOR, colorId)
             .apply()
     }
 

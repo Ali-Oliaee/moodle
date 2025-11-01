@@ -66,7 +66,7 @@
     </LinearLayout>
 
     <!-- Whiteboard View taking remaining space -->
-    <com.example.moodle.ui.whiteboard.WhiteboardView
+    <com.example.moodle.ui.whiteboard.views.WhiteboardView
         android:id="@+id/whiteboardView"
         android:layout_width="0dp"
         android:layout_height="0dp"

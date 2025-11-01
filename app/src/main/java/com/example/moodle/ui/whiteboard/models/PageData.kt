@@ -1,4 +1,4 @@
-package com.example.moodle.ui.whiteboard
+package com.example.moodle.ui.whiteboard.models
 
 import android.graphics.Color
 
@@ -8,12 +8,13 @@ import android.graphics.Color
  */
 data class PageData(
     val pageId: Int,
-    val paths: MutableList<WhiteboardView.DrawingPath> = mutableListOf(),
-    val undoStack: MutableList<WhiteboardView.DrawingPath> = mutableListOf(),
-    val textObjects: MutableList<WhiteboardView.TextObject> = mutableListOf(),
-    val shapeObjects: MutableList<WhiteboardView.ShapeObject> = mutableListOf(),
-    val imageObjects: MutableList<WhiteboardView.ImageObject> = mutableListOf(),
-    var backgroundPattern: BackgroundPattern = BackgroundPattern.PLAIN
+    val paths: MutableList<DrawingPath> = mutableListOf(),
+    val undoStack: MutableList<DrawingPath> = mutableListOf(),
+    val textObjects: MutableList<TextObject> = mutableListOf(),
+    val shapeObjects: MutableList<ShapeObject> = mutableListOf(),
+    val imageObjects: MutableList<ImageObject> = mutableListOf(),
+    var backgroundPattern: BackgroundPattern = BackgroundPattern.PLAIN,
+    var backgroundColor: BackgroundColor = BackgroundColor.WHITE
 ) {
     fun canUndo(): Boolean = paths.isNotEmpty()
     fun canRedo(): Boolean = undoStack.isNotEmpty()
@@ -26,7 +27,7 @@ data class PageData(
         imageObjects.clear()
     }
     
-    fun undo(): WhiteboardView.DrawingPath? {
+    fun undo(): DrawingPath? {
         return if (canUndo()) {
             val lastPath = paths.removeAt(paths.size - 1)
             undoStack.add(lastPath)
@@ -34,7 +35,7 @@ data class PageData(
         } else null
     }
     
-    fun redo(): WhiteboardView.DrawingPath? {
+    fun redo(): DrawingPath? {
         return if (canRedo()) {
             val pathToRedo = undoStack.removeAt(undoStack.size - 1)
             paths.add(pathToRedo)
