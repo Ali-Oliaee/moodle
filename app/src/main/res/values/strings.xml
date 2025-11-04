@@ -242,4 +242,8 @@
     <string name="import_title">ورود</string>
     <string name="export_success">خروج با موفقیت انجام شد</string>
     <string name="exported_pages">%1$s صفحه خروجی گرفته شد</string>
+    
+    <!-- Toolbar Toggle -->
+    <string name="toggle_toolbar">نمایش/مخفی کردن نوار ابزار</string>
+    <string name="desc_toggle_toolbar">دکمه نمایش/مخفی کردن نوار ابزار</string>
 </resources>

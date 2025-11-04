@@ -150,6 +150,20 @@
 
     </LinearLayout>
 
+    <!-- Floating Toggle Button (Left Side) -->
+    <ImageButton
+        android:id="@+id/btnToggleToolbars"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@drawable/ic_chevron_up"
+        android:background="@drawable/tool_button_background"
+        android:elevation="8dp"
+        android:layout_margin="8dp"
+        android:contentDescription="@string/desc_toggle_toolbar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/mainContentArea"
+        android:layout_marginTop="16dp" />
+
     <!-- Bottom Toolbar (shown only when split mode is disabled) -->
     <LinearLayout
         android:id="@+id/bottomToolbar"

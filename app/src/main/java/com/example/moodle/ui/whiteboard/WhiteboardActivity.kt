@@ -42,6 +42,9 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnExport: ImageButton
     private lateinit var btnImport: ImageButton
     private lateinit var btnPinchMode: ImageButton
+    private lateinit var btnToggleToolbars: ImageButton
+    private lateinit var topToolbar: LinearLayout
+    private lateinit var bottomToolbar: LinearLayout
     
     // Tool Buttons
     private lateinit var btnPen: ImageButton
@@ -73,6 +76,9 @@ class WhiteboardActivity : AppCompatActivity() {
     
     // User preferences
     private lateinit var userPreferences: UserPreferences
+    
+    // Toolbar visibility state
+    private var areToolbarsVisible = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -117,6 +123,9 @@ class WhiteboardActivity : AppCompatActivity() {
         btnExport = findViewById(R.id.btnExport)
         btnImport = findViewById(R.id.btnImport)
         btnPinchMode = findViewById(R.id.btnPinchMode)
+        btnToggleToolbars = findViewById(R.id.btnToggleToolbars)
+        topToolbar = findViewById(R.id.topToolbar)
+        bottomToolbar = findViewById(R.id.bottomToolbar)
         
         // Tool buttons
         btnPen = findViewById(R.id.btnPen)
@@ -183,6 +192,9 @@ class WhiteboardActivity : AppCompatActivity() {
         btnExport.setOnClickListener { showExportOptionsDialog() }
         btnImport.setOnClickListener { showImportOptionsDialog() }
         btnPinchMode.setOnClickListener { popupController.showZoomPopup(btnPinchMode) }
+        
+        // Toggle toolbars button listener
+        btnToggleToolbars.setOnClickListener { toggleToolbarsVisibility() }
         
         // Tool button listeners
         setupToolListeners()
@@ -827,6 +839,92 @@ class WhiteboardActivity : AppCompatActivity() {
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
+    }
+    
+    /**
+     * Toggle visibility of top and bottom toolbars with animation
+     */
+    private fun toggleToolbarsVisibility() {
+        areToolbarsVisible = !areToolbarsVisible
+        
+        if (areToolbarsVisible) {
+            // Show toolbars
+            showToolbar(topToolbar)
+            showToolbar(bottomToolbar)
+            // Change icon to chevron up (hide action)
+            btnToggleToolbars.setImageResource(R.drawable.ic_chevron_up)
+        } else {
+            // Hide toolbars
+            hideToolbar(topToolbar)
+            hideToolbar(bottomToolbar)
+            // Change icon to chevron down (show action)
+            btnToggleToolbars.setImageResource(R.drawable.ic_chevron_down)
+        }
+    }
+    
+    /**
+     * Hide toolbar with slide animation
+     */
+    private fun hideToolbar(toolbar: android.view.View) {
+        // Keep visibility VISIBLE but move off-screen and make transparent
+        // to avoid layout recalculation that could affect WhiteboardView
+        toolbar.animate()
+            .alpha(0f)
+            .translationY(if (toolbar.id == R.id.topToolbar) -toolbar.height.toFloat() else toolbar.height.toFloat())
+            .setDuration(300)
+            .withStartAction {
+                // Disable clicks on hidden toolbar
+                toolbar.isClickable = false
+                disableViewGroupClicks(toolbar)
+            }
+            .start()
+    }
+    
+    /**
+     * Show toolbar with slide animation
+     */
+    private fun showToolbar(toolbar: android.view.View) {
+        // Re-enable clicks
+        toolbar.isClickable = true
+        enableViewGroupClicks(toolbar)
+        
+        toolbar.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(300)
+            .start()
+    }
+    
+    /**
+     * Disable all clicks within a ViewGroup
+     */
+    private fun disableViewGroupClicks(view: android.view.View) {
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val child = view.getChildAt(i)
+                child.isClickable = false
+                child.isFocusable = false
+                if (child is ViewGroup) {
+                    disableViewGroupClicks(child)
+                }
+            }
+        }
+    }
+    
+    /**
+     * Enable all clicks within a ViewGroup
+     */
+    private fun enableViewGroupClicks(view: android.view.View) {
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val child = view.getChildAt(i)
+                child.isClickable = true
+                child.isFocusable = true
+                if (child is ViewGroup) {
+                    enableViewGroupClicks(child)
+                }
+            }
+        }
     }
 
     override fun onRequestPermissionsResult(
