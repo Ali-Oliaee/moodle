@@ -65,19 +65,44 @@
     <string name="desc_formula_tool">انتخاب فرمول ریاضی</string>
     <string name="desc_line_tool">انتخاب ابزار خط</string>
     <string name="desc_circle_tool">انتخاب ابزار دایره</string>
+    <string name="desc_ellipse_tool">انتخاب ابزار بیضی</string>
     <string name="desc_triangle_tool">انتخاب ابزار مثلث</string>
+    <string name="desc_right_triangle_tool">انتخاب ابزار مثلث قائم</string>
+    <string name="desc_isosceles_triangle_tool">انتخاب ابزار مثلث متساوی‌الساقین</string>
     <string name="desc_rectangle_tool">انتخاب ابزار مستطیل</string>
+    <string name="desc_diamond_tool">انتخاب ابزار لوزی</string>
+    <string name="desc_parallelogram_tool">انتخاب ابزار متوازی‌الاضلاع</string>
+    <string name="desc_trapezoid_tool">انتخاب ابزار ذوزنقه</string>
+    <string name="desc_pentagon_tool">انتخاب ابزار پنج‌ضلعی</string>
+    <string name="desc_hexagon_tool">انتخاب ابزار شش‌ضلعی</string>
+    <string name="desc_star_tool">انتخاب ابزار ستاره</string>
+    <string name="desc_arrow_tool">انتخاب ابزار فلش</string>
+    <string name="desc_cube_tool">انتخاب ابزار مکعب</string>
+    <string name="desc_cylinder_tool">انتخاب ابزار استوانه</string>
+    <string name="desc_pyramid_tool">انتخاب ابزار هرم</string>
+    <string name="desc_sphere_tool">انتخاب ابزار کره</string>
+    <string name="desc_cone_tool">انتخاب ابزار مخروط</string>
     <string name="desc_shapes_tool">انتخاب ابزار اشکال</string>
     <string name="shapes">اشکال</string>
+    
+    <!-- Measurement Tools -->
+    <string name="ruler">خط‌کش</string>
+    <string name="bag">کیسه</string>
+    <string name="conveyor">نوار نقاله</string>
+    <string name="precision_millimeter">میلی‌متر</string>
+    <string name="precision_centimeter">سانتی‌متر</string>
+    <string name="desc_ruler_tool">انتخاب ابزار خط‌کش</string>
+    <string name="desc_bag_tool">انتخاب ابزار کیسه</string>
+    <string name="desc_conveyor_tool">انتخاب ابزار نوار نقاله</string>
     <string name="desc_undo_button">برگشت از آخرین عمل</string>
     <string name="desc_redo_button">بازگردانی آخرین عمل</string>
     <string name="desc_clear_button">پاک کردن رویاگرانی</string>
     <string name="desc_color_picker">انتخاب رنگ</string>
     <string name="desc_stroke_width">انتخاب عرض خط</string>
     <string name="desc_mode_toggle">تغییر بین حالت رسم و حالت پان</string>
-    <string name="desc_pinch_mode">فعال/غیرفعال کردن حالت زوم با انگشت</string>
-    <string name="pinch_mode_enabled">حالت زوم فعال شد</string>
-    <string name="pinch_mode_disabled">حالت زوم غیرفعال شد</string>
+    <string name="desc_pinch_mode">فعال/غیرفعال کردن حالت زوم و پان با انگشت</string>
+    <string name="pinch_mode_enabled">حالت زوم فعال - رسم غیرفعال شد، از ۲-۳ انگشت برای ناوبری استفاده کنید</string>
+    <string name="pinch_mode_disabled">حالت زوم غیرفعال - رسم فعال شد</string>
     
     <!-- Navigation Drawer -->
     <string name="desc_menu_button">باز کردن منو</string>
@@ -246,4 +271,10 @@
     <!-- Toolbar Toggle -->
     <string name="toggle_toolbar">نمایش/مخفی کردن نوار ابزار</string>
     <string name="desc_toggle_toolbar">دکمه نمایش/مخفی کردن نوار ابزار</string>
+    
+    <!-- Ruler Tools -->
+    <string name="ruler_tools_title">ابزارهای اندازه‌گیری</string>
+    <string name="desc_ruler_button">نمایش ابزارهای اندازه‌گیری</string>
+    <string name="precision_settings">دقت اندازه‌گیری</string>
+    <string name="ruler_info_text">ابزار را انتخاب کنید و دقت مورد نظر را تنظیم نمایید</string>
 </resources>

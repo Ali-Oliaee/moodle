@@ -223,6 +223,16 @@
             android:background="@drawable/tool_button_background"
             android:contentDescription="@string/desc_shapes_tool" />
 
+        <!-- Ruler Tools Popup Button -->
+        <ImageButton
+            android:id="@+id/btnRuler"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_ruler"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_ruler_button" />
+
         <!-- Separator -->
         <View
             android:layout_width="1dp"
@@ -267,20 +277,11 @@
 
         <!-- Mode Tools -->
         <ImageButton
-            android:id="@+id/btnModeToggle"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="2dp"
-            android:src="@drawable/ic_move_4d"
-            android:background="@drawable/tool_button_background"
-            android:contentDescription="@string/desc_mode_toggle" />
-
-        <ImageButton
             android:id="@+id/btnPinchMode"
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:layout_margin="2dp"
-            android:src="@drawable/ic_zoom"
+            android:src="@drawable/ic_move_4d"
             android:background="@drawable/tool_button_background"
             android:contentDescription="@string/desc_pinch_mode" />
 

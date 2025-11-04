@@ -123,15 +123,22 @@ class WhiteboardView @JvmOverloads constructor(
             return true
         }
         
-        // Normal mode: Handle scale gesture only if pinch mode is enabled
+        // Pinch mode: Only allow zoom/pan gestures, no drawing
         if (isPinchModeEnabled) {
             scaleGestureDetector.onTouchEvent(event)
-            if (zoomPanController.isScaling) {
-                return true
+            
+            // Handle gesture detection for double tap (zoom reset)
+            gestureDetector.onTouchEvent(event)
+            
+            // Allow panning when not scaling
+            if (!zoomPanController.isScaling) {
+                touchHandler.handlePanningTouch(event)
             }
+            
+            return true
         }
         
-        // Handle gesture detection for double tap (zoom reset)
+        // Normal mode: Handle gesture detection for double tap (zoom reset)
         gestureDetector.onTouchEvent(event)
         
         // Handle drawing or panning based on mode

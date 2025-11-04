@@ -8,16 +8,15 @@
     android:background="#F5F5F5"
     tools:context=".ui.whiteboard.WhiteboardActivity">
 
-    <!-- Top Toolbar with attendance, logout, and record buttons -->
+    <!-- Top Toolbar with recorder and welcome message -->
     <LinearLayout
         android:id="@+id/topToolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="4dp"
+        android:padding="12dp"
         android:background="#FFFFFF"
         android:elevation="4dp"
-        android:gravity="center"
         app:layout_constraintTop_toTopOf="parent">
 
         <!-- Record Button -->
@@ -30,13 +29,12 @@
             android:padding="8dp"
             android:background="@drawable/drawer_item_background"
             android:clickable="true"
-            android:focusable="true"
-            android:layout_marginEnd="8dp">
+            android:focusable="true">
 
             <Button
                 android:id="@+id/toggleRecordBtn"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:layout_marginEnd="8dp"
                 android:background="@drawable/circle_button"
                 android:elevation="2dp"
@@ -47,9 +45,9 @@
         <!-- Attendance Button -->
         <ImageButton
             android:id="@+id/btnAttendance"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginEnd="8dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
             android:src="@drawable/ic_attendance"
             android:background="@drawable/tool_button_background"
             android:contentDescription="@string/attendance_title" />
@@ -57,8 +55,9 @@
         <!-- Logout Button -->
         <ImageButton
             android:id="@+id/btnLogout"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
             android:src="@drawable/ic_logout"
             android:background="@drawable/tool_button_background"
             android:contentDescription="@string/logout" />
@@ -77,142 +76,207 @@
         app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- Bottom Toolbar with drawing tools -->
-    <LinearLayout
+    <ScrollView
         android:id="@+id/bottomToolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:background="#FFFFFF"
         android:elevation="4dp"
-        android:padding="6dp"
-        android:gravity="center"
+        android:padding="8dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <!-- Drawing Tools -->
-        <ImageButton
-            android:id="@+id/btnPen"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="2dp"
-            android:src="@drawable/ic_pen"
-            android:background="@drawable/tool_button_background"
-            android:contentDescription="@string/desc_pen_tool" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp">
 
-        <ImageButton
-            android:id="@+id/btnEraser"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="2dp"
-            android:src="@drawable/ic_eraser"
-            android:background="@drawable/tool_button_background"
-            android:contentDescription="@string/desc_eraser_tool" />
+            <!-- Drawing Tools Row -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="8dp">
 
-        <ImageButton
-            android:id="@+id/btnText"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="2dp"
-            android:src="@drawable/ic_text"
-            android:background="@drawable/tool_button_background"
-            android:contentDescription="@string/desc_text_tool" />
+                <!-- Drawing Tools -->
+                <ImageButton
+                    android:id="@+id/btnPen"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_margin="4dp"
+                    android:src="@drawable/ic_pen"
+                    android:background="@drawable/tool_button_background"
+                    android:contentDescription="@string/desc_pen_tool" />
 
-        <ImageButton
-            android:id="@+id/btnFormula"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="2dp"
-            android:src="@drawable/ic_formula"
-            android:background="@drawable/tool_button_background"
-            android:contentDescription="@string/desc_formula_tool" />
+                <ImageButton
+                    android:id="@+id/btnEraser"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_margin="4dp"
+                    android:src="@drawable/ic_eraser"
+                    android:background="@drawable/tool_button_background"
+                    android:contentDescription="@string/desc_eraser_tool" />
 
-        <!-- Separator -->
-        <View
-            android:layout_width="1dp"
-            android:layout_height="30dp"
-            android:layout_marginHorizontal="4dp"
-            android:background="#E0E0E0" />
+                <!-- Separator -->
+                <View
+                    android:layout_width="2dp"
+                    android:layout_height="40dp"
+                    android:layout_marginHorizontal="8dp"
+                    android:background="#E0E0E0" />
 
-        <!-- Action Tools -->
-        <ImageButton
-            android:id="@+id/btnUndo"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="2dp"
-            android:src="@drawable/ic_undo"
-            android:background="@drawable/tool_button_background"
-            android:contentDescription="@string/desc_undo_button" />
+                <!-- Action Tools -->
+                <ImageButton
+                    android:id="@+id/btnUndo"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_margin="4dp"
+                    android:src="@drawable/ic_undo"
+                    android:background="@drawable/tool_button_background"
+                    android:contentDescription="@string/desc_undo_button" />
 
-        <ImageButton
-            android:id="@+id/btnRedo"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="2dp"
-            android:src="@drawable/ic_redo"
-            android:background="@drawable/tool_button_background"
-            android:contentDescription="@string/desc_redo_button" />
+                <ImageButton
+                    android:id="@+id/btnRedo"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_margin="4dp"
+                    android:src="@drawable/ic_redo"
+                    android:background="@drawable/tool_button_background"
+                    android:contentDescription="@string/desc_redo_button" />
 
-        <ImageButton
-            android:id="@+id/btnClear"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="2dp"
-            android:src="@drawable/ic_clear"
-            android:background="@drawable/tool_button_background"
-            android:contentDescription="@string/desc_clear_button" />
+                <ImageButton
+                    android:id="@+id/btnClear"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_margin="4dp"
+                    android:src="@drawable/ic_clear"
+                    android:background="@drawable/tool_button_background"
+                    android:contentDescription="@string/desc_clear_button" />
 
-        <!-- Separator -->
-        <View
-            android:layout_width="1dp"
-            android:layout_height="30dp"
-            android:layout_marginHorizontal="4dp"
-            android:background="#E0E0E0" />
+                <!-- Separator -->
+                <View
+                    android:layout_width="2dp"
+                    android:layout_height="40dp"
+                    android:layout_marginHorizontal="8dp"
+                    android:background="#E0E0E0" />
 
-        <!-- Mode Tools -->
-        <ImageButton
-            android:id="@+id/btnModeToggle"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="2dp"
-            android:src="@drawable/ic_move_4d"
-            android:background="@drawable/tool_button_background"
-            android:contentDescription="@string/desc_mode_toggle" />
+                <!-- Mode Tools -->
+                <ImageButton
+                    android:id="@+id/btnPinchMode"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_margin="4dp"
+                    android:src="@drawable/ic_move_4d"
+                    android:background="@drawable/tool_button_background"
+                    android:contentDescription="@string/desc_pinch_mode" />
 
-        <ImageButton
-            android:id="@+id/btnPinchMode"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="2dp"
-            android:src="@drawable/ic_zoom"
-            android:background="@drawable/tool_button_background"
-            android:contentDescription="@string/desc_pinch_mode" />
+            </LinearLayout>
 
-        <!-- Separator -->
-        <View
-            android:layout_width="1dp"
-            android:layout_height="30dp"
-            android:layout_marginHorizontal="4dp"
-            android:background="#E0E0E0" />
+            <!-- Colors Row -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="8dp">
 
-        <!-- Color Popup Button -->
-        <Button
-            android:id="@+id/btnColorPicker"
-            android:layout_width="26dp"
-            android:layout_height="26dp"
-            android:layout_margin="2dp"
-            android:background="@drawable/color_button_background"
-            android:backgroundTint="#000000"
-            android:contentDescription="@string/colors" />
+                <Button
+                    android:id="@+id/colorBlack"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_margin="3dp"
+                    android:background="@drawable/color_button_background"
+                    android:backgroundTint="#000000"
+                    android:contentDescription="@string/color_black" />
 
-        <!-- Stroke Width Popup Button -->
-        <ImageButton
-            android:id="@+id/btnStrokeWidth"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="2dp"
-            android:src="@drawable/ic_stroke_width"
-            android:background="@drawable/tool_button_background"
-            android:contentDescription="@string/stroke_width" />
+                <Button
+                    android:id="@+id/colorRed"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_margin="3dp"
+                    android:background="@drawable/color_button_background"
+                    android:backgroundTint="#F44336"
+                    android:contentDescription="@string/color_red" />
 
-    </LinearLayout>
+                <Button
+                    android:id="@+id/colorBlue"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_margin="3dp"
+                    android:background="@drawable/color_button_background"
+                    android:backgroundTint="#2196F3"
+                    android:contentDescription="@string/color_blue" />
+
+                <Button
+                    android:id="@+id/colorGreen"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_margin="3dp"
+                    android:background="@drawable/color_button_background"
+                    android:backgroundTint="#4CAF50"
+                    android:contentDescription="@string/color_green" />
+
+                <Button
+                    android:id="@+id/colorYellow"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_margin="3dp"
+                    android:background="@drawable/color_button_background"
+                    android:backgroundTint="#FFEB3B"
+                    android:contentDescription="@string/color_yellow" />
+
+                <Button
+                    android:id="@+id/colorPurple"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_margin="3dp"
+                    android:background="@drawable/color_button_background"
+                    android:backgroundTint="#9C27B0"
+                    android:contentDescription="@string/color_purple" />
+
+                <Button
+                    android:id="@+id/colorOrange"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_margin="3dp"
+                    android:background="@drawable/color_button_background"
+                    android:backgroundTint="#FF9800"
+                    android:contentDescription="@string/color_orange" />
+
+            </LinearLayout>
+
+            <!-- Stroke Width Row -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="8dp">
+
+                <SeekBar
+                    android:id="@+id/strokeWidthSeekBar"
+                    android:layout_width="200dp"
+                    android:layout_height="wrap_content"
+                    android:max="20"
+                    android:progress="8"
+                    android:contentDescription="@string/desc_stroke_width" />
+
+                <TextView
+                    android:id="@+id/strokeWidthValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="8"
+                    android:textSize="12sp"
+                    android:layout_marginStart="12dp"
+                    android:minWidth="20dp"
+                    android:gravity="center"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </ScrollView>
 
 </android.support.constraint.ConstraintLayout>

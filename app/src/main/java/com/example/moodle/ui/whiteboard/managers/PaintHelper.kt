@@ -69,7 +69,13 @@ class PaintHelper {
             }
             DrawingTool.SELECTION -> selectionPaint
             DrawingTool.SELECTIVE_ERASER -> selectionPaint
-            DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> drawPaint.apply {
+            // All shape tools
+            DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE,
+            DrawingTool.CUBE, DrawingTool.CYLINDER, DrawingTool.PYRAMID, DrawingTool.SPHERE, DrawingTool.CONE,
+            DrawingTool.RIGHT_TRIANGLE, DrawingTool.ISOSCELES_TRIANGLE, DrawingTool.PARALLELOGRAM, 
+            DrawingTool.TRAPEZOID, DrawingTool.PENTAGON, DrawingTool.HEXAGON, DrawingTool.STAR, 
+            DrawingTool.DIAMOND, DrawingTool.ELLIPSE, DrawingTool.ARROW,
+            DrawingTool.RULER, DrawingTool.BAG, DrawingTool.CONVEYOR -> drawPaint.apply {
                 this.color = color
                 this.strokeWidth = strokeWidth
                 xfermode = null

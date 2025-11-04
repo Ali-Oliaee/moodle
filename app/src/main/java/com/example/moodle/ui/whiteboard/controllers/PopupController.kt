@@ -32,6 +32,7 @@ class PopupController(
     private var backgroundPopupWindow: PopupWindow? = null
     private var zoomPopupWindow: PopupWindow? = null
     private var shapesPopupWindow: PopupWindow? = null
+    private var rulerPopupWindow: PopupWindow? = null
     
     // State
     private var isUpdatingZoomFromSlider = false
@@ -44,6 +45,7 @@ class PopupController(
     var onBackgroundImageUploadRequested: (() -> Unit)? = null
     var onToolSelected: ((DrawingTool) -> Unit)? = null
     var onEraserModeSelected: ((Boolean) -> Unit)? = null
+    var onRulerPrecisionChanged: ((RulerPrecision) -> Unit)? = null
     
     /**
      * Show color picker popup
@@ -370,35 +372,42 @@ class PopupController(
             true
         )
         
-        // Shape buttons in popup
-        val btnLinePopup = popupView.findViewById<ImageButton>(R.id.btnLinePopup)
-        val btnCirclePopup = popupView.findViewById<ImageButton>(R.id.btnCirclePopup)
-        val btnTrianglePopup = popupView.findViewById<ImageButton>(R.id.btnTrianglePopup)
-        val btnRectanglePopup = popupView.findViewById<ImageButton>(R.id.btnRectanglePopup)
+        // Find all shape buttons
+        setupShapeButton(popupView, R.id.btnLinePopup, DrawingTool.LINE)
+        setupShapeButton(popupView, R.id.btnCirclePopup, DrawingTool.CIRCLE)
+        setupShapeButton(popupView, R.id.btnEllipsePopup, DrawingTool.ELLIPSE)
+        setupShapeButton(popupView, R.id.btnRectanglePopup, DrawingTool.RECTANGLE)
+        setupShapeButton(popupView, R.id.btnDiamondPopup, DrawingTool.DIAMOND)
         
-        // Set click listeners
-        btnLinePopup.setOnClickListener {
-            onToolSelected?.invoke(DrawingTool.LINE)
-            shapesPopupWindow?.dismiss()
-        }
+        setupShapeButton(popupView, R.id.btnTrianglePopup, DrawingTool.TRIANGLE)
+        setupShapeButton(popupView, R.id.btnRightTrianglePopup, DrawingTool.RIGHT_TRIANGLE)
+        setupShapeButton(popupView, R.id.btnIsoscelesTrianglePopup, DrawingTool.ISOSCELES_TRIANGLE)
+        setupShapeButton(popupView, R.id.btnStarPopup, DrawingTool.STAR)
+        setupShapeButton(popupView, R.id.btnArrowPopup, DrawingTool.ARROW)
         
-        btnCirclePopup.setOnClickListener {
-            onToolSelected?.invoke(DrawingTool.CIRCLE)
-            shapesPopupWindow?.dismiss()
-        }
+        setupShapeButton(popupView, R.id.btnPentagonPopup, DrawingTool.PENTAGON)
+        setupShapeButton(popupView, R.id.btnHexagonPopup, DrawingTool.HEXAGON)
+        setupShapeButton(popupView, R.id.btnParallelogramPopup, DrawingTool.PARALLELOGRAM)
+        setupShapeButton(popupView, R.id.btnTrapezoidPopup, DrawingTool.TRAPEZOID)
         
-        btnTrianglePopup.setOnClickListener {
-            onToolSelected?.invoke(DrawingTool.TRIANGLE)
-            shapesPopupWindow?.dismiss()
-        }
-        
-        btnRectanglePopup.setOnClickListener {
-            onToolSelected?.invoke(DrawingTool.RECTANGLE)
-            shapesPopupWindow?.dismiss()
-        }
+        setupShapeButton(popupView, R.id.btnCubePopup, DrawingTool.CUBE)
+        setupShapeButton(popupView, R.id.btnCylinderPopup, DrawingTool.CYLINDER)
+        setupShapeButton(popupView, R.id.btnPyramidPopup, DrawingTool.PYRAMID)
+        setupShapeButton(popupView, R.id.btnSpherePopup, DrawingTool.SPHERE)
+        setupShapeButton(popupView, R.id.btnConePopup, DrawingTool.CONE)
         
         // Show popup at center of screen
         shapesPopupWindow?.showAtLocation(anchorView, Gravity.CENTER, 0, 0)
+    }
+    
+    /**
+     * Helper to setup shape button click listener
+     */
+    private fun setupShapeButton(popupView: View, buttonId: Int, tool: DrawingTool) {
+        popupView.findViewById<ImageButton>(buttonId)?.setOnClickListener {
+            onToolSelected?.invoke(tool)
+            shapesPopupWindow?.dismiss()
+        }
     }
     
     /**
@@ -458,6 +467,55 @@ class PopupController(
     }
     
     /**
+     * Show ruler tools popup
+     */
+    fun showRulerPopup() {
+        val inflater = LayoutInflater.from(activity)
+        val popupView = inflater.inflate(R.layout.popup_ruler, null)
+        
+        rulerPopupWindow = PopupWindow(
+            popupView,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        )
+        
+        // Get references to views
+        val rulerOption = popupView.findViewById<LinearLayout>(R.id.rulerOption)
+        val bagOption = popupView.findViewById<LinearLayout>(R.id.bagOption)
+        val conveyorOption = popupView.findViewById<LinearLayout>(R.id.conveyorOption)
+        
+        // Ruler option click listener
+        rulerOption.setOnClickListener {
+            onToolSelected?.invoke(DrawingTool.RULER)
+            rulerPopupWindow?.dismiss()
+            Toast.makeText(activity, activity.getString(R.string.ruler), Toast.LENGTH_SHORT).show()
+        }
+        
+        // Bag option click listener
+        bagOption.setOnClickListener {
+            onToolSelected?.invoke(DrawingTool.BAG)
+            rulerPopupWindow?.dismiss()
+            Toast.makeText(activity, activity.getString(R.string.bag), Toast.LENGTH_SHORT).show()
+        }
+        
+        // Conveyor option click listener
+        conveyorOption.setOnClickListener {
+            onToolSelected?.invoke(DrawingTool.CONVEYOR)
+            rulerPopupWindow?.dismiss()
+            Toast.makeText(activity, activity.getString(R.string.conveyor), Toast.LENGTH_SHORT).show()
+        }
+        
+        // Show popup at center of screen
+        rulerPopupWindow?.showAtLocation(
+            activity.findViewById(android.R.id.content),
+            Gravity.CENTER,
+            0,
+            0
+        )
+    }
+    
+    /**
      * Dismiss zoom popup if open
      */
     fun dismissZoomPopup() {
@@ -475,6 +533,7 @@ class PopupController(
         backgroundPopupWindow?.dismiss()
         zoomPopupWindow?.dismiss()
         shapesPopupWindow?.dismiss()
+        rulerPopupWindow?.dismiss()
     }
     
     /**
@@ -486,5 +545,13 @@ class PopupController(
         val variables: List<String>,
         val descriptions: List<String>
     )
+    
+    /**
+     * Enum for ruler precision settings
+     */
+    enum class RulerPrecision {
+        MILLIMETER,
+        CENTIMETER
+    }
 }
 

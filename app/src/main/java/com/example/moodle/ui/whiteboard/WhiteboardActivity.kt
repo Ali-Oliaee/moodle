@@ -52,10 +52,10 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnText: ImageButton
     private lateinit var btnFormula: ImageButton
     private lateinit var btnShapes: ImageButton
+    private lateinit var btnRuler: ImageButton
     private lateinit var btnUndo: ImageButton
     private lateinit var btnRedo: ImageButton
     private lateinit var btnClear: ImageButton
-    private lateinit var btnModeToggle: ImageButton
     private lateinit var btnColorPicker: Button
     private lateinit var btnStrokeWidth: ImageButton
     private lateinit var btnBackground: ImageButton
@@ -79,6 +79,9 @@ class WhiteboardActivity : AppCompatActivity() {
     
     // Toolbar visibility state
     private var areToolbarsVisible = true
+    
+    // Pinch mode state
+    private var isPinchModeActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -133,10 +136,10 @@ class WhiteboardActivity : AppCompatActivity() {
         btnText = findViewById(R.id.btnText)
         btnFormula = findViewById(R.id.btnFormula)
         btnShapes = findViewById(R.id.btnShapes)
+        btnRuler = findViewById(R.id.btnRuler)
         btnUndo = findViewById(R.id.btnUndo)
         btnRedo = findViewById(R.id.btnRedo)
         btnClear = findViewById(R.id.btnClear)
-        btnModeToggle = findViewById(R.id.btnModeToggle)
         btnColorPicker = findViewById(R.id.btnColorPicker)
         btnStrokeWidth = findViewById(R.id.btnStrokeWidth)
         btnBackground = findViewById(R.id.btnBackground)
@@ -174,6 +177,12 @@ class WhiteboardActivity : AppCompatActivity() {
         splitModeController.onSplitModeChanged = { enabled ->
             if (enabled) {
                 popupController.dismissZoomPopup()
+                // Disable pinch mode in split mode
+                if (isPinchModeActive) {
+                    isPinchModeActive = false
+                    whiteboardView.setPinchModeEnabled(false)
+                    btnPinchMode.isSelected = false
+                }
                 // Hide toggle button in split mode
                 btnToggleToolbars.visibility = android.view.View.GONE
                 // If toolbars were hidden, show them back in split mode
@@ -189,6 +198,9 @@ class WhiteboardActivity : AppCompatActivity() {
             // Disable background button in split mode, enable in normal mode
             btnBackground.isEnabled = !enabled
             btnBackground.alpha = if (enabled) 0.5f else 1.0f
+            // Disable pinch mode button in split mode
+            btnPinchMode.isEnabled = !enabled
+            btnPinchMode.alpha = if (enabled) 0.5f else 1.0f
         }
     }
     
@@ -202,7 +214,7 @@ class WhiteboardActivity : AppCompatActivity() {
         btnLogout.setOnClickListener { logout() }
         btnExport.setOnClickListener { showExportOptionsDialog() }
         btnImport.setOnClickListener { showImportOptionsDialog() }
-        btnPinchMode.setOnClickListener { popupController.showZoomPopup(btnPinchMode) }
+        btnPinchMode.setOnClickListener { togglePinchMode() }
         
         // Toggle toolbars button listener
         btnToggleToolbars.setOnClickListener { toggleToolbarsVisibility() }
@@ -241,6 +253,10 @@ class WhiteboardActivity : AppCompatActivity() {
             popupController.showShapesPopup(btnShapes)
         }
         
+        btnRuler.setOnClickListener {
+            popupController.showRulerPopup()
+        }
+        
         btnUndo.setOnClickListener {
             whiteboardView.undo()
             saveCurrentPageToViewModel()
@@ -255,10 +271,6 @@ class WhiteboardActivity : AppCompatActivity() {
         
         btnClear.setOnClickListener {
             showClearConfirmDialog()
-        }
-        
-        btnModeToggle.setOnClickListener {
-            viewModel.toggleDrawingMode()
         }
         
         btnColorPicker.setOnClickListener {
@@ -331,6 +343,9 @@ class WhiteboardActivity : AppCompatActivity() {
         popupController.onBackgroundImageUploadRequested = {
             openBackgroundImagePicker()
         }
+        
+        popupController.onRulerPrecisionChanged = { precision ->
+        }
     }
     
     /**
@@ -381,7 +396,6 @@ class WhiteboardActivity : AppCompatActivity() {
         viewModel.isDrawingMode.observe(this, Observer { isDrawing ->
             isDrawing?.let {
                 whiteboardView.setDrawingMode(it)
-                btnModeToggle.isSelected = !it
             }
         })
         
@@ -486,12 +500,18 @@ class WhiteboardActivity : AppCompatActivity() {
         btnEraser.isSelected = false
         btnText.isSelected = false
         btnShapes.isSelected = false
+        btnRuler.isSelected = false
         
         when (tool) {
             DrawingTool.PEN, DrawingTool.SELECTION -> btnPen.isSelected = true
             DrawingTool.ERASER, DrawingTool.SELECTIVE_ERASER -> btnEraser.isSelected = true
             DrawingTool.TEXT -> btnText.isSelected = true
-            DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> btnShapes.isSelected = true
+            DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE,
+            DrawingTool.ELLIPSE, DrawingTool.DIAMOND, DrawingTool.STAR, DrawingTool.ARROW,
+            DrawingTool.RIGHT_TRIANGLE, DrawingTool.ISOSCELES_TRIANGLE, DrawingTool.PARALLELOGRAM,
+            DrawingTool.TRAPEZOID, DrawingTool.PENTAGON, DrawingTool.HEXAGON,
+            DrawingTool.CUBE, DrawingTool.CYLINDER, DrawingTool.PYRAMID, DrawingTool.SPHERE, DrawingTool.CONE -> btnShapes.isSelected = true
+            DrawingTool.RULER, DrawingTool.BAG, DrawingTool.CONVEYOR -> btnRuler.isSelected = true
         }
     }
     
@@ -850,6 +870,26 @@ class WhiteboardActivity : AppCompatActivity() {
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
+    }
+    
+    /**
+     * Toggle pinch and zoom mode
+     * When enabled, users can only zoom/pan, drawing is disabled
+     */
+    private fun togglePinchMode() {
+        isPinchModeActive = !isPinchModeActive
+        whiteboardView.setPinchModeEnabled(isPinchModeActive)
+        
+        // Update button visual state
+        btnPinchMode.isSelected = isPinchModeActive
+        
+        // Provide user feedback
+        val messageRes = if (isPinchModeActive) {
+            R.string.pinch_mode_enabled
+        } else {
+            R.string.pinch_mode_disabled
+        }
+        Toast.makeText(this, getString(messageRes), Toast.LENGTH_SHORT).show()
     }
     
     /**
