@@ -41,6 +41,7 @@ class PopupController(
     var onStrokeWidthChanged: ((Float) -> Unit)? = null
     var onBackgroundPatternSelected: ((BackgroundPattern) -> Unit)? = null
     var onBackgroundColorSelected: ((BackgroundColor) -> Unit)? = null
+    var onBackgroundImageUploadRequested: (() -> Unit)? = null
     var onToolSelected: ((DrawingTool) -> Unit)? = null
     var onEraserModeSelected: ((Boolean) -> Unit)? = null
     
@@ -222,6 +223,13 @@ class PopupController(
         setupBackgroundPatternClickListener(popupView, R.id.backgroundLinesBoth, BackgroundPattern.LINES_BOTH)
         setupBackgroundPatternClickListener(popupView, R.id.backgroundDotGrid, BackgroundPattern.DOT_GRID)
         setupBackgroundPatternClickListener(popupView, R.id.backgroundGraphPaper, BackgroundPattern.GRAPH_PAPER)
+        
+        // Setup upload background image button
+        val btnUploadBackgroundImage = popupView.findViewById<Button>(R.id.btnUploadBackgroundImage)
+        btnUploadBackgroundImage?.setOnClickListener {
+            onBackgroundImageUploadRequested?.invoke()
+            backgroundPopupWindow?.dismiss()
+        }
         
         backgroundPopupWindow?.showAtLocation(whiteboardView, Gravity.CENTER, 0, 0)
     }

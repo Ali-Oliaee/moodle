@@ -294,6 +294,7 @@ class WhiteboardActivity : AppCompatActivity() {
         
         popupController.onBackgroundColorSelected = { color ->
             viewModel.selectBackgroundColor(color)
+            whiteboardView.setBackgroundImage(null) // Clear background image when color is selected
         }
         
         popupController.onToolSelected = { tool ->
@@ -302,6 +303,10 @@ class WhiteboardActivity : AppCompatActivity() {
         
         popupController.onEraserModeSelected = { isSelective ->
             viewModel.setSelectiveEraserMode(isSelective)
+        }
+        
+        popupController.onBackgroundImageUploadRequested = {
+            openBackgroundImagePicker()
         }
     }
     
@@ -692,6 +697,45 @@ class WhiteboardActivity : AppCompatActivity() {
     }
     
     /**
+     * Open background image picker
+     */
+    private fun openBackgroundImagePicker() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "image/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        
+        try {
+            startActivityForResult(
+                Intent.createChooser(intent, getString(R.string.upload_background_image)),
+                REQUEST_CODE_BACKGROUND_IMAGE
+            )
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.no_file_manager), Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    /**
+     * Handle background image selection
+     */
+    private fun handleBackgroundImageSelection(uri: android.net.Uri) {
+        try {
+            val inputStream = contentResolver.openInputStream(uri)
+            val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+            
+            if (bitmap != null) {
+                whiteboardView.setBackgroundImage(bitmap)
+                Toast.makeText(this, getString(R.string.background_image_set), Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, getString(R.string.import_image_invalid), Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.import_image_failed), Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    /**
      * Show import Moodle file confirmation dialog
      */
     private fun showImportMoodleConfirmDialog() {
@@ -819,6 +863,13 @@ class WhiteboardActivity : AppCompatActivity() {
                         }
                     }
                 }
+                REQUEST_CODE_BACKGROUND_IMAGE -> {
+                    if (resultCode == RESULT_OK && data != null) {
+                        data.data?.let { uri ->
+                            handleBackgroundImageSelection(uri)
+                        }
+                    }
+                }
             }
         }
     }
@@ -833,5 +884,6 @@ class WhiteboardActivity : AppCompatActivity() {
     companion object {
         private const val REQUEST_CODE_IMPORT_IMAGE = 2001
         private const val REQUEST_CODE_IMPORT_MOODLE = 2002
+        private const val REQUEST_CODE_BACKGROUND_IMAGE = 2003
     }
 }

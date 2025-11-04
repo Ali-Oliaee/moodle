@@ -21,6 +21,7 @@ class CanvasRenderManager(
     // Background pattern and color
     private var currentBackgroundPattern = BackgroundPattern.PLAIN
     private var currentBackgroundColor = BackgroundColor.WHITE
+    private var backgroundImage: Bitmap? = null
     
     // Selection paint for selective eraser
     private val selectionPaint = Paint().apply {
@@ -162,6 +163,16 @@ class CanvasRenderManager(
         
         if (bitmapWidth == 0f || bitmapHeight == 0f) return
         
+        // Draw background image if available, otherwise draw color
+        backgroundImage?.let { image ->
+            if (!image.isRecycled) {
+                val destRect = RectF(0f, 0f, bitmapWidth, bitmapHeight)
+                canvas.drawBitmap(image, null, destRect, null)
+                return
+            }
+        }
+        
+        // Draw background color if no image
         val backgroundPaint = Paint().apply {
             color = currentBackgroundColor.colorValue
             style = Paint.Style.FILL
@@ -435,6 +446,12 @@ class CanvasRenderManager(
     }
     
     fun getBackgroundColor(): BackgroundColor = currentBackgroundColor
+    
+    fun setBackgroundImage(bitmap: Bitmap?) {
+        backgroundImage = bitmap
+    }
+    
+    fun getBackgroundImage(): Bitmap? = backgroundImage
     
     fun redrawCanvas() {
         bitmapManager.drawingCanvas?.let { canvas ->

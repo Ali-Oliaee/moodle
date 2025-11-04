@@ -153,6 +153,8 @@
     <string name="background_color_light_green">سبز روشن</string>
     <string name="background_color_light_yellow">زرد روشن</string>
     <string name="background_color_light_pink">صورتی روشن</string>
+    <string name="upload_background_image">بارگذاری تصویر پس‌زمینه</string>
+    <string name="background_image_set">تصویر پس‌زمینه تنظیم شد</string>
     
     <!-- Pagination -->
     <string name="desc_previous_page">صفحه قبلی</string>
