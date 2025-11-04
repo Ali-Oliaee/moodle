@@ -174,6 +174,17 @@ class WhiteboardActivity : AppCompatActivity() {
         splitModeController.onSplitModeChanged = { enabled ->
             if (enabled) {
                 popupController.dismissZoomPopup()
+                // Hide toggle button in split mode
+                btnToggleToolbars.visibility = android.view.View.GONE
+                // If toolbars were hidden, show them back in split mode
+                if (!areToolbarsVisible) {
+                    areToolbarsVisible = true
+                    showToolbar(topToolbar)
+                    btnToggleToolbars.setImageResource(R.drawable.ic_chevron_up)
+                }
+            } else {
+                // Show toggle button in normal mode
+                btnToggleToolbars.visibility = android.view.View.VISIBLE
             }
             // Disable background button in split mode, enable in normal mode
             btnBackground.isEnabled = !enabled

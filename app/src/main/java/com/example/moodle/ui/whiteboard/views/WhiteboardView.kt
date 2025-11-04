@@ -60,6 +60,9 @@ class WhiteboardView @JvmOverloads constructor(
             Pair(w, h)
         }
         touchHandler.getDrawingCanvas = { bitmapManager.drawingCanvas }
+        touchHandler.onSectionControlButtonClick = { section, buttonIndex ->
+            handleSectionControlButtonClick(section, buttonIndex)
+        }
         
         // Zoom pan controller callbacks
         zoomPanController.onInvalidate = { invalidate() }
@@ -74,6 +77,23 @@ class WhiteboardView @JvmOverloads constructor(
         bitmapManager.onBitmapInitialized = { canvasWidth, canvasHeight ->
             zoomPanController.initializeFocus(canvasWidth, canvasHeight)
         }
+    }
+    
+    private fun handleSectionControlButtonClick(section: SectionManager.Section, buttonIndex: Int) {
+        // Button index: 0=pen, 1=eraser, 2=clear, 3=black, 4=blue, 5=green, 6=red
+        when (buttonIndex) {
+            0 -> section.currentTool = DrawingTool.PEN
+            1 -> section.currentTool = DrawingTool.ERASER
+            2 -> {
+                section.clear()
+                stateManager.drawingChangeListener?.onDrawingChanged()
+            }
+            3 -> section.currentColor = Color.BLACK
+            4 -> section.currentColor = Color.parseColor("#2196F3")  // Blue
+            5 -> section.currentColor = Color.parseColor("#4CAF50")  // Green
+            6 -> section.currentColor = Color.parseColor("#F44336")  // Red
+        }
+        invalidate()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -90,7 +110,7 @@ class WhiteboardView @JvmOverloads constructor(
                 touchHandler.getActivePaths(),
                 touchHandler.selectionPath,
                 touchHandler.previewPath,
-                emptyMap(), // pointerSectionMap - managed internally
+                touchHandler.getPointerSectionMap(),
                 touchHandler.currentActiveSection
             )
         }

@@ -80,13 +80,24 @@ class PaintHelper {
     
     /**
      * Get paint for a specific section in split mode
+     * Uses white color for eraser since CLEAR mode doesn't work without bitmap layer
      */
     fun getPaintForSection(
         tool: DrawingTool,
         color: Int,
         strokeWidth: Float
     ): Paint {
-        return Paint(getCurrentPaint(tool, color, strokeWidth))
+        return when (tool) {
+            DrawingTool.ERASER -> Paint().apply {
+                isAntiAlias = true
+                style = Paint.Style.STROKE
+                strokeJoin = Paint.Join.ROUND
+                strokeCap = Paint.Cap.ROUND
+                this.color = Color.WHITE
+                this.strokeWidth = strokeWidth * 2
+            }
+            else -> Paint(getCurrentPaint(tool, color, strokeWidth))
+        }
     }
 }
 

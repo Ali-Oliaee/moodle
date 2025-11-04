@@ -13,7 +13,7 @@ import android.util.Log
  * Each section has its own drawing area and independent tools
  * 
  * Layout: Each section has controls at the bottom with:
- * - Pen, Eraser, Undo, Redo, Color, Stroke Width, Clear
+ * - Pen, Eraser, Clear, and 4 color options (Black, Blue, Green, Red)
  */
 class SectionManager {
     
@@ -129,8 +129,8 @@ class SectionManager {
     fun enableSplitMode(numberOfSections: Int) {
         android.util.Log.d("SectionManager", "enableSplitMode called with $numberOfSections sections, board: $boardWidth x $boardHeight")
         
-        if (numberOfSections < 2 || numberOfSections > 4) {
-            Log.w("SectionManager", "Invalid number of sections: $numberOfSections. Must be between 2 and 4.")
+        if (numberOfSections < 2 || numberOfSections > 6) {
+            Log.w("SectionManager", "Invalid number of sections: $numberOfSections. Must be between 2 and 6.")
             return
         }
         
@@ -161,6 +161,7 @@ class SectionManager {
             2 -> create2Sections()
             3 -> create3Sections()
             4 -> create4Sections()
+            6 -> create6Sections()
             else -> create2Sections() // Default fallback
         }
         

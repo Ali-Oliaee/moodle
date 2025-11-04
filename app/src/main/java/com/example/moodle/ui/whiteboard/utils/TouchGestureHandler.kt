@@ -57,6 +57,9 @@ class TouchGestureHandler(
     
     // View dimensions callback
     var getViewWidth: (() -> Int)? = null
+    
+    // Section control button click callback
+    var onSectionControlButtonClick: ((section: SectionManager.Section, buttonIndex: Int) -> Unit)? = null
     var getViewHeight: (() -> Int)? = null
     
     // Bitmap bounds callback
@@ -105,7 +108,8 @@ class TouchGestureHandler(
             if (touchedSection != null) {
                 // Check if touch is in control area
                 if (touchedSection.containsInControlArea(screenX, screenY)) {
-                    // Control area touches are handled separately
+                    // Handle control button clicks
+                    handleSectionControlClick(touchedSection, screenX, screenY)
                     return
                 }
                 
@@ -488,6 +492,37 @@ class TouchGestureHandler(
         }
     }
     
+    // Handle clicks on section control buttons
+    private fun handleSectionControlClick(section: SectionManager.Section, x: Float, y: Float) {
+        val controlArea = section.controlBounds
+        val sectionWidth = section.bounds.width()
+        
+        val buttonSize = 50f
+        val buttonSpacing = 6f
+        val buttonCount = 7
+        
+        val totalWidth = buttonCount * buttonSize + (buttonCount - 1) * buttonSpacing
+        val startX = controlArea.left + (sectionWidth - totalWidth) / 2
+        val centerY = controlArea.centerY()
+        val buttonTop = centerY - buttonSize / 2
+        
+        for (i in 0 until buttonCount) {
+            val buttonLeft = startX + i * (buttonSize + buttonSpacing)
+            val buttonRight = buttonLeft + buttonSize
+            val buttonBottom = buttonTop + buttonSize
+            val rect = RectF(buttonLeft, buttonTop, buttonRight, buttonBottom)
+            
+            if (rect.contains(x, y)) {
+                // Button index: 0=pen, 1=eraser, 2=clear, 3=black, 4=blue, 5=green, 6=red
+                onSectionControlButtonClick?.invoke(section, i)
+                onInvalidate?.invoke()
+                return
+            }
+        }
+    }
+    
     fun getActivePaths(): Map<Int, Path> = activePaths
+    
+    fun getPointerSectionMap(): Map<Int, SectionManager.Section> = pointerSectionMap
 }
 
