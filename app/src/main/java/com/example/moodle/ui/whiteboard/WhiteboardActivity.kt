@@ -12,7 +12,7 @@ import android.view.ViewGroup
 import android.widget.*
 import com.example.moodle.R
 import com.example.moodle.data.datastore.UserPreferences
-import com.example.moodle.ui.attendance.AttendanceActivity
+// import com.example.moodle.ui.attendance.AttendanceActivity
 import com.example.moodle.ui.login.LoginActivity
 import com.example.moodle.ui.whiteboard.controllers.PopupController
 import com.example.moodle.ui.whiteboard.controllers.RecordingController
@@ -856,7 +856,7 @@ class WhiteboardActivity : AppCompatActivity() {
      * Open attendance screen
      */
     private fun openAttendanceScreen() {
-        startActivity(Intent(this, AttendanceActivity::class.java))
+        // startActivity(Intent(this, AttendanceActivity::class.java))
     }
 
     /**

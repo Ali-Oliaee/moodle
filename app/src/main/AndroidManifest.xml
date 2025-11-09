@@ -38,11 +38,6 @@
             android:screenOrientation="landscape"
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
-        <activity
-            android:name=".ui.attendance.AttendanceActivity"
-            android:exported="false"
-            android:screenOrientation="landscape" />
-
         <service
             android:name=".ui.whiteboard.ScreenRecordService"
             android:exported="false" />

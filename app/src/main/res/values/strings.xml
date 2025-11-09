@@ -1,6 +1,15 @@
 <resources>
     <string name="app_name">Moodle</string>
     
+    <!-- Login Activity -->
+    <string name="login_empty_username">نام کاربری نمی تواند خالی باشد</string>
+    <string name="login_empty_password">رمز عبور نمی تواند خالی باشد</string>
+    <string name="login_success">ورود با موفقیت انجام شد</string>
+    <string name="login_error">مشکلی در ورود به سامانه رخ داده است</string>
+    <string name="login_loading">در حال ورود...</string>
+    <string name="login">ورود</string>
+
+
     <!-- Whiteboard Activity -->
     <string name="welcome_message">خوش آمدید!</string>
     <string name="welcome_user_message">خوش آمدید, %1$s!</string>
