@@ -89,6 +89,36 @@
             android:focusable="true"
             android:layout_margin="4dp" />
 
+        <!-- Dark Blue Color -->
+        <View
+            android:id="@+id/backgroundColorDarkBlue"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_color_dark_blue"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_margin="4dp" />
+
+        <!-- Dark Green Color -->
+        <View
+            android:id="@+id/backgroundColorDarkGreen"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_color_dark_green"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_margin="4dp" />
+
+        <!-- Black Color -->
+        <View
+            android:id="@+id/backgroundColorBlack"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_color_black"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_margin="4dp" />
+       
     </GridLayout>
     
     <!-- Divider -->

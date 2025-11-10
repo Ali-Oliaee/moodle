@@ -86,9 +86,6 @@ class BackgroundPreviewView @JvmOverloads constructor(
                 BackgroundPattern.DOT_GRID -> {
                     drawDotGridPreview(c, width, height, 8f)
                 }
-                BackgroundPattern.RULED_PAPER -> {
-                    drawRuledPaperPreview(c, width, height)
-                }
                 BackgroundPattern.GRAPH_PAPER -> {
                     drawGraphPaperPreview(c, width, height)
                 }
@@ -137,23 +134,6 @@ class BackgroundPreviewView @JvmOverloads constructor(
                 x += spacing
             }
             y += spacing
-        }
-    }
-    
-    private fun drawRuledPaperPreview(canvas: Canvas, width: Float, height: Float) {
-        // Draw margin line
-        val marginLeft = width * 0.25f
-        canvas.drawLine(marginLeft, 2f, marginLeft, height - 2f, Paint().apply {
-            color = Color.parseColor("#FF6B6B")
-            strokeWidth = 1f
-        })
-        
-        // Draw horizontal lines
-        val lineSpacing = 8f
-        var y = lineSpacing
-        while (y < height) {
-            canvas.drawLine(2f, y, width - 2f, y, linePaint)
-            y += lineSpacing
         }
     }
     

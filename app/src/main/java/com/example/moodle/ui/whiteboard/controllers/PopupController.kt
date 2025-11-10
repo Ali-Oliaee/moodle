@@ -215,6 +215,9 @@ class PopupController(
         setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightGreen, BackgroundColor.LIGHT_GREEN)
         setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightYellow, BackgroundColor.LIGHT_YELLOW)
         setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightPink, BackgroundColor.LIGHT_PINK)
+        setupBackgroundColorClickListener(popupView, R.id.backgroundColorDarkBlue, BackgroundColor.DARK_BLUE)
+        setupBackgroundColorClickListener(popupView, R.id.backgroundColorDarkGreen, BackgroundColor.DARK_GREEN)
+        setupBackgroundColorClickListener(popupView, R.id.backgroundColorBlack, BackgroundColor.BLACK)
         
         // Set up click listeners for all patterns
         setupBackgroundPatternClickListener(popupView, R.id.backgroundPlain, BackgroundPattern.PLAIN)

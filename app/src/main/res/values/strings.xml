@@ -187,6 +187,9 @@
     <string name="background_color_light_green">سبز روشن</string>
     <string name="background_color_light_yellow">زرد روشن</string>
     <string name="background_color_light_pink">صورتی روشن</string>
+    <string name="background_color_dark_blue">آبی تیره</string>
+    <string name="background_color_dark_green">سبز تیره</string>
+    <string name="background_color_black">سیاه</string>
     <string name="upload_background_image">بارگذاری تصویر پس‌زمینه</string>
     <string name="background_image_set">تصویر پس‌زمینه تنظیم شد</string>
     
