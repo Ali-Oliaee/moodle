@@ -147,9 +147,6 @@ class TouchGestureHandler(
             DrawingTool.CUBE, DrawingTool.CYLINDER, DrawingTool.PYRAMID, DrawingTool.SPHERE, DrawingTool.CONE,
             DrawingTool.RIGHT_TRIANGLE, DrawingTool.ISOSCELES_TRIANGLE, DrawingTool.PARALLELOGRAM, DrawingTool.TRAPEZOID,
             DrawingTool.PENTAGON, DrawingTool.HEXAGON, DrawingTool.STAR, DrawingTool.DIAMOND, DrawingTool.ELLIPSE, DrawingTool.ARROW,
-            DrawingTool.RULER, DrawingTool.BAG, DrawingTool.CONVEYOR -> {
-                handleShapeTouchDown(x, y, toolToUse, pointerId)
-            }
             else -> {
                 // Create new path for drawing
                 val newPath = Path()
@@ -187,11 +184,6 @@ class TouchGestureHandler(
                 DrawingTool.CUBE, DrawingTool.CYLINDER, DrawingTool.PYRAMID, DrawingTool.SPHERE, DrawingTool.CONE,
                 DrawingTool.RIGHT_TRIANGLE, DrawingTool.ISOSCELES_TRIANGLE, DrawingTool.PARALLELOGRAM, DrawingTool.TRAPEZOID,
                 DrawingTool.PENTAGON, DrawingTool.HEXAGON, DrawingTool.STAR, DrawingTool.DIAMOND, DrawingTool.ELLIPSE, DrawingTool.ARROW,
-                DrawingTool.RULER, DrawingTool.BAG, DrawingTool.CONVEYOR -> {
-                    val (x, y) = transformScreenToDrawing(event.x, event.y)
-                    handleShapeTouchMove(x, y, toolToUse, id)
-                    return
-                }
                 else -> {}
             }
         }
@@ -245,9 +237,6 @@ class TouchGestureHandler(
             DrawingTool.CUBE, DrawingTool.CYLINDER, DrawingTool.PYRAMID, DrawingTool.SPHERE, DrawingTool.CONE,
             DrawingTool.RIGHT_TRIANGLE, DrawingTool.ISOSCELES_TRIANGLE, DrawingTool.PARALLELOGRAM, DrawingTool.TRAPEZOID,
             DrawingTool.PENTAGON, DrawingTool.HEXAGON, DrawingTool.STAR, DrawingTool.DIAMOND, DrawingTool.ELLIPSE, DrawingTool.ARROW,
-            DrawingTool.RULER, DrawingTool.BAG, DrawingTool.CONVEYOR -> {
-                handleShapeTouchUp(x, y, toolToUse, pointerId)
-            }
             else -> {
                 finishDrawingPath(pointerId)
             }
@@ -771,76 +760,6 @@ class TouchGestureHandler(
                 path.lineTo(right - headLength, centerY + shaftWidth / 2)
                 path.lineTo(left, centerY + shaftWidth / 2)
                 path.close()
-            }
-            DrawingTool.RULER -> {
-                val left = min(startX, endX)
-                val top = min(startY, endY)
-                val right = max(startX, endX)
-                val bottom = max(startY, endY)
-                val width = right - left
-                val height = bottom - top
-                
-                path.addRect(left, top, right, bottom, Path.Direction.CW)
-                
-                val numMarks = 10
-                val markSpacing = width / numMarks
-                for (i in 0..numMarks) {
-                    val x = left + i * markSpacing
-                    val markHeight = if (i % 5 == 0) height * 0.5f else height * 0.3f
-                    path.moveTo(x, top)
-                    path.lineTo(x, top + markHeight)
-                }
-            }
-            DrawingTool.BAG -> {
-                val centerX = (startX + endX) / 2
-                val centerY = (startY + endY) / 2
-                val width = abs(endX - startX)
-                val height = abs(endY - startY)
-                
-                val topWidth = width * 0.6f
-                val bottomWidth = width * 0.9f
-                val bodyHeight = height * 0.8f
-                
-                path.moveTo(centerX - topWidth / 2, centerY - height / 2)
-                path.lineTo(centerX + topWidth / 2, centerY - height / 2)
-                path.lineTo(centerX + bottomWidth / 2, centerY + bodyHeight / 2)
-                path.lineTo(centerX - bottomWidth / 2, centerY + bodyHeight / 2)
-                path.close()
-                
-                val handleWidth = width * 0.3f
-                val handleHeight = height * 0.2f
-                path.addArc(
-                    centerX - handleWidth / 2,
-                    centerY - height / 2 - handleHeight,
-                    centerX + handleWidth / 2,
-                    centerY - height / 2,
-                    0f, -180f
-                )
-            }
-            DrawingTool.CONVEYOR -> {
-                val left = min(startX, endX)
-                val top = min(startY, endY)
-                val right = max(startX, endX)
-                val bottom = max(startY, endY)
-                val width = right - left
-                val height = bottom - top
-                val centerY = (top + bottom) / 2
-                
-                path.moveTo(left, centerY - height * 0.25f)
-                path.lineTo(right, centerY - height * 0.25f)
-                path.moveTo(left, centerY + height * 0.25f)
-                path.lineTo(right, centerY + height * 0.25f)
-                
-                path.addCircle(left, centerY, height * 0.3f, Path.Direction.CW)
-                path.addCircle(right, centerY, height * 0.3f, Path.Direction.CW)
-                
-                val numMarks = 8
-                val markSpacing = width / numMarks
-                for (i in 0 until numMarks) {
-                    val x = left + i * markSpacing + markSpacing / 2
-                    path.moveTo(x, centerY - height * 0.15f)
-                    path.lineTo(x, centerY + height * 0.15f)
-                }
             }
             else -> {
                 path.moveTo(startX, startY)
