@@ -173,7 +173,6 @@ class WhiteboardActivity : AppCompatActivity() {
         
         splitModeController.onSplitModeChanged = { enabled ->
             if (enabled) {
-                popupController.dismissZoomPopup()
                 // Disable pinch mode in split mode
                 if (isPinchModeActive) {
                     isPinchModeActive = false

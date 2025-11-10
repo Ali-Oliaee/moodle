@@ -30,12 +30,7 @@ class PopupController(
     private var eraserModePopupWindow: PopupWindow? = null
     private var formulaPopupWindow: PopupWindow? = null
     private var backgroundPopupWindow: PopupWindow? = null
-    private var zoomPopupWindow: PopupWindow? = null
     private var shapesPopupWindow: PopupWindow? = null
-    private var rulerPopupWindow: PopupWindow? = null
-    
-    // State
-    private var isUpdatingZoomFromSlider = false
     
     // Callbacks
     var onColorSelected: ((Int) -> Unit)? = null
@@ -45,7 +40,6 @@ class PopupController(
     var onBackgroundImageUploadRequested: (() -> Unit)? = null
     var onToolSelected: ((DrawingTool) -> Unit)? = null
     var onEraserModeSelected: ((Boolean) -> Unit)? = null
-    var onRulerPrecisionChanged: ((RulerPrecision) -> Unit)? = null
     
     /**
      * Show color picker popup
@@ -118,62 +112,6 @@ class PopupController(
         
         // Show popup above the anchor view
         strokePopupWindow?.showAsDropDown(anchorView, 0, -anchorView.height - 150, Gravity.CENTER)
-    }
-    
-    /**
-     * Show zoom slider popup
-     */
-    fun showZoomPopup(anchorView: View) {
-        val inflater = LayoutInflater.from(activity)
-        val popupView = inflater.inflate(R.layout.popup_zoom_slider, null)
-        
-        zoomPopupWindow = PopupWindow(
-            popupView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-        
-        val zoomSlider = popupView.findViewById<SeekBar>(R.id.zoomSlider)
-        val btnResetZoom = popupView.findViewById<Button>(R.id.btnResetZoom)
-        
-        // Get current zoom level and range
-        val currentZoom = whiteboardView.getZoomLevel()
-        val minZoom = whiteboardView.getMinZoomLevel()
-        val maxZoom = whiteboardView.getMaxZoomLevel()
-        
-        // Convert zoom level to progress (0-100)
-        val progress = ((currentZoom - minZoom) / (maxZoom - minZoom) * 100f).toInt()
-        zoomSlider.progress = progress
-        
-        // Setup slider listener
-        zoomSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser && !isUpdatingZoomFromSlider) {
-                    // Convert progress (0-100) to zoom level (minZoom-maxZoom)
-                    val zoomLevel = minZoom + (progress / 100f) * (maxZoom - minZoom)
-                    
-                    isUpdatingZoomFromSlider = true
-                    whiteboardView.setZoomLevel(zoomLevel)
-                    isUpdatingZoomFromSlider = false
-                }
-            }
-            
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        
-        // Setup reset button
-        btnResetZoom.setOnClickListener {
-            whiteboardView.setZoomLevel(1.0f)
-            
-            // Update slider
-            val resetProgress = ((1.0f - minZoom) / (maxZoom - minZoom) * 100f).toInt()
-            zoomSlider.progress = resetProgress
-        }
-        
-        // Show popup above the anchor view
-        zoomPopupWindow?.showAsDropDown(anchorView, 0, -anchorView.height - 150, Gravity.CENTER)
     }
     
     /**
@@ -470,13 +408,6 @@ class PopupController(
     }
     
     /**
-     * Dismiss zoom popup if open
-     */
-    fun dismissZoomPopup() {
-        zoomPopupWindow?.dismiss()
-    }
-    
-    /**
      * Clean up all popup windows
      */
     fun cleanup() {
@@ -485,9 +416,7 @@ class PopupController(
         eraserModePopupWindow?.dismiss()
         formulaPopupWindow?.dismiss()
         backgroundPopupWindow?.dismiss()
-        zoomPopupWindow?.dismiss()
         shapesPopupWindow?.dismiss()
-        rulerPopupWindow?.dismiss()
     }
     
     /**
@@ -499,13 +428,5 @@ class PopupController(
         val variables: List<String>,
         val descriptions: List<String>
     )
-    
-    /**
-     * Enum for ruler precision settings
-     */
-    enum class RulerPrecision {
-        MILLIMETER,
-        CENTIMETER
-    }
 }
 

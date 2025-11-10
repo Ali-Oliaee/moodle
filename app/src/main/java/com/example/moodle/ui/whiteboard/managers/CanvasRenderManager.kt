@@ -103,10 +103,8 @@ class CanvasRenderManager(
         canvas.translate(-zoomPanController.focusX, -zoomPanController.focusY)
         canvas.scale(zoomPanController.scaleFactor, zoomPanController.scaleFactor)
         
-        // Draw background color
         drawBackgroundColor(canvas)
         
-        // Draw background pattern
         drawBackgroundPattern(canvas)
         
         // Draw the infinite bitmap with all previous strokes
@@ -128,17 +126,14 @@ class CanvasRenderManager(
             }
         }
         
-        // Draw text objects
         for (textObject in stateManager.textObjects) {
             textObject.draw(canvas)
         }
         
-        // Draw shape objects
         for (shapeObject in stateManager.shapeObjects) {
             shapeObject.draw(canvas)
         }
         
-        // Draw image objects
         for (imageObject in stateManager.imageObjects) {
             imageObject.draw(canvas)
         }
@@ -207,7 +202,6 @@ class CanvasRenderManager(
                 drawVerticalLines(canvas, patternPaint, 40f, bitmapWidth, bitmapHeight)
             }
             BackgroundPattern.DOT_GRID -> drawDotGrid(canvas, patternPaint, 30f, bitmapWidth, bitmapHeight)
-            BackgroundPattern.RULED_PAPER -> drawRuledPaper(canvas, 40f, bitmapWidth, bitmapHeight)
             BackgroundPattern.GRAPH_PAPER -> drawGraphPaper(canvas, bitmapWidth, bitmapHeight)
             BackgroundPattern.PLAIN -> {}
         }
@@ -264,22 +258,7 @@ class CanvasRenderManager(
             y += adjustedSpacing
         }
     }
-    
-    private fun drawRuledPaper(canvas: Canvas, spacing: Float, width: Float, height: Float) {
-        val adjustedSpacing = spacing / zoomPanController.scaleFactor
-        val paint = Paint().apply {
-            color = Color.parseColor("#B0BEC5")
-            strokeWidth = 1f / zoomPanController.scaleFactor
-            style = Paint.Style.STROKE
-        }
-        
-        var y = 0f
-        while (y <= height) {
-            canvas.drawLine(0f, y, width, y, paint)
-            y += adjustedSpacing
-        }
-    }
-    
+
     private fun drawGraphPaper(canvas: Canvas, width: Float, height: Float) {
         val smallSpacing = 20f / zoomPanController.scaleFactor
         val largeSpacing = 100f / zoomPanController.scaleFactor
