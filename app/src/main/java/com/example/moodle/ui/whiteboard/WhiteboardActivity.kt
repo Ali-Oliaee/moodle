@@ -52,7 +52,6 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnText: ImageButton
     private lateinit var btnFormula: ImageButton
     private lateinit var btnShapes: ImageButton
-    private lateinit var btnRuler: ImageButton
     private lateinit var btnUndo: ImageButton
     private lateinit var btnRedo: ImageButton
     private lateinit var btnClear: ImageButton
@@ -92,8 +91,7 @@ class WhiteboardActivity : AppCompatActivity() {
         // Initialize preferences
         userPreferences = UserPreferences(this)
         
-        // Set layout
-        setContentView(R.layout.activity_whiteboard_split)
+        setContentView(R.layout.activity_whiteboard)
         
         // Initialize views
         initializeViews()
@@ -136,7 +134,6 @@ class WhiteboardActivity : AppCompatActivity() {
         btnText = findViewById(R.id.btnText)
         btnFormula = findViewById(R.id.btnFormula)
         btnShapes = findViewById(R.id.btnShapes)
-        btnRuler = findViewById(R.id.btnRuler)
         btnUndo = findViewById(R.id.btnUndo)
         btnRedo = findViewById(R.id.btnRedo)
         btnClear = findViewById(R.id.btnClear)
@@ -253,10 +250,6 @@ class WhiteboardActivity : AppCompatActivity() {
             popupController.showShapesPopup(btnShapes)
         }
         
-        btnRuler.setOnClickListener {
-            popupController.showRulerPopup()
-        }
-        
         btnUndo.setOnClickListener {
             whiteboardView.undo()
             saveCurrentPageToViewModel()
@@ -344,8 +337,6 @@ class WhiteboardActivity : AppCompatActivity() {
             openBackgroundImagePicker()
         }
         
-        popupController.onRulerPrecisionChanged = { precision ->
-        }
     }
     
     /**
@@ -500,7 +491,6 @@ class WhiteboardActivity : AppCompatActivity() {
         btnEraser.isSelected = false
         btnText.isSelected = false
         btnShapes.isSelected = false
-        btnRuler.isSelected = false
         
         when (tool) {
             DrawingTool.PEN, DrawingTool.SELECTION -> btnPen.isSelected = true
@@ -511,7 +501,6 @@ class WhiteboardActivity : AppCompatActivity() {
             DrawingTool.RIGHT_TRIANGLE, DrawingTool.ISOSCELES_TRIANGLE, DrawingTool.PARALLELOGRAM,
             DrawingTool.TRAPEZOID, DrawingTool.PENTAGON, DrawingTool.HEXAGON,
             DrawingTool.CUBE, DrawingTool.CYLINDER, DrawingTool.PYRAMID, DrawingTool.SPHERE, DrawingTool.CONE -> btnShapes.isSelected = true
-            DrawingTool.RULER, DrawingTool.BAG, DrawingTool.CONVEYOR -> btnRuler.isSelected = true
         }
     }
     

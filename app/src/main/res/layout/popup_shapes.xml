@@ -7,19 +7,6 @@
     android:padding="8dp"
     android:elevation="8dp">
 
-    <!-- NORMAL 2D SHAPES SECTION -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="2D Shapes"
-        android:textSize="12sp"
-        android:textStyle="bold"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="2dp"
-        android:textColor="@android:color/black" />
-
     <!-- Row 1: Basic Shapes -->
     <LinearLayout
         android:layout_width="wrap_content"
@@ -177,19 +164,6 @@
         android:background="#CCCCCC"
         android:layout_marginTop="8dp"
         android:layout_marginBottom="4dp" />
-
-    <!-- 3D SHAPES SECTION -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="3D Shapes"
-        android:textSize="12sp"
-        android:textStyle="bold"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="2dp"
-        android:textColor="@android:color/black" />
 
     <!-- Row 4: 3D Shapes -->
     <LinearLayout

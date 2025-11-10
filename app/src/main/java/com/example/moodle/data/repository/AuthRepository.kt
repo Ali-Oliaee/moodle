@@ -30,8 +30,8 @@ class AuthRepository(
                         Log.d("Moodle-Auth", "Login failed: Empty response body")
                         Result.failure(Exception("Empty response from server"))
                     }
-                    !body.token.isNullOrBlank() -> {
-                        prefs.saveAuthToken(body.token)
+                    !body.accessToken.isNullOrBlank() -> {
+                        prefs.saveAuthToken(body.accessToken)
                         prefs.saveUsername(username)
                         
                         Result.success(body)

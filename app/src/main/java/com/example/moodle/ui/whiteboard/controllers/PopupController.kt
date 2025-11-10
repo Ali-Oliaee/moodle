@@ -467,55 +467,6 @@ class PopupController(
     }
     
     /**
-     * Show ruler tools popup
-     */
-    fun showRulerPopup() {
-        val inflater = LayoutInflater.from(activity)
-        val popupView = inflater.inflate(R.layout.popup_ruler, null)
-        
-        rulerPopupWindow = PopupWindow(
-            popupView,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            true
-        )
-        
-        // Get references to views
-        val rulerOption = popupView.findViewById<LinearLayout>(R.id.rulerOption)
-        val bagOption = popupView.findViewById<LinearLayout>(R.id.bagOption)
-        val conveyorOption = popupView.findViewById<LinearLayout>(R.id.conveyorOption)
-        
-        // Ruler option click listener
-        rulerOption.setOnClickListener {
-            onToolSelected?.invoke(DrawingTool.RULER)
-            rulerPopupWindow?.dismiss()
-            Toast.makeText(activity, activity.getString(R.string.ruler), Toast.LENGTH_SHORT).show()
-        }
-        
-        // Bag option click listener
-        bagOption.setOnClickListener {
-            onToolSelected?.invoke(DrawingTool.BAG)
-            rulerPopupWindow?.dismiss()
-            Toast.makeText(activity, activity.getString(R.string.bag), Toast.LENGTH_SHORT).show()
-        }
-        
-        // Conveyor option click listener
-        conveyorOption.setOnClickListener {
-            onToolSelected?.invoke(DrawingTool.CONVEYOR)
-            rulerPopupWindow?.dismiss()
-            Toast.makeText(activity, activity.getString(R.string.conveyor), Toast.LENGTH_SHORT).show()
-        }
-        
-        // Show popup at center of screen
-        rulerPopupWindow?.showAtLocation(
-            activity.findViewById(android.R.id.content),
-            Gravity.CENTER,
-            0,
-            0
-        )
-    }
-    
-    /**
      * Dismiss zoom popup if open
      */
     fun dismissZoomPopup() {
