@@ -28,10 +28,6 @@
     <string name="tool_pen">قلم</string>
     <string name="tool_eraser">روشن کننده</string>
     <string name="tool_text">متن</string>
-    <string name="drawing_mode">حالت رسم</string>
-    <string name="pan_mode">حالت پان</string>
-    <string name="selection_mode">حالت انتخاب - می‌توانید اشیاء را انتخاب و جابجا کنید</string>
-    <string name="pen_mode">حالت قلم - می‌توانید روی تخته بنویسید</string>
     
     <!-- Actions -->
     <string name="undo">برگشت</string>
@@ -95,9 +91,6 @@
     <string name="shapes">اشکال</string>
     
     <!-- Measurement Tools -->
-    <string name="ruler">خط‌کش</string>
-    <string name="bag">کیسه</string>
-    <string name="conveyor">نوار نقاله</string>
     <string name="precision_millimeter">میلی‌متر</string>
     <string name="precision_centimeter">سانتی‌متر</string>
     <string name="desc_ruler_tool">انتخاب ابزار خط‌کش</string>

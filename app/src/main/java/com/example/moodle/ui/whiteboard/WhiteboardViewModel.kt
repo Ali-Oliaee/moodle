@@ -187,11 +187,9 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
         if (!currentMode) {
             // Switch to selection mode
             _currentTool.value = DrawingTool.SELECTION
-            _showToastMessage.value = "selection_mode"
         } else {
             // Switch back to pen mode
             _currentTool.value = DrawingTool.PEN
-            _showToastMessage.value = "pen_mode"
         }
     }
     
@@ -225,8 +223,8 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
     fun setDrawingMode(isDrawing: Boolean) {
         _isDrawingMode.value = isDrawing
         
-        val modeKey = if (isDrawing) "drawing_mode" else "pan_mode"
-        _showToastMessage.value = modeKey
+        // val modeKey = if (isDrawing) "drawing_mode" else "pan_mode"
+        // _showToastMessage.value = modeKey
     }
     
     /**

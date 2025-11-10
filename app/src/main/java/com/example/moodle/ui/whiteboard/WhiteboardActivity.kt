@@ -806,10 +806,6 @@ class WhiteboardActivity : AppCompatActivity() {
      */
     private fun showToastByKey(key: String) {
         val stringRes = when (key) {
-            "selection_mode" -> R.string.selection_mode
-            "pen_mode" -> R.string.pen_mode
-            "drawing_mode" -> R.string.drawing_mode
-            "pan_mode" -> R.string.pan_mode
             "max_pages_reached" -> {
                 Toast.makeText(this, getString(R.string.max_pages_reached, PageManager.MAX_PAGES), Toast.LENGTH_SHORT).show()
                 return
@@ -871,14 +867,7 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Update button visual state
         btnPinchMode.isSelected = isPinchModeActive
-        
-        // Provide user feedback
-        val messageRes = if (isPinchModeActive) {
-            R.string.pinch_mode_enabled
-        } else {
-            R.string.pinch_mode_disabled
-        }
-        Toast.makeText(this, getString(messageRes), Toast.LENGTH_SHORT).show()
+  
     }
     
     /**
