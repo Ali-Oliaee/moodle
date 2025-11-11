@@ -23,6 +23,7 @@ import com.example.moodle.ui.whiteboard.managers.PageManager
 import com.example.moodle.ui.whiteboard.models.BackgroundColor
 import com.example.moodle.ui.whiteboard.models.BackgroundPattern
 import com.example.moodle.ui.whiteboard.models.DrawingTool
+import com.example.moodle.ui.whiteboard.models.WhiteboardViewState
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
 import com.example.moodle.utils.FontHelper
 
@@ -268,14 +269,14 @@ class WhiteboardActivity : AppCompatActivity() {
         btnColorPicker.setOnClickListener {
             popupController.showColorPickerPopup(
                 btnColorPicker,
-                viewModel.currentColor.value ?: Color.BLACK
+                viewModel.uiState.value?.currentColor ?: Color.BLACK
             )
         }
         
         btnStrokeWidth.setOnClickListener {
             popupController.showStrokeWidthPopup(
                 btnStrokeWidth,
-                viewModel.currentStrokeWidth.value ?: 8f
+                viewModel.uiState.value?.currentStrokeWidth ?: 8f
             )
         }
         
@@ -361,125 +362,86 @@ class WhiteboardActivity : AppCompatActivity() {
      * This is the core of MVVM - UI reacts to state changes
      */
     private fun observeViewModel() {
-        // Observe tool changes
-        viewModel.currentTool.observe(this, Observer { tool ->
-            tool?.let { 
-                whiteboardView.setDrawingTool(it)
-                updateToolButtonSelection(it)
-            }
+        viewModel.uiState.observe(this, Observer { state ->
+            state?.let { handleStateUpdate(it) }
         })
+    }
+    
+    /**
+     * Handle UI state updates
+     */
+    private fun handleStateUpdate(state: WhiteboardViewState) {
+        // Update tool
+        whiteboardView.setDrawingTool(state.currentTool)
+        updateToolButtonSelection(state.currentTool)
         
-        // Observe color changes
-        viewModel.currentColor.observe(this, Observer { color ->
-            color?.let {
-                whiteboardView.setColor(it)
-                btnColorPicker.backgroundTintList = android.content.res.ColorStateList.valueOf(it)
-            }
-        })
+        // Update pen button icon based on tool
+        val penIconRes = if (state.currentTool == DrawingTool.SELECTION) {
+            R.drawable.ic_hand
+        } else {
+            R.drawable.ic_pen
+        }
+        btnPen.setImageResource(penIconRes)
         
-        // Observe stroke width changes
-        viewModel.currentStrokeWidth.observe(this, Observer { width ->
-            width?.let { whiteboardView.setStrokeWidth(it) }
-        })
+        // Update color
+        whiteboardView.setColor(state.currentColor)
+        btnColorPicker.backgroundTintList = android.content.res.ColorStateList.valueOf(state.currentColor)
         
-        // Observe drawing mode
-        viewModel.isDrawingMode.observe(this, Observer { isDrawing ->
-            isDrawing?.let {
-                whiteboardView.setDrawingMode(it)
-            }
-        })
+        // Update stroke width
+        whiteboardView.setStrokeWidth(state.currentStrokeWidth)
         
-        // Observe pen selection mode
-        viewModel.isPenInSelectionMode.observe(this, Observer { isSelection ->
-            val iconRes = if (isSelection == true) R.drawable.ic_hand else R.drawable.ic_pen
-            btnPen.setImageResource(iconRes)
-        })
+        // Update drawing mode
+        whiteboardView.setDrawingMode(state.isDrawingMode)
         
-        // Observe undo/redo state
-        viewModel.canUndo.observe(this, Observer { canUndo ->
-            btnUndo.isEnabled = canUndo == true
-            btnUndo.alpha = if (canUndo == true) 1.0f else 0.5f
-        })
+        // Update undo/redo buttons
+        btnUndo.isEnabled = state.canUndo
+        btnUndo.alpha = if (state.canUndo) 1.0f else 0.5f
         
-        viewModel.canRedo.observe(this, Observer { canRedo ->
-            btnRedo.isEnabled = canRedo == true
-            btnRedo.alpha = if (canRedo == true) 1.0f else 0.5f
-        })
+        btnRedo.isEnabled = state.canRedo
+        btnRedo.alpha = if (state.canRedo) 1.0f else 0.5f
         
-        // Observe pagination state
-        viewModel.currentPageNumber.observe(this, Observer { pageNum ->
-            updatePageIndicator()
-        })
+        // Update pagination
+        updatePageIndicatorFromState(state)
         
-        viewModel.totalPages.observe(this, Observer { total ->
-            updatePageIndicator()
-        })
+        btnPreviousPage.isEnabled = state.canGoToPreviousPage
+        btnPreviousPage.alpha = if (state.canGoToPreviousPage) 1.0f else 0.5f
         
-        viewModel.canGoToPreviousPage.observe(this, Observer { canGoPrev ->
-            btnPreviousPage.isEnabled = canGoPrev == true
-            btnPreviousPage.alpha = if (canGoPrev == true) 1.0f else 0.5f
-        })
+        updateNextPageButtonFromState(state)
         
-        viewModel.canGoToNextPage.observe(this, Observer { canGoNext ->
-            updateNextPageButton()
-        })
+        btnDeletePage.isEnabled = state.canDeletePage
+        btnDeletePage.alpha = if (state.canDeletePage) 1.0f else 0.5f
         
-        viewModel.canCreateNewPage.observe(this, Observer { canCreate ->
-            updateNextPageButton()
-        })
+        // Update background
+        whiteboardView.setBackgroundPattern(state.backgroundPattern)
+        whiteboardView.setBackgroundColor(state.backgroundColor)
         
-        viewModel.canDeletePage.observe(this, Observer { canDelete ->
-            btnDeletePage.isEnabled = canDelete == true
-            btnDeletePage.alpha = if (canDelete == true) 1.0f else 0.5f
-        })
+        // Handle page change event
+        if (state.pageChangeEvent) {
+            loadCurrentPageFromViewModel()
+            updateUndoRedoState()
+            viewModel.clearPageChangeEvent()
+        }
         
-        // Observe background pattern
-        viewModel.backgroundPattern.observe(this, Observer { pattern ->
-            pattern?.let { whiteboardView.setBackgroundPattern(it) }
-        })
+        // Handle one-time events
+        state.showTextInputDialog?.let { coords ->
+            showTextInputDialog(coords.first, coords.second)
+            viewModel.clearTextInputDialogEvent()
+        }
         
-        // Observe background color
-        viewModel.backgroundColor.observe(this, Observer { color ->
-            color?.let { whiteboardView.setBackgroundColor(it) }
-        })
+        state.showToastMessage?.let { messageKey ->
+            showToastByKey(messageKey)
+            viewModel.clearToastMessageEvent()
+        }
         
-        // Observe page change events
-        viewModel.pageChangeEvent.observe(this, Observer { changed ->
-            if (changed == true) {
-                loadCurrentPageFromViewModel()
-                updateUndoRedoState()
-                viewModel.clearPageChangeEvent()
-            }
-        })
+        state.errorMessage?.let { error ->
+            Toast.makeText(this, error as CharSequence, Toast.LENGTH_LONG).show()
+            viewModel.clearErrorMessageEvent()
+        }
         
-        // Observe one-time events
-        viewModel.showTextInputDialog.observe(this, Observer { coords ->
-            coords?.let {
-                showTextInputDialog(it.first, it.second)
-                viewModel.clearTextInputDialogEvent()
-            }
-        })
-        
-        viewModel.showToastMessage.observe(this, Observer { messageKey ->
-            messageKey?.let {
-                showToastByKey(it)
-                viewModel.clearToastMessageEvent()
-            }
-        })
-        
-        viewModel.errorMessage.observe(this, Observer { error ->
-            error?.let {
-                Toast.makeText(this, it, Toast.LENGTH_LONG).show()
-                viewModel.clearErrorMessageEvent()
-            }
-        })
-        
-        viewModel.exportSuccess.observe(this, Observer { message ->
-            message?.let {
-                showExportSuccessMessage(it)
-                viewModel.clearExportSuccessEvent()
-            }
-        })
+        state.exportSuccess?.let { message ->
+            showExportSuccessMessage(message)
+            viewModel.clearExportSuccessEvent()
+        }
     }
     
     /**
@@ -504,32 +466,30 @@ class WhiteboardActivity : AppCompatActivity() {
     }
     
     /**
-     * Update page indicator text
+     * Update page indicator text from state
      */
-    private fun updatePageIndicator() {
-        val pageNum = viewModel.currentPageNumber.value ?: 1
-        val total = viewModel.totalPages.value ?: 1
-        tvPageIndicator.text = getString(R.string.page_indicator_format, pageNum, total)
+    private fun updatePageIndicatorFromState(state: WhiteboardViewState) {
+        tvPageIndicator.text = getString(R.string.page_indicator_format, state.currentPageNumber, state.totalPages)
     }
     
     /**
-     * Update next page button icon and state
+     * Update next page button icon and state from state
      */
-    private fun updateNextPageButton() {
-        val canGoNext = viewModel.canGoToNextPage.value ?: false
-        val canCreate = viewModel.canCreateNewPage.value ?: false
-        
-        if (canGoNext) {
+    private fun updateNextPageButtonFromState(state: WhiteboardViewState) {
+        if (state.canGoToNextPage) {
             btnNextPage.setImageResource(R.drawable.ic_arrow_forward)
             btnNextPage.contentDescription = getString(R.string.desc_next_page)
+            btnNextPage.isEnabled = true
             btnNextPage.alpha = 1.0f
-        } else if (canCreate) {
+        } else if (state.canCreateNewPage) {
             btnNextPage.setImageResource(R.drawable.ic_add)
             btnNextPage.contentDescription = getString(R.string.desc_add_page)
+            btnNextPage.isEnabled = true
             btnNextPage.alpha = 1.0f
         } else {
             btnNextPage.setImageResource(R.drawable.ic_add)
             btnNextPage.contentDescription = getString(R.string.desc_add_page)
+            btnNextPage.isEnabled = false
             btnNextPage.alpha = 0.5f
         }
     }
@@ -622,7 +582,7 @@ class WhiteboardActivity : AppCompatActivity() {
      * Show delete page confirmation dialog
      */
     private fun showDeletePageConfirmDialog() {
-        if (viewModel.totalPages.value ?: 1 <= 1) {
+        if (viewModel.uiState.value?.totalPages ?: 1 <= 1) {
             Toast.makeText(this, getString(R.string.cannot_delete_last_page), Toast.LENGTH_SHORT).show()
             return
         }
@@ -666,7 +626,7 @@ class WhiteboardActivity : AppCompatActivity() {
      * Show PNG export options (current page or all pages)
      */
     private fun showPNGExportOptions() {
-        if (viewModel.totalPages.value ?: 1 > 1) {
+        if (viewModel.uiState.value?.totalPages ?: 1 > 1) {
             val options = arrayOf(
                 getString(R.string.export_current_page),
                 getString(R.string.export_all_pages)

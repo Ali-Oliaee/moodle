@@ -14,7 +14,9 @@ import com.example.moodle.ui.whiteboard.models.BackgroundColor
 import com.example.moodle.ui.whiteboard.models.BackgroundPattern
 import com.example.moodle.ui.whiteboard.models.DrawingTool
 import com.example.moodle.ui.whiteboard.models.PageData
+import com.example.moodle.ui.whiteboard.models.WhiteboardViewState
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
+import kotlin.math.absoluteValue
 
 /**
  * ViewModel for WhiteboardActivity
@@ -31,75 +33,9 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
     
     // ========== UI State - Observable LiveData ==========
     
-    // Tool State
-    private val _currentColor = MutableLiveData<Int>()
-    val currentColor: LiveData<Int> = _currentColor
-    
-    private val _currentStrokeWidth = MutableLiveData<Float>()
-    val currentStrokeWidth: LiveData<Float> = _currentStrokeWidth
-    
-    private val _currentTool = MutableLiveData<DrawingTool>()
-    val currentTool: LiveData<DrawingTool> = _currentTool
-    
-    private val _isDrawingMode = MutableLiveData<Boolean>()
-    val isDrawingMode: LiveData<Boolean> = _isDrawingMode
-    
-    private val _isPenInSelectionMode = MutableLiveData<Boolean>()
-    val isPenInSelectionMode: LiveData<Boolean> = _isPenInSelectionMode
-    
-    private val _isSelectiveEraserMode = MutableLiveData<Boolean>()
-    val isSelectiveEraserMode: LiveData<Boolean> = _isSelectiveEraserMode
-    
-    // Undo/Redo State
-    private val _canUndo = MutableLiveData<Boolean>()
-    val canUndo: LiveData<Boolean> = _canUndo
-    
-    private val _canRedo = MutableLiveData<Boolean>()
-    val canRedo: LiveData<Boolean> = _canRedo
-    
-    // Pagination State
-    private val _currentPageNumber = MutableLiveData<Int>()
-    val currentPageNumber: LiveData<Int> = _currentPageNumber
-    
-    private val _totalPages = MutableLiveData<Int>()
-    val totalPages: LiveData<Int> = _totalPages
-    
-    private val _canGoToPreviousPage = MutableLiveData<Boolean>()
-    val canGoToPreviousPage: LiveData<Boolean> = _canGoToPreviousPage
-    
-    private val _canGoToNextPage = MutableLiveData<Boolean>()
-    val canGoToNextPage: LiveData<Boolean> = _canGoToNextPage
-    
-    private val _canCreateNewPage = MutableLiveData<Boolean>()
-    val canCreateNewPage: LiveData<Boolean> = _canCreateNewPage
-    
-    private val _canDeletePage = MutableLiveData<Boolean>()
-    val canDeletePage: LiveData<Boolean> = _canDeletePage
-    
-    // Background State
-    private val _backgroundPattern = MutableLiveData<BackgroundPattern>()
-    val backgroundPattern: LiveData<BackgroundPattern> = _backgroundPattern
-    
-    private val _backgroundColor = MutableLiveData<BackgroundColor>()
-    val backgroundColor: LiveData<BackgroundColor> = _backgroundColor
-    
-    // ========== Events (one-time actions) ==========
-    
-    private val _showTextInputDialog = MutableLiveData<Pair<Float, Float>?>()
-    val showTextInputDialog: LiveData<Pair<Float, Float>?> = _showTextInputDialog
-    
-    private val _showToastMessage = MutableLiveData<String?>()
-    val showToastMessage: LiveData<String?> = _showToastMessage
-    
-    private val _exportSuccess = MutableLiveData<String?>()
-    val exportSuccess: LiveData<String?> = _exportSuccess
-    
-    private val _errorMessage = MutableLiveData<String?>()
-    val errorMessage: LiveData<String?> = _errorMessage
-    
-    private val _pageChangeEvent = MutableLiveData<Boolean>()
-    val pageChangeEvent: LiveData<Boolean> = _pageChangeEvent
-    
+    private val _uiState = MutableLiveData<WhiteboardViewState>()
+    val uiState: LiveData<WhiteboardViewState> = _uiState
+
     init {
         initializeDefaultValues()
         setupPageManagerListener()
@@ -110,23 +46,31 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
      */
     private fun initializeDefaultValues() {
         // Load saved shared settings
-        _currentColor.value = pageManager.sharedColor
-        _currentStrokeWidth.value = pageManager.sharedStrokeWidth
-        
-        // Tool defaults
-        _currentTool.value = DrawingTool.PEN
-        _isDrawingMode.value = true
-        _isPenInSelectionMode.value = false
-        _isSelectiveEraserMode.value = false
-        
-        // Undo/Redo defaults
-        _canUndo.value = false
-        _canRedo.value = false
-        
-        // Load current page's background pattern and color
         val currentPage = pageManager.getCurrentPage()
-        _backgroundPattern.value = currentPage.backgroundPattern
-        _backgroundColor.value = currentPage.backgroundColor
+        
+        _uiState.value = WhiteboardViewState(
+            backgroundPattern = currentPage.backgroundPattern,
+            backgroundColor = currentPage.backgroundColor,
+            isDrawingMode = true,
+            isZooming = false,
+            canUndo = false,
+            canRedo = false,
+            currentColor = pageManager.sharedColor,
+            currentStrokeWidth = pageManager.sharedStrokeWidth,
+            currentTool = DrawingTool.PEN,
+            isSelectiveEraserMode = false,
+            currentPageNumber = 1,
+            totalPages = pageManager.getTotalPages(),
+            canGoToPreviousPage = false,
+            canGoToNextPage = pageManager.canGoToNextPage(),
+            canCreateNewPage = pageManager.canCreateNewPage(),
+            canDeletePage = pageManager.getTotalPages() > 1,
+            showTextInputDialog = null,
+            showToastMessage = null,
+            exportSuccess = null,
+            errorMessage = null,
+            pageChangeEvent = false
+        )
         
         // Initialize pagination state
         updatePaginationState()
@@ -142,20 +86,39 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
                 loadSharedSettings()
                 // Load the current page's background settings
                 val currentPage = pageManager.getCurrentPage()
-                _backgroundPattern.value = currentPage.backgroundPattern
-                _backgroundColor.value = currentPage.backgroundColor
-                _pageChangeEvent.value = true
+                updateState { state ->
+                    state.copy(
+                        backgroundPattern = currentPage.backgroundPattern,
+                        backgroundColor = currentPage.backgroundColor,
+                        pageChangeEvent = true
+                    )
+                }
             }
             
             override fun onPageCreated(pageId: Int, totalPages: Int) {
                 updatePaginationState()
                 // Load the new page's background settings
                 val currentPage = pageManager.getCurrentPage()
-                _backgroundPattern.value = currentPage.backgroundPattern
-                _backgroundColor.value = currentPage.backgroundColor
-                _pageChangeEvent.value = true
+                updateState { state ->
+                    state.copy(
+                        backgroundPattern = currentPage.backgroundPattern,
+                        backgroundColor = currentPage.backgroundColor,
+                        pageChangeEvent = true
+                    )
+                }
             }
         })
+    }
+    
+    // ========== State Update Helper ==========
+    
+    /**
+     * Helper function to update state immutably
+     */
+    private fun updateState(update: (WhiteboardViewState) -> WhiteboardViewState) {
+        _uiState.value?.let { currentState ->
+            _uiState.value = update(currentState)
+        }
     }
     
     // ========== Tool Management ==========
@@ -164,16 +127,12 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
      * Select a drawing tool
      */
     fun selectTool(tool: DrawingTool) {
-        _currentTool.value = tool
-        
-        // Reset pen selection mode when selecting other tools
-        if (tool != DrawingTool.PEN && tool != DrawingTool.SELECTION) {
-            _isPenInSelectionMode.value = false
-        }
-        
-        // Ensure drawing mode is enabled when selecting a tool
-        if (_isDrawingMode.value == false) {
-            setDrawingMode(true)
+        updateState { state ->
+            val shouldEnableDrawingMode = !state.isDrawingMode
+            state.copy(
+                currentTool = tool,
+                isDrawingMode = if (shouldEnableDrawingMode) true else state.isDrawingMode
+            )
         }
     }
     
@@ -181,15 +140,13 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
      * Toggle pen between drawing and selection mode
      */
     fun togglePenSelectionMode() {
-        val currentMode = _isPenInSelectionMode.value ?: false
-        _isPenInSelectionMode.value = !currentMode
-        
-        if (!currentMode) {
-            // Switch to selection mode
-            _currentTool.value = DrawingTool.SELECTION
-        } else {
-            // Switch back to pen mode
-            _currentTool.value = DrawingTool.PEN
+        updateState { state ->
+            val newTool = if (state.currentTool == DrawingTool.PEN) {
+                DrawingTool.SELECTION
+            } else {
+                DrawingTool.PEN
+            }
+            state.copy(currentTool = newTool)
         }
     }
     
@@ -197,80 +154,96 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
      * Select a color
      */
     fun selectColor(color: Int) {
-        _currentColor.value = color
         pageManager.updateSharedColor(color)
+        updateState { state ->
+            state.copy(currentColor = color)
+        }
     }
     
     /**
      * Set stroke width
      */
     fun setStrokeWidth(width: Float) {
-        _currentStrokeWidth.value = width
         pageManager.updateSharedStrokeWidth(width)
+        updateState { state ->
+            state.copy(currentStrokeWidth = width)
+        }
     }
     
     /**
      * Toggle between drawing and pan mode
      */
     fun toggleDrawingMode() {
-        val currentMode = _isDrawingMode.value ?: true
-        setDrawingMode(!currentMode)
+        updateState { state ->
+            state.copy(isDrawingMode = !state.isDrawingMode)
+        }
     }
     
     /**
      * Set drawing mode
      */
     fun setDrawingMode(isDrawing: Boolean) {
-        _isDrawingMode.value = isDrawing
-        
-        // val modeKey = if (isDrawing) "drawing_mode" else "pan_mode"
-        // _showToastMessage.value = modeKey
+        updateState { state ->
+            state.copy(isDrawingMode = isDrawing)
+        }
     }
     
     /**
      * Set selective eraser mode
      */
     fun setSelectiveEraserMode(selective: Boolean) {
-        _isSelectiveEraserMode.value = selective
+        updateState { state ->
+            state.copy(isSelectiveEraserMode = selective)
+        }
     }
     
     /**
      * Select background pattern for current page
      */
     fun selectBackgroundPattern(pattern: BackgroundPattern) {
-        _backgroundPattern.value = pattern
         val currentPage = pageManager.getCurrentPage()
         currentPage.backgroundPattern = pattern
+        updateState { state ->
+            state.copy(backgroundPattern = pattern)
+        }
     }
     
     /**
      * Select background color for current page
      */
     fun selectBackgroundColor(color: BackgroundColor) {
-        _backgroundColor.value = color
         val currentPage = pageManager.getCurrentPage()
         currentPage.backgroundColor = color
+        updateState { state ->
+            state.copy(backgroundColor = color)
+        }
     }
     
     /**
      * Request text input dialog
      */
     fun requestTextInput(x: Float, y: Float) {
-        _showTextInputDialog.value = Pair(x, y)
+        updateState { state ->
+            state.copy(showTextInputDialog = Pair(x, y))
+        }
     }
     
     /**
      * Clear text input dialog event
      */
     fun clearTextInputDialogEvent() {
-        _showTextInputDialog.value = null
+        updateState { state ->
+            state.copy(showTextInputDialog = null)
+        }
     }
     
     /**
      * Clear toast message event
      */
     fun clearToastMessageEvent() {
-        _showToastMessage.value = null
+        updateState { state ->
+            state.copy(showToastMessage = null)
+        }
     }
     
     // ========== Page Management ==========
@@ -282,20 +255,28 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
         val pageIds = pageManager.getPageIds()
         val currentIndex = pageIds.indexOf(pageManager.getCurrentPageId())
         
-        _currentPageNumber.value = currentIndex + 1
-        _totalPages.value = pageManager.getTotalPages()
-        _canGoToPreviousPage.value = pageManager.canGoToPreviousPage()
-        _canGoToNextPage.value = pageManager.canGoToNextPage()
-        _canCreateNewPage.value = pageManager.canCreateNewPage()
-        _canDeletePage.value = pageManager.getTotalPages() > 1
+        updateState { state ->
+            state.copy(
+                currentPageNumber = currentIndex + 1,
+                totalPages = pageManager.getTotalPages(),
+                canGoToPreviousPage = pageManager.canGoToPreviousPage(),
+                canGoToNextPage = pageManager.canGoToNextPage(),
+                canCreateNewPage = pageManager.canCreateNewPage(),
+                canDeletePage = pageManager.getTotalPages() > 1
+            )
+        }
     }
     
     /**
      * Load shared settings from page manager
      */
     private fun loadSharedSettings() {
-        _currentColor.value = pageManager.sharedColor
-        _currentStrokeWidth.value = pageManager.sharedStrokeWidth
+        updateState { state ->
+            state.copy(
+                currentColor = pageManager.sharedColor,
+                currentStrokeWidth = pageManager.sharedStrokeWidth
+            )
+        }
     }
     
     /**
@@ -307,7 +288,9 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
         } else if (pageManager.canCreateNewPage()) {
             pageManager.createNewPage()
         } else {
-            _showToastMessage.value = "max_pages_reached"
+            updateState { state ->
+                state.copy(showToastMessage = "max_pages_reached")
+            }
         }
     }
     
@@ -325,7 +308,9 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
      */
     fun deleteCurrentPage(): Boolean {
         if (pageManager.getTotalPages() <= 1) {
-            _showToastMessage.value = "cannot_delete_last_page"
+            updateState { state ->
+                state.copy(showToastMessage = "cannot_delete_last_page")
+            }
             return false
         }
         
@@ -334,7 +319,9 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
         
         if (result) {
             updatePaginationState()
-            _showToastMessage.value = "page_deleted"
+            updateState { state ->
+                state.copy(showToastMessage = "page_deleted")
+            }
         }
         
         return result
@@ -372,8 +359,9 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
      * Update undo/redo state
      */
     fun updateUndoRedoState(canUndo: Boolean, canRedo: Boolean) {
-        _canUndo.value = canUndo
-        _canRedo.value = canRedo
+        updateState { state ->
+            state.copy(canUndo = canUndo, canRedo = canRedo)
+        }
     }
     
     // ========== Import/Export ==========
@@ -385,10 +373,14 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
         exportManager.exportToPNG(
             whiteboardView,
             onSuccess = { file ->
-                _exportSuccess.value = file.absolutePath
+                updateState { state ->
+                    state.copy(exportSuccess = file.absolutePath)
+                }
             },
             onError = { error ->
-                _errorMessage.value = error
+                updateState { state ->
+                    state.copy(errorMessage = error)
+                }
             }
         )
     }
@@ -401,10 +393,14 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
             whiteboardView,
             pageManager,
             onSuccess = { files ->
-                _exportSuccess.value = "exported_${files.size}_pages"
+                updateState { state ->
+                    state.copy(exportSuccess = "exported_${files.size}_pages")
+                }
             },
             onError = { error ->
-                _errorMessage.value = error
+                updateState { state ->
+                    state.copy(errorMessage = error)
+                }
             }
         )
     }
@@ -417,10 +413,14 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
             whiteboardView,
             pageManager,
             onSuccess = { file ->
-                _exportSuccess.value = file.absolutePath
+                updateState { state ->
+                    state.copy(exportSuccess = file.absolutePath)
+                }
             },
             onError = { error ->
-                _errorMessage.value = error
+                updateState { state ->
+                    state.copy(errorMessage = error)
+                }
             }
         )
     }
@@ -436,7 +436,9 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
                 onComplete()
             },
             onError = { error ->
-                _errorMessage.value = error
+                updateState { state ->
+                    state.copy(errorMessage = error)
+                }
             }
         )
     }
@@ -454,7 +456,9 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
                 onComplete()
             },
             onError = { error ->
-                _errorMessage.value = error
+                updateState { state ->
+                    state.copy(errorMessage = error)
+                }
             }
         )
     }
@@ -463,21 +467,27 @@ class WhiteboardViewModel(application: Application) : AndroidViewModel(applicati
      * Clear export success event
      */
     fun clearExportSuccessEvent() {
-        _exportSuccess.value = null
+        updateState { state ->
+            state.copy(exportSuccess = null)
+        }
     }
     
     /**
      * Clear error message event
      */
     fun clearErrorMessageEvent() {
-        _errorMessage.value = null
+        updateState { state ->
+            state.copy(errorMessage = null)
+        }
     }
     
     /**
      * Clear page change event
      */
     fun clearPageChangeEvent() {
-        _pageChangeEvent.value = false
+        updateState { state ->
+            state.copy(pageChangeEvent = false)
+        }
     }
     
     override fun onCleared() {
