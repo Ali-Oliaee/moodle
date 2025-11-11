@@ -146,7 +146,10 @@ class TouchGestureHandler(
             DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE,
             DrawingTool.CUBE, DrawingTool.CYLINDER, DrawingTool.PYRAMID, DrawingTool.SPHERE, DrawingTool.CONE,
             DrawingTool.RIGHT_TRIANGLE, DrawingTool.ISOSCELES_TRIANGLE, DrawingTool.PARALLELOGRAM, DrawingTool.TRAPEZOID,
-            DrawingTool.PENTAGON, DrawingTool.HEXAGON, DrawingTool.STAR, DrawingTool.DIAMOND, DrawingTool.ELLIPSE, DrawingTool.ARROW,
+            DrawingTool.PENTAGON, DrawingTool.HEXAGON, DrawingTool.STAR, DrawingTool.DIAMOND, DrawingTool.ELLIPSE, DrawingTool.ARROW -> {
+                handleShapeTouchDown(x, y, toolToUse, pointerId)
+            }
+
             else -> {
                 // Create new path for drawing
                 val newPath = Path()
@@ -183,7 +186,11 @@ class TouchGestureHandler(
                 DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE,
                 DrawingTool.CUBE, DrawingTool.CYLINDER, DrawingTool.PYRAMID, DrawingTool.SPHERE, DrawingTool.CONE,
                 DrawingTool.RIGHT_TRIANGLE, DrawingTool.ISOSCELES_TRIANGLE, DrawingTool.PARALLELOGRAM, DrawingTool.TRAPEZOID,
-                DrawingTool.PENTAGON, DrawingTool.HEXAGON, DrawingTool.STAR, DrawingTool.DIAMOND, DrawingTool.ELLIPSE, DrawingTool.ARROW,
+                DrawingTool.PENTAGON, DrawingTool.HEXAGON, DrawingTool.STAR, DrawingTool.DIAMOND, DrawingTool.ELLIPSE, DrawingTool.ARROW -> {
+                    val (x, y) = transformScreenToDrawing(event.x, event.y)
+                    handleShapeTouchMove(x, y, toolToUse, id)
+                    return
+                }
                 else -> {}
             }
         }
@@ -236,7 +243,9 @@ class TouchGestureHandler(
             DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE,
             DrawingTool.CUBE, DrawingTool.CYLINDER, DrawingTool.PYRAMID, DrawingTool.SPHERE, DrawingTool.CONE,
             DrawingTool.RIGHT_TRIANGLE, DrawingTool.ISOSCELES_TRIANGLE, DrawingTool.PARALLELOGRAM, DrawingTool.TRAPEZOID,
-            DrawingTool.PENTAGON, DrawingTool.HEXAGON, DrawingTool.STAR, DrawingTool.DIAMOND, DrawingTool.ELLIPSE, DrawingTool.ARROW,
+            DrawingTool.PENTAGON, DrawingTool.HEXAGON, DrawingTool.STAR, DrawingTool.DIAMOND, DrawingTool.ELLIPSE, DrawingTool.ARROW -> {
+                handleShapeTouchUp(x, y, toolToUse, pointerId)
+            }
             else -> {
                 finishDrawingPath(pointerId)
             }
