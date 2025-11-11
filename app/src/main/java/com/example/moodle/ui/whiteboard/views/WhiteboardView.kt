@@ -60,6 +60,9 @@ class WhiteboardView @JvmOverloads constructor(
             Pair(w, h)
         }
         touchHandler.getDrawingCanvas = { bitmapManager.drawingCanvas }
+        touchHandler.onSectionControlButtonClick = { section, buttonIndex ->
+            handleSectionControlButtonClick(section, buttonIndex)
+        }
         
         // Zoom pan controller callbacks
         zoomPanController.onInvalidate = { invalidate() }
@@ -74,6 +77,23 @@ class WhiteboardView @JvmOverloads constructor(
         bitmapManager.onBitmapInitialized = { canvasWidth, canvasHeight ->
             zoomPanController.initializeFocus(canvasWidth, canvasHeight)
         }
+    }
+    
+    private fun handleSectionControlButtonClick(section: SectionManager.Section, buttonIndex: Int) {
+        // Button index: 0=pen, 1=eraser, 2=clear, 3=black, 4=blue, 5=green, 6=red
+        when (buttonIndex) {
+            0 -> section.currentTool = DrawingTool.PEN
+            1 -> section.currentTool = DrawingTool.ERASER
+            2 -> {
+                section.clear()
+                stateManager.drawingChangeListener?.onDrawingChanged()
+            }
+            3 -> section.currentColor = Color.BLACK
+            4 -> section.currentColor = Color.parseColor("#2196F3")  // Blue
+            5 -> section.currentColor = Color.parseColor("#4CAF50")  // Green
+            6 -> section.currentColor = Color.parseColor("#F44336")  // Red
+        }
+        invalidate()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -90,7 +110,7 @@ class WhiteboardView @JvmOverloads constructor(
                 touchHandler.getActivePaths(),
                 touchHandler.selectionPath,
                 touchHandler.previewPath,
-                emptyMap(), // pointerSectionMap - managed internally
+                touchHandler.getPointerSectionMap(),
                 touchHandler.currentActiveSection
             )
         }
@@ -103,15 +123,22 @@ class WhiteboardView @JvmOverloads constructor(
             return true
         }
         
-        // Normal mode: Handle scale gesture only if pinch mode is enabled
+        // Pinch mode: Only allow zoom/pan gestures, no drawing
         if (isPinchModeEnabled) {
             scaleGestureDetector.onTouchEvent(event)
-            if (zoomPanController.isScaling) {
-                return true
+            
+            // Handle gesture detection for double tap (zoom reset)
+            gestureDetector.onTouchEvent(event)
+            
+            // Allow panning when not scaling
+            if (!zoomPanController.isScaling) {
+                touchHandler.handlePanningTouch(event)
             }
+            
+            return true
         }
         
-        // Handle gesture detection for double tap (zoom reset)
+        // Normal mode: Handle gesture detection for double tap (zoom reset)
         gestureDetector.onTouchEvent(event)
         
         // Handle drawing or panning based on mode
@@ -219,6 +246,15 @@ class WhiteboardView @JvmOverloads constructor(
     }
     
     fun getBackgroundColor(): BackgroundColor = renderManager.getBackgroundColor()
+    
+    // Background image
+    fun setBackgroundImage(bitmap: Bitmap?) {
+        renderManager.setBackgroundImage(bitmap)
+        renderManager.redrawCanvas()
+        invalidate()
+    }
+    
+    fun getBackgroundImage(): Bitmap? = renderManager.getBackgroundImage()
     
     // Zoom controls
     fun setZoomLevel(zoomLevel: Float) {

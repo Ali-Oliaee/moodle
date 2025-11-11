@@ -1,0 +1,32 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Cylinder representation -->
+    <!-- Top ellipse -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="@android:color/black"
+        android:strokeWidth="1.5"
+        android:pathData="M 12,6 C 8.69,6 6,7.34 6,9 C 6,10.66 8.69,12 12,12 C 15.31,12 18,10.66 18,9 C 18,7.34 15.31,6 12,6 Z"/>
+    <!-- Left vertical line -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="@android:color/black"
+        android:strokeWidth="1.5"
+        android:pathData="M 6,9 L 6,15"/>
+    <!-- Right vertical line -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="@android:color/black"
+        android:strokeWidth="1.5"
+        android:pathData="M 18,9 L 18,15"/>
+    <!-- Bottom ellipse (partial arc for 3D effect) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="@android:color/black"
+        android:strokeWidth="1.5"
+        android:pathData="M 6,15 C 6,16.66 8.69,18 12,18 C 15.31,18 18,16.66 18,15"/>
+</vector>
+

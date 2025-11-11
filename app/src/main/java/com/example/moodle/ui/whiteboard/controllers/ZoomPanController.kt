@@ -222,19 +222,40 @@ class ZoomPanController(context: Context) {
      */
     fun isPanning(): Boolean = isPanning
     
-    // Scale gesture handling
+    /**
+     * Scale gesture handling
+     * Implements zoom-to-focal-point behavior following MDN guidelines
+     * https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events/Pinch_zoom_gestures
+     */
     fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
         isScaling = true
         return true
     }
     
     fun onScale(detector: ScaleGestureDetector): Boolean {
+        // Store the old scale factor before applying the new one
+        val oldScaleFactor = scaleFactor
+        
+        // Apply the scale factor increment from the gesture
         scaleFactor *= detector.scaleFactor
+        // Clamp to min/max zoom levels
         scaleFactor = max(minScaleFactor, kotlin.math.min(scaleFactor, 5.0f))
         
-        focusX = detector.focusX - (detector.focusX - focusX) * detector.scaleFactor
-        focusY = detector.focusY - (detector.focusY - focusY) * detector.scaleFactor
+        // Zoom toward the focal point (center between two fingers)
+        // Algorithm:
+        // 1. Convert the focal point from screen coordinates to canvas coordinates
+        // 2. After scaling, adjust the pan offset so the same canvas point appears under the focal point
+        // This ensures the point between the user's fingers stays visually stationary during zoom
         
+        // Step 1: Find which point on the canvas is currently under the focal point
+        val focusXInCanvas = (detector.focusX + focusX) / oldScaleFactor
+        val focusYInCanvas = (detector.focusY + focusY) / oldScaleFactor
+        
+        // Step 2: Calculate new pan offset to keep that canvas point under the focal point
+        focusX = focusXInCanvas * scaleFactor - detector.focusX
+        focusY = focusYInCanvas * scaleFactor - detector.focusY
+        
+        // Ensure we don't pan outside the canvas boundaries
         constrainFocusToBounds()
         onInvalidate?.invoke()
         return true

@@ -12,7 +12,7 @@ import android.view.ViewGroup
 import android.widget.*
 import com.example.moodle.R
 import com.example.moodle.data.datastore.UserPreferences
-import com.example.moodle.ui.attendance.AttendanceActivity
+// import com.example.moodle.ui.attendance.AttendanceActivity
 import com.example.moodle.ui.login.LoginActivity
 import com.example.moodle.ui.whiteboard.controllers.PopupController
 import com.example.moodle.ui.whiteboard.controllers.RecordingController
@@ -42,6 +42,9 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnExport: ImageButton
     private lateinit var btnImport: ImageButton
     private lateinit var btnPinchMode: ImageButton
+    private lateinit var btnToggleToolbars: ImageButton
+    private lateinit var topToolbar: LinearLayout
+    private lateinit var bottomToolbar: LinearLayout
     
     // Tool Buttons
     private lateinit var btnPen: ImageButton
@@ -52,7 +55,6 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnUndo: ImageButton
     private lateinit var btnRedo: ImageButton
     private lateinit var btnClear: ImageButton
-    private lateinit var btnModeToggle: ImageButton
     private lateinit var btnColorPicker: Button
     private lateinit var btnStrokeWidth: ImageButton
     private lateinit var btnBackground: ImageButton
@@ -73,6 +75,12 @@ class WhiteboardActivity : AppCompatActivity() {
     
     // User preferences
     private lateinit var userPreferences: UserPreferences
+    
+    // Toolbar visibility state
+    private var areToolbarsVisible = true
+    
+    // Pinch mode state
+    private var isPinchModeActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,8 +91,7 @@ class WhiteboardActivity : AppCompatActivity() {
         // Initialize preferences
         userPreferences = UserPreferences(this)
         
-        // Set layout
-        setContentView(R.layout.activity_whiteboard_split)
+        setContentView(R.layout.activity_whiteboard)
         
         // Initialize views
         initializeViews()
@@ -117,6 +124,9 @@ class WhiteboardActivity : AppCompatActivity() {
         btnExport = findViewById(R.id.btnExport)
         btnImport = findViewById(R.id.btnImport)
         btnPinchMode = findViewById(R.id.btnPinchMode)
+        btnToggleToolbars = findViewById(R.id.btnToggleToolbars)
+        topToolbar = findViewById(R.id.topToolbar)
+        bottomToolbar = findViewById(R.id.bottomToolbar)
         
         // Tool buttons
         btnPen = findViewById(R.id.btnPen)
@@ -127,7 +137,6 @@ class WhiteboardActivity : AppCompatActivity() {
         btnUndo = findViewById(R.id.btnUndo)
         btnRedo = findViewById(R.id.btnRedo)
         btnClear = findViewById(R.id.btnClear)
-        btnModeToggle = findViewById(R.id.btnModeToggle)
         btnColorPicker = findViewById(R.id.btnColorPicker)
         btnStrokeWidth = findViewById(R.id.btnStrokeWidth)
         btnBackground = findViewById(R.id.btnBackground)
@@ -164,11 +173,30 @@ class WhiteboardActivity : AppCompatActivity() {
         
         splitModeController.onSplitModeChanged = { enabled ->
             if (enabled) {
-                popupController.dismissZoomPopup()
+                // Disable pinch mode in split mode
+                if (isPinchModeActive) {
+                    isPinchModeActive = false
+                    whiteboardView.setPinchModeEnabled(false)
+                    btnPinchMode.isSelected = false
+                }
+                // Hide toggle button in split mode
+                btnToggleToolbars.visibility = android.view.View.GONE
+                // If toolbars were hidden, show them back in split mode
+                if (!areToolbarsVisible) {
+                    areToolbarsVisible = true
+                    showToolbar(topToolbar)
+                    btnToggleToolbars.setImageResource(R.drawable.ic_chevron_up)
+                }
+            } else {
+                // Show toggle button in normal mode
+                btnToggleToolbars.visibility = android.view.View.VISIBLE
             }
             // Disable background button in split mode, enable in normal mode
             btnBackground.isEnabled = !enabled
             btnBackground.alpha = if (enabled) 0.5f else 1.0f
+            // Disable pinch mode button in split mode
+            btnPinchMode.isEnabled = !enabled
+            btnPinchMode.alpha = if (enabled) 0.5f else 1.0f
         }
     }
     
@@ -182,7 +210,10 @@ class WhiteboardActivity : AppCompatActivity() {
         btnLogout.setOnClickListener { logout() }
         btnExport.setOnClickListener { showExportOptionsDialog() }
         btnImport.setOnClickListener { showImportOptionsDialog() }
-        btnPinchMode.setOnClickListener { popupController.showZoomPopup(btnPinchMode) }
+        btnPinchMode.setOnClickListener { togglePinchMode() }
+        
+        // Toggle toolbars button listener
+        btnToggleToolbars.setOnClickListener { toggleToolbarsVisibility() }
         
         // Tool button listeners
         setupToolListeners()
@@ -232,10 +263,6 @@ class WhiteboardActivity : AppCompatActivity() {
         
         btnClear.setOnClickListener {
             showClearConfirmDialog()
-        }
-        
-        btnModeToggle.setOnClickListener {
-            viewModel.toggleDrawingMode()
         }
         
         btnColorPicker.setOnClickListener {
@@ -294,6 +321,7 @@ class WhiteboardActivity : AppCompatActivity() {
         
         popupController.onBackgroundColorSelected = { color ->
             viewModel.selectBackgroundColor(color)
+            whiteboardView.setBackgroundImage(null) // Clear background image when color is selected
         }
         
         popupController.onToolSelected = { tool ->
@@ -303,6 +331,11 @@ class WhiteboardActivity : AppCompatActivity() {
         popupController.onEraserModeSelected = { isSelective ->
             viewModel.setSelectiveEraserMode(isSelective)
         }
+        
+        popupController.onBackgroundImageUploadRequested = {
+            openBackgroundImagePicker()
+        }
+        
     }
     
     /**
@@ -353,7 +386,6 @@ class WhiteboardActivity : AppCompatActivity() {
         viewModel.isDrawingMode.observe(this, Observer { isDrawing ->
             isDrawing?.let {
                 whiteboardView.setDrawingMode(it)
-                btnModeToggle.isSelected = !it
             }
         })
         
@@ -463,7 +495,11 @@ class WhiteboardActivity : AppCompatActivity() {
             DrawingTool.PEN, DrawingTool.SELECTION -> btnPen.isSelected = true
             DrawingTool.ERASER, DrawingTool.SELECTIVE_ERASER -> btnEraser.isSelected = true
             DrawingTool.TEXT -> btnText.isSelected = true
-            DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> btnShapes.isSelected = true
+            DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE,
+            DrawingTool.ELLIPSE, DrawingTool.DIAMOND, DrawingTool.STAR, DrawingTool.ARROW,
+            DrawingTool.RIGHT_TRIANGLE, DrawingTool.ISOSCELES_TRIANGLE, DrawingTool.PARALLELOGRAM,
+            DrawingTool.TRAPEZOID, DrawingTool.PENTAGON, DrawingTool.HEXAGON,
+            DrawingTool.CUBE, DrawingTool.CYLINDER, DrawingTool.PYRAMID, DrawingTool.SPHERE, DrawingTool.CONE -> btnShapes.isSelected = true
         }
     }
     
@@ -692,6 +728,45 @@ class WhiteboardActivity : AppCompatActivity() {
     }
     
     /**
+     * Open background image picker
+     */
+    private fun openBackgroundImagePicker() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "image/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        
+        try {
+            startActivityForResult(
+                Intent.createChooser(intent, getString(R.string.upload_background_image)),
+                REQUEST_CODE_BACKGROUND_IMAGE
+            )
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.no_file_manager), Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    /**
+     * Handle background image selection
+     */
+    private fun handleBackgroundImageSelection(uri: android.net.Uri) {
+        try {
+            val inputStream = contentResolver.openInputStream(uri)
+            val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+            
+            if (bitmap != null) {
+                whiteboardView.setBackgroundImage(bitmap)
+                Toast.makeText(this, getString(R.string.background_image_set), Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, getString(R.string.import_image_invalid), Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.import_image_failed), Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    /**
      * Show import Moodle file confirmation dialog
      */
     private fun showImportMoodleConfirmDialog() {
@@ -730,10 +805,6 @@ class WhiteboardActivity : AppCompatActivity() {
      */
     private fun showToastByKey(key: String) {
         val stringRes = when (key) {
-            "selection_mode" -> R.string.selection_mode
-            "pen_mode" -> R.string.pen_mode
-            "drawing_mode" -> R.string.drawing_mode
-            "pan_mode" -> R.string.pan_mode
             "max_pages_reached" -> {
                 Toast.makeText(this, getString(R.string.max_pages_reached, PageManager.MAX_PAGES), Toast.LENGTH_SHORT).show()
                 return
@@ -769,7 +840,7 @@ class WhiteboardActivity : AppCompatActivity() {
      * Open attendance screen
      */
     private fun openAttendanceScreen() {
-        startActivity(Intent(this, AttendanceActivity::class.java))
+        // startActivity(Intent(this, AttendanceActivity::class.java))
     }
 
     /**
@@ -783,6 +854,105 @@ class WhiteboardActivity : AppCompatActivity() {
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
+    }
+    
+    /**
+     * Toggle pinch and zoom mode
+     * When enabled, users can only zoom/pan, drawing is disabled
+     */
+    private fun togglePinchMode() {
+        isPinchModeActive = !isPinchModeActive
+        whiteboardView.setPinchModeEnabled(isPinchModeActive)
+        
+        // Update button visual state
+        btnPinchMode.isSelected = isPinchModeActive
+  
+    }
+    
+    /**
+     * Toggle visibility of top and bottom toolbars with animation
+     */
+    private fun toggleToolbarsVisibility() {
+        areToolbarsVisible = !areToolbarsVisible
+        
+        if (areToolbarsVisible) {
+            // Show toolbars
+            showToolbar(topToolbar)
+            showToolbar(bottomToolbar)
+            // Change icon to chevron up (hide action)
+            btnToggleToolbars.setImageResource(R.drawable.ic_chevron_up)
+        } else {
+            // Hide toolbars
+            hideToolbar(topToolbar)
+            hideToolbar(bottomToolbar)
+            // Change icon to chevron down (show action)
+            btnToggleToolbars.setImageResource(R.drawable.ic_chevron_down)
+        }
+    }
+    
+    /**
+     * Hide toolbar with slide animation
+     */
+    private fun hideToolbar(toolbar: android.view.View) {
+        // Keep visibility VISIBLE but move off-screen and make transparent
+        // to avoid layout recalculation that could affect WhiteboardView
+        toolbar.animate()
+            .alpha(0f)
+            .translationY(if (toolbar.id == R.id.topToolbar) -toolbar.height.toFloat() else toolbar.height.toFloat())
+            .setDuration(300)
+            .withStartAction {
+                // Disable clicks on hidden toolbar
+                toolbar.isClickable = false
+                disableViewGroupClicks(toolbar)
+            }
+            .start()
+    }
+    
+    /**
+     * Show toolbar with slide animation
+     */
+    private fun showToolbar(toolbar: android.view.View) {
+        // Re-enable clicks
+        toolbar.isClickable = true
+        enableViewGroupClicks(toolbar)
+        
+        toolbar.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(300)
+            .start()
+    }
+    
+    /**
+     * Disable all clicks within a ViewGroup
+     */
+    private fun disableViewGroupClicks(view: android.view.View) {
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val child = view.getChildAt(i)
+                child.isClickable = false
+                child.isFocusable = false
+                if (child is ViewGroup) {
+                    disableViewGroupClicks(child)
+                }
+            }
+        }
+    }
+    
+    /**
+     * Enable all clicks within a ViewGroup
+     */
+    private fun enableViewGroupClicks(view: android.view.View) {
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val child = view.getChildAt(i)
+                child.isClickable = true
+                child.isFocusable = true
+                if (child is ViewGroup) {
+                    enableViewGroupClicks(child)
+                }
+            }
+        }
     }
 
     override fun onRequestPermissionsResult(
@@ -819,6 +989,13 @@ class WhiteboardActivity : AppCompatActivity() {
                         }
                     }
                 }
+                REQUEST_CODE_BACKGROUND_IMAGE -> {
+                    if (resultCode == RESULT_OK && data != null) {
+                        data.data?.let { uri ->
+                            handleBackgroundImageSelection(uri)
+                        }
+                    }
+                }
             }
         }
     }
@@ -833,5 +1010,6 @@ class WhiteboardActivity : AppCompatActivity() {
     companion object {
         private const val REQUEST_CODE_IMPORT_IMAGE = 2001
         private const val REQUEST_CODE_IMPORT_MOODLE = 2002
+        private const val REQUEST_CODE_BACKGROUND_IMAGE = 2003
     }
 }

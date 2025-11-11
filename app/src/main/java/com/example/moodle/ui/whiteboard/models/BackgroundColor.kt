@@ -12,7 +12,10 @@ enum class BackgroundColor(val id: Int, val colorValue: Int, val nameResId: Int)
     LIGHT_BLUE(2, Color.parseColor("#E3F2FD"), com.example.moodle.R.string.background_color_light_blue),
     LIGHT_GREEN(3, Color.parseColor("#E8F5E9"), com.example.moodle.R.string.background_color_light_green),
     LIGHT_YELLOW(4, Color.parseColor("#FFFDE7"), com.example.moodle.R.string.background_color_light_yellow),
-    LIGHT_PINK(5, Color.parseColor("#FCE4EC"), com.example.moodle.R.string.background_color_light_pink);
+    LIGHT_PINK(5, Color.parseColor("#FCE4EC"), com.example.moodle.R.string.background_color_light_pink),
+    DARK_BLUE(6, Color.parseColor("#000d61"), com.example.moodle.R.string.background_color_dark_blue),
+    DARK_GREEN(7, Color.parseColor("#032e00"), com.example.moodle.R.string.background_color_dark_green),
+    BLACK(8, Color.parseColor("#1a1a1a"), com.example.moodle.R.string.background_color_black);
 
     companion object {
         fun fromId(id: Int): BackgroundColor {

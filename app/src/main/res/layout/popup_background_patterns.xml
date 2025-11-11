@@ -89,6 +89,36 @@
             android:focusable="true"
             android:layout_margin="4dp" />
 
+        <!-- Dark Blue Color -->
+        <View
+            android:id="@+id/backgroundColorDarkBlue"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_color_dark_blue"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_margin="4dp" />
+
+        <!-- Dark Green Color -->
+        <View
+            android:id="@+id/backgroundColorDarkGreen"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_color_dark_green"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_margin="4dp" />
+
+        <!-- Black Color -->
+        <View
+            android:id="@+id/backgroundColorBlack"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:background="@drawable/circle_color_black"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_margin="4dp" />
+       
     </GridLayout>
     
     <!-- Divider -->
@@ -251,5 +281,28 @@
         </FrameLayout>
 
     </GridLayout>
+    
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E0E0E0"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="12dp" />
+    
+    <!-- Upload Background Image Button -->
+    <Button
+        android:id="@+id/btnUploadBackgroundImage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/upload_background_image"
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:background="@drawable/button_primary"
+        android:padding="12dp"
+        android:gravity="center"
+        android:drawableLeft="@drawable/ic_image"
+        android:drawablePadding="8dp"
+        android:layout_marginTop="4dp" />
 
 </LinearLayout>

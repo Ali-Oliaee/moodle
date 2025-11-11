@@ -21,6 +21,7 @@ class CanvasRenderManager(
     // Background pattern and color
     private var currentBackgroundPattern = BackgroundPattern.PLAIN
     private var currentBackgroundColor = BackgroundColor.WHITE
+    private var backgroundImage: Bitmap? = null
     
     // Selection paint for selective eraser
     private val selectionPaint = Paint().apply {
@@ -102,10 +103,8 @@ class CanvasRenderManager(
         canvas.translate(-zoomPanController.focusX, -zoomPanController.focusY)
         canvas.scale(zoomPanController.scaleFactor, zoomPanController.scaleFactor)
         
-        // Draw background color
         drawBackgroundColor(canvas)
         
-        // Draw background pattern
         drawBackgroundPattern(canvas)
         
         // Draw the infinite bitmap with all previous strokes
@@ -127,17 +126,14 @@ class CanvasRenderManager(
             }
         }
         
-        // Draw text objects
         for (textObject in stateManager.textObjects) {
             textObject.draw(canvas)
         }
         
-        // Draw shape objects
         for (shapeObject in stateManager.shapeObjects) {
             shapeObject.draw(canvas)
         }
         
-        // Draw image objects
         for (imageObject in stateManager.imageObjects) {
             imageObject.draw(canvas)
         }
@@ -162,6 +158,16 @@ class CanvasRenderManager(
         
         if (bitmapWidth == 0f || bitmapHeight == 0f) return
         
+        // Draw background image if available, otherwise draw color
+        backgroundImage?.let { image ->
+            if (!image.isRecycled) {
+                val destRect = RectF(0f, 0f, bitmapWidth, bitmapHeight)
+                canvas.drawBitmap(image, null, destRect, null)
+                return
+            }
+        }
+        
+        // Draw background color if no image
         val backgroundPaint = Paint().apply {
             color = currentBackgroundColor.colorValue
             style = Paint.Style.FILL
@@ -196,7 +202,6 @@ class CanvasRenderManager(
                 drawVerticalLines(canvas, patternPaint, 40f, bitmapWidth, bitmapHeight)
             }
             BackgroundPattern.DOT_GRID -> drawDotGrid(canvas, patternPaint, 30f, bitmapWidth, bitmapHeight)
-            BackgroundPattern.RULED_PAPER -> drawRuledPaper(canvas, 40f, bitmapWidth, bitmapHeight)
             BackgroundPattern.GRAPH_PAPER -> drawGraphPaper(canvas, bitmapWidth, bitmapHeight)
             BackgroundPattern.PLAIN -> {}
         }
@@ -253,22 +258,7 @@ class CanvasRenderManager(
             y += adjustedSpacing
         }
     }
-    
-    private fun drawRuledPaper(canvas: Canvas, spacing: Float, width: Float, height: Float) {
-        val adjustedSpacing = spacing / zoomPanController.scaleFactor
-        val paint = Paint().apply {
-            color = Color.parseColor("#B0BEC5")
-            strokeWidth = 1f / zoomPanController.scaleFactor
-            style = Paint.Style.STROKE
-        }
-        
-        var y = 0f
-        while (y <= height) {
-            canvas.drawLine(0f, y, width, y, paint)
-            y += adjustedSpacing
-        }
-    }
-    
+
     private fun drawGraphPaper(canvas: Canvas, width: Float, height: Float) {
         val smallSpacing = 20f / zoomPanController.scaleFactor
         val largeSpacing = 100f / zoomPanController.scaleFactor
@@ -330,13 +320,19 @@ class CanvasRenderManager(
             isAntiAlias = true
         }
         
+        // Define the 4 colors
+        val colorBlack = Color.BLACK
+        val colorBlue = Color.parseColor("#2196F3")
+        val colorGreen = Color.parseColor("#4CAF50")
+        val colorRed = Color.parseColor("#F44336")
+        
         for (section in sectionManager.getAllSections()) {
             val controlArea = section.controlBounds
             val sectionWidth = section.bounds.width()
             
-            val buttonSize = 32f
-            val buttonSpacing = 4f
-            val buttonCount = 7
+            val buttonSize = 50f
+            val buttonSpacing = 6f
+            val buttonCount = 7  // pen, eraser, clear, black, blue, green, red
             
             val totalWidth = buttonCount * buttonSize + (buttonCount - 1) * buttonSpacing
             val startX = controlArea.left + (sectionWidth - totalWidth) / 2
@@ -352,17 +348,18 @@ class CanvasRenderManager(
                 val isSelected = when (i) {
                     0 -> section.currentTool == DrawingTool.PEN
                     1 -> section.currentTool == DrawingTool.ERASER
+                    3 -> section.currentColor == colorBlack
+                    4 -> section.currentColor == colorBlue
+                    5 -> section.currentColor == colorGreen
+                    6 -> section.currentColor == colorRed
                     else -> false
                 }
                 
-                val isEnabled = when (i) {
-                    2 -> section.canUndo()
-                    3 -> section.canRedo()
-                    else -> true
-                }
-                
                 // Draw button background
-                if (isSelected) {
+                if (isSelected && i >= 3) {
+                    // For color buttons, use a thicker border when selected
+                    canvas.drawRoundRect(rect, 4f, 4f, buttonBg)
+                } else if (isSelected) {
                     canvas.drawRoundRect(rect, 4f, 4f, selectedBg)
                 } else {
                     canvas.drawRoundRect(rect, 4f, 4f, buttonBg)
@@ -373,11 +370,11 @@ class CanvasRenderManager(
                 when (i) {
                     0 -> drawIcon(canvas, "✎", rect, isSelected)
                     1 -> drawIcon(canvas, "⌫", rect, isSelected)
-                    2 -> drawIcon(canvas, "↶", rect, isEnabled)
-                    3 -> drawIcon(canvas, "↷", rect, isEnabled)
-                    4 -> drawIcon(canvas, "✕", rect, true)
-                    5 -> drawColorButton(canvas, rect, section.currentColor)
-                    6 -> drawStrokeButton(canvas, rect, section.currentStrokeWidth)
+                    2 -> drawIcon(canvas, "✕", rect, true)
+                    3 -> drawColorButton(canvas, rect, colorBlack, isSelected)
+                    4 -> drawColorButton(canvas, rect, colorBlue, isSelected)
+                    5 -> drawColorButton(canvas, rect, colorGreen, isSelected)
+                    6 -> drawColorButton(canvas, rect, colorRed, isSelected)
                 }
             }
         }
@@ -387,41 +384,57 @@ class CanvasRenderManager(
         val paint = Paint().apply {
             isAntiAlias = true
             color = if (enabled) Color.parseColor("#333333") else Color.parseColor("#AAAAAA")
-            textSize = 20f
+            textSize = 28f
             textAlign = Paint.Align.CENTER
             isFakeBoldText = true
         }
-        canvas.drawText(icon, rect.centerX(), rect.centerY() + 7f, paint)
+        canvas.drawText(icon, rect.centerX(), rect.centerY() + 10f, paint)
     }
     
-    private fun drawColorButton(canvas: Canvas, rect: RectF, color: Int) {
+    private fun drawColorButton(canvas: Canvas, rect: RectF, color: Int, isSelected: Boolean = false) {
         val colorPaint = Paint().apply {
             style = Paint.Style.FILL
             this.color = color
             isAntiAlias = true
         }
-        val innerRect = RectF(rect.left + 6f, rect.top + 6f, rect.right - 6f, rect.bottom - 6f)
-        canvas.drawRoundRect(innerRect, 2f, 2f, colorPaint)
+        val innerRect = RectF(rect.left + 8f, rect.top + 8f, rect.right - 8f, rect.bottom - 8f)
+        canvas.drawRoundRect(innerRect, 4f, 4f, colorPaint)
         
         val borderPaint = Paint().apply {
             style = Paint.Style.STROKE
-            this.color = Color.parseColor("#888888")
-            strokeWidth = 1f
+            this.color = if (isSelected) Color.parseColor("#333333") else Color.parseColor("#888888")
+            strokeWidth = if (isSelected) 3.5f else 2f
             isAntiAlias = true
         }
-        canvas.drawRoundRect(innerRect, 2f, 2f, borderPaint)
+        canvas.drawRoundRect(innerRect, 4f, 4f, borderPaint)
     }
     
-    private fun drawStrokeButton(canvas: Canvas, rect: RectF, strokeWidth: Float) {
-        val strokePaint = Paint().apply {
-            color = Color.parseColor("#333333")
-            style = Paint.Style.STROKE
-            this.strokeWidth = strokeWidth.coerceIn(2f, 10f)
-            strokeCap = Paint.Cap.ROUND
-            isAntiAlias = true
+    // Method to detect which button was clicked in section controls
+    fun detectSectionControlButton(section: SectionManager.Section, x: Float, y: Float): Int? {
+        val controlArea = section.controlBounds
+        val sectionWidth = section.bounds.width()
+        
+        val buttonSize = 50f
+        val buttonSpacing = 6f
+        val buttonCount = 7
+        
+        val totalWidth = buttonCount * buttonSize + (buttonCount - 1) * buttonSpacing
+        val startX = controlArea.left + (sectionWidth - totalWidth) / 2
+        val centerY = controlArea.centerY()
+        val buttonTop = centerY - buttonSize / 2
+        
+        for (i in 0 until buttonCount) {
+            val buttonLeft = startX + i * (buttonSize + buttonSpacing)
+            val buttonRight = buttonLeft + buttonSize
+            val buttonBottom = buttonTop + buttonSize
+            val rect = RectF(buttonLeft, buttonTop, buttonRight, buttonBottom)
+            
+            if (rect.contains(x, y)) {
+                return i  // Return button index: 0=pen, 1=eraser, 2=clear, 3=black, 4=blue, 5=green, 6=red
+            }
         }
-        val margin = rect.width() * 0.25f
-        canvas.drawLine(rect.left + margin, rect.centerY(), rect.right - margin, rect.centerY(), strokePaint)
+        
+        return null
     }
     
     fun setBackgroundPattern(pattern: BackgroundPattern) {
@@ -435,6 +448,12 @@ class CanvasRenderManager(
     }
     
     fun getBackgroundColor(): BackgroundColor = currentBackgroundColor
+    
+    fun setBackgroundImage(bitmap: Bitmap?) {
+        backgroundImage = bitmap
+    }
+    
+    fun getBackgroundImage(): Bitmap? = backgroundImage
     
     fun redrawCanvas() {
         bitmapManager.drawingCanvas?.let { canvas ->

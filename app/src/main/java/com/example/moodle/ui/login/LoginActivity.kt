@@ -21,11 +21,11 @@ import kotlinx.coroutines.*
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var authRepository: AuthRepository
-    private lateinit var etUsername: TextInputEditText
-    private lateinit var etPassword: TextInputEditText
+    private lateinit var inputUsername: TextInputEditText
+    private lateinit var inputPassword: TextInputEditText
     private lateinit var btnLogin: Button
     private lateinit var progressBar: ProgressBar
-    private lateinit var tvError: TextView
+    private lateinit var errorText: TextView
     
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.Main + job)
@@ -42,11 +42,11 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun initializeViews() {
-        etUsername = findViewById(R.id.etUsername)
-        etPassword = findViewById(R.id.etPassword)
+        inputUsername = findViewById(R.id.inputUsername)
+        inputPassword = findViewById(R.id.inputPassword)
         btnLogin = findViewById(R.id.btnLogin)
         progressBar = findViewById(R.id.progressBar)
-        tvError = findViewById(R.id.tvError)
+        errorText = findViewById(R.id.errorText)
     }
 
     private fun applyFonts() {
@@ -55,15 +55,7 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun checkLoginStatus() {
-        // Skip login in debug builds for development
-        if (BuildConfig.SKIP_LOGIN) {
-            navigateToWhiteboard()
-            return
-        }
-        
-        if (authRepository.isLoggedIn()) {
-            navigateToWhiteboard()
-        }
+        if (authRepository.isLoggedIn()) navigateToWhiteboard()
     }
 
     private fun setupClickListeners() {
@@ -73,17 +65,15 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun performLogin() {
-        val username = etUsername.text.toString().trim()
-        val password = etPassword.text.toString().trim()
+        val username = inputUsername.text.toString().trim()
+        val password = inputPassword.text.toString().trim()
 
-        // Validate inputs
         if (username.isBlank()) {
-            showError("نام کاربری نمی تواند خالی باشد")
+            showError(getString(R.string.login_empty_username))
             return
         }
-        
         if (password.isBlank()) {
-            showError("رمز عبور نمی تواند خالی باشد")
+            showError(getString(R.string.login_empty_password))
             return
         }
 
@@ -97,17 +87,17 @@ class LoginActivity : AppCompatActivity() {
                 result.fold(
                     onSuccess = { loginResponse ->
                         hideLoading()
-                        Toast.makeText(this@LoginActivity, "ورود با موفقیت انجام شد", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@LoginActivity, getString(R.string.login_success), Toast.LENGTH_SHORT).show()
                         navigateToWhiteboard()
                     },
                     onFailure = { exception ->
                         hideLoading()
-                        showError(exception.message ?: "مشکلی در ورود به سامانه رخ داده است")
+                        showError(exception.message ?: getString(R.string.login_error))
                     }
                 )
             } catch (e: Exception) {
                 hideLoading()
-                showError("مشکلی در ورود به سامانه رخ داده است: ${e.message}")
+                showError(getString(R.string.login_error) + ": ${e.message}")
             }
         }
     }
@@ -115,23 +105,23 @@ class LoginActivity : AppCompatActivity() {
     private fun showLoading() {
         progressBar.visibility = View.VISIBLE
         btnLogin.isEnabled = false
-        btnLogin.text = "در حال ورود..."
+        btnLogin.text = getString(R.string.login_loading)
     }
 
     private fun hideLoading() {
         progressBar.visibility = View.GONE
         btnLogin.isEnabled = true
-        btnLogin.text = "ورود"
+        btnLogin.text = getString(R.string.login)
     }
 
     private fun showError(error: String) {
-        tvError.text = error
-        tvError.visibility = View.VISIBLE
+        errorText.text = error
+        errorText.visibility = View.VISIBLE
     }
 
     private fun hideError() {
-        tvError.visibility = View.GONE
-        tvError.text = ""
+        errorText.visibility = View.GONE
+        errorText.text = ""
     }
 
     private fun navigateToWhiteboard() {

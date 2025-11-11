@@ -8,17 +8,6 @@
     android:padding="12dp"
     android:elevation="8dp">
 
-    <!-- Title
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/colors"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:textColor="#333333"
-        android:layout_gravity="center"
-        android:layout_marginBottom="8dp" /> -->
-
     <!-- Color Grid Row 1 -->
     <LinearLayout
         android:layout_width="wrap_content"

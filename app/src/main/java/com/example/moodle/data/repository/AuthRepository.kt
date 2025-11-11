@@ -3,6 +3,7 @@ package com.example.moodle.data.repository
 import com.example.moodle.data.api.ApiClient
 import com.example.moodle.data.api.ApiService
 import com.example.moodle.data.datastore.UserPreferences
+import com.example.moodle.data.model.LoginRequest
 import com.example.moodle.data.model.LoginResponse
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
@@ -15,12 +16,11 @@ class AuthRepository(
     suspend fun login(
         username: String, 
         password: String, 
-        service: String = "moodle_mobile_app"
     ): Result<LoginResponse> = withContext(Dispatchers.IO) {
         try {
             val apiService = ApiClient.createApiService()
-
-            val response = apiService.login(username, password, service).execute()
+            val request = LoginRequest(username, password)
+            val response = apiService.login(request).execute()
         
             if (response.isSuccessful) {
                 val body = response.body()
@@ -30,8 +30,8 @@ class AuthRepository(
                         Log.d("Moodle-Auth", "Login failed: Empty response body")
                         Result.failure(Exception("Empty response from server"))
                     }
-                    !body.token.isNullOrBlank() -> {
-                        prefs.saveAuthToken(body.token)
+                    !body.accessToken.isNullOrBlank() -> {
+                        prefs.saveAuthToken(body.accessToken)
                         prefs.saveUsername(username)
                         
                         Result.success(body)

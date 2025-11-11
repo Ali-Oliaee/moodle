@@ -13,7 +13,7 @@ import android.util.Log
  * Each section has its own drawing area and independent tools
  * 
  * Layout: Each section has controls at the bottom with:
- * - Pen, Eraser, Undo, Redo, Color, Stroke Width, Clear
+ * - Pen, Eraser, Clear, and 4 color options (Black, Blue, Green, Red)
  */
 class SectionManager {
     
@@ -106,16 +106,6 @@ class SectionManager {
         alpha = 30 // Very light background
     }
     
-    // Different background colors for sections
-    private val sectionColors = arrayOf(
-        Color.parseColor("#E3F2FD"), // Light Blue
-        Color.parseColor("#E8F5E8"), // Light Green  
-        Color.parseColor("#FFF3E0"), // Light Orange
-        Color.parseColor("#F3E5F5"), // Light Purple
-        Color.parseColor("#FFEBEE"), // Light Red
-        Color.parseColor("#E0F2F1")  // Light Teal
-    )
-    
     fun setBoardDimensions(width: Float, height: Float) {
         android.util.Log.d("SectionManager", "setBoardDimensions: $width x $height, isSplitMode=$isSplitMode")
         boardWidth = width
@@ -129,8 +119,8 @@ class SectionManager {
     fun enableSplitMode(numberOfSections: Int) {
         android.util.Log.d("SectionManager", "enableSplitMode called with $numberOfSections sections, board: $boardWidth x $boardHeight")
         
-        if (numberOfSections < 2 || numberOfSections > 4) {
-            Log.w("SectionManager", "Invalid number of sections: $numberOfSections. Must be between 2 and 4.")
+        if (numberOfSections < 2 || numberOfSections > 6) {
+            Log.w("SectionManager", "Invalid number of sections: $numberOfSections. Must be between 2 and 6.")
             return
         }
         
@@ -157,62 +147,23 @@ class SectionManager {
     private fun createSections(count: Int) {
         sections.clear()
         
-        when (count) {
-            2 -> create2Sections()
-            3 -> create3Sections()
-            4 -> create4Sections()
-            else -> create2Sections() // Default fallback
+        if (count < 4 ) {
+            val width = boardWidth / count.toFloat()
+
+            for (i in 1..count) {
+                sections.add(Section(
+                    id = i,
+                    bounds = RectF((i - 1) * width, 0f, i * width, boardHeight),
+                    drawingBounds = RectF((i - 1) * width, 0f, i * width, boardHeight - CONTROL_TOOLBAR_HEIGHT),
+                    controlBounds = RectF((i - 1) * width, boardHeight - CONTROL_TOOLBAR_HEIGHT, i * width, boardHeight),
+                    studentName = "Section $i"
+                ))
+            }
         }
+        else if (count == 4) create4Sections()
+        else create6Sections()
         
         Log.d("SectionManager", "Created $count sections")
-    }
-    
-    private fun create2Sections() {
-        val halfWidth = boardWidth / 2f
-        
-        sections.add(Section(
-            id = 1,
-            bounds = RectF(0f, 0f, halfWidth, boardHeight),
-            drawingBounds = RectF(0f, 0f, halfWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
-            controlBounds = RectF(0f, boardHeight - CONTROL_TOOLBAR_HEIGHT, halfWidth, boardHeight),
-            studentName = "Section 1"
-        ))
-        
-        sections.add(Section(
-            id = 2,
-            bounds = RectF(halfWidth, 0f, boardWidth, boardHeight),
-            drawingBounds = RectF(halfWidth, 0f, boardWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
-            controlBounds = RectF(halfWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT, boardWidth, boardHeight),
-            studentName = "Section 2"
-        ))
-    }
-    
-    private fun create3Sections() {
-        val thirdWidth = boardWidth / 3f
-        
-        sections.add(Section(
-            id = 1,
-            bounds = RectF(0f, 0f, thirdWidth, boardHeight),
-            drawingBounds = RectF(0f, 0f, thirdWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
-            controlBounds = RectF(0f, boardHeight - CONTROL_TOOLBAR_HEIGHT, thirdWidth, boardHeight),
-            studentName = "Section 1"
-        ))
-        
-        sections.add(Section(
-            id = 2,
-            bounds = RectF(thirdWidth, 0f, thirdWidth * 2f, boardHeight),
-            drawingBounds = RectF(thirdWidth, 0f, thirdWidth * 2f, boardHeight - CONTROL_TOOLBAR_HEIGHT),
-            controlBounds = RectF(thirdWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT, thirdWidth * 2f, boardHeight),
-            studentName = "Section 2"
-        ))
-        
-        sections.add(Section(
-            id = 3,
-            bounds = RectF(thirdWidth * 2f, 0f, boardWidth, boardHeight),
-            drawingBounds = RectF(thirdWidth * 2f, 0f, boardWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
-            controlBounds = RectF(thirdWidth * 2f, boardHeight - CONTROL_TOOLBAR_HEIGHT, boardWidth, boardHeight),
-            studentName = "Section 3"
-        ))
     }
     
     private fun create4Sections() {
@@ -340,7 +291,7 @@ class SectionManager {
             // Draw white background for drawing area
             sectionBackgroundPaint.color = Color.WHITE
             canvas.drawRect(section.drawingBounds, sectionBackgroundPaint)
-            
+
             // Draw light gray background for control toolbar
             sectionBackgroundPaint.color = Color.parseColor("#F5F5F5")
             canvas.drawRect(section.controlBounds, sectionBackgroundPaint)

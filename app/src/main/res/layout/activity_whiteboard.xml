@@ -8,7 +8,7 @@
     android:background="#F5F5F5"
     tools:context=".ui.whiteboard.WhiteboardActivity">
 
-    <!-- Top Toolbar with attendance, logout, and record buttons -->
+    <!-- Top Toolbar with attendance, logout, record buttons, and split controls -->
     <LinearLayout
         android:id="@+id/topToolbar"
         android:layout_width="match_parent"
@@ -40,9 +40,74 @@
                 android:layout_marginEnd="8dp"
                 android:background="@drawable/circle_button"
                 android:elevation="2dp"
+                android:clickable="false"
+                android:focusable="false"
                 android:contentDescription="@string/desc_record_button" />
 
         </LinearLayout>
+
+        <!-- Split Mode Controls -->
+        <LinearLayout
+            android:id="@+id/splitControls"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginEnd="8dp">
+
+            <ImageButton
+                android:id="@+id/btnEnableSplit"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_split_enable"
+                android:background="@drawable/tool_button_background"
+                android:layout_marginEnd="4dp"
+                android:contentDescription="@string/enable_split" />
+
+            <ImageButton
+                android:id="@+id/btnDisableSplit"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_split_disable"
+                android:background="@drawable/tool_button_background"
+                android:visibility="gone"
+                android:contentDescription="@string/disable_split" />
+
+        </LinearLayout>
+
+        <!-- Import/Export Controls -->
+        <LinearLayout
+            android:id="@+id/importExportControls"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginEnd="8dp">
+
+            <ImageButton
+                android:id="@+id/btnExport"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_export"
+                android:background="@drawable/tool_button_background"
+                android:layout_marginEnd="4dp"
+                android:contentDescription="@string/desc_export_button" />
+
+            <ImageButton
+                android:id="@+id/btnImport"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_import"
+                android:background="@drawable/tool_button_background"
+                android:contentDescription="@string/desc_import_button" />
+
+        </LinearLayout>
+
+        <!-- Spacer to push buttons to the right -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
 
         <!-- Attendance Button -->
         <ImageButton
@@ -65,18 +130,41 @@
 
     </LinearLayout>
 
-    <!-- Whiteboard View taking remaining space -->
-    <com.example.moodle.ui.whiteboard.views.WhiteboardView
-        android:id="@+id/whiteboardView"
+    <!-- Main Content Area -->
+    <LinearLayout
+        android:id="@+id/mainContentArea"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="#FFFFFF"
+        android:orientation="horizontal"
         app:layout_constraintTop_toBottomOf="@id/topToolbar"
-        app:layout_constraintBottom_toTopOf="@id/bottomToolbar"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <!-- Bottom Toolbar with drawing tools -->
+        <!-- Whiteboard View -->
+        <com.example.moodle.ui.whiteboard.views.WhiteboardView
+            android:id="@+id/whiteboardView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#FFFFFF" />
+
+    </LinearLayout>
+
+    <!-- Floating Toggle Button (Left Side) -->
+    <ImageButton
+        android:id="@+id/btnToggleToolbars"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@drawable/ic_chevron_up"
+        android:background="@drawable/tool_button_background"
+        android:elevation="8dp"
+        android:layout_margin="8dp"
+        android:contentDescription="@string/desc_toggle_toolbar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/mainContentArea"
+        android:layout_marginTop="16dp" />
+
+    <!-- Bottom Toolbar (shown only when split mode is disabled) -->
     <LinearLayout
         android:id="@+id/bottomToolbar"
         android:layout_width="match_parent"
@@ -125,6 +213,16 @@
             android:background="@drawable/tool_button_background"
             android:contentDescription="@string/desc_formula_tool" />
 
+        <!-- Shape Tools Popup Button -->
+        <ImageButton
+            android:id="@+id/btnShapes"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_shapes"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_shapes_tool" />
+
         <!-- Separator -->
         <View
             android:layout_width="1dp"
@@ -169,20 +267,11 @@
 
         <!-- Mode Tools -->
         <ImageButton
-            android:id="@+id/btnModeToggle"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_margin="2dp"
-            android:src="@drawable/ic_move_4d"
-            android:background="@drawable/tool_button_background"
-            android:contentDescription="@string/desc_mode_toggle" />
-
-        <ImageButton
             android:id="@+id/btnPinchMode"
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:layout_margin="2dp"
-            android:src="@drawable/ic_zoom"
+            android:src="@drawable/ic_move_4d"
             android:background="@drawable/tool_button_background"
             android:contentDescription="@string/desc_pinch_mode" />
 
@@ -212,6 +301,63 @@
             android:src="@drawable/ic_stroke_width"
             android:background="@drawable/tool_button_background"
             android:contentDescription="@string/stroke_width" />
+
+        <!-- Background Pattern Button -->
+        <ImageButton
+            android:id="@+id/btnBackground"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_background"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_background_button" />
+
+        <!-- Separator -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="30dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="#E0E0E0" />
+
+        <!-- Pagination Controls -->
+        <ImageButton
+            android:id="@+id/btnPreviousPage"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_arrow_back"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_previous_page" />
+
+        <TextView
+            android:id="@+id/tvPageIndicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="4dp"
+            android:text="1/1"
+            android:textSize="12sp"
+            android:textColor="#333333"
+            android:minWidth="32dp"
+            android:gravity="center"
+            android:layout_gravity="center_vertical" />
+
+        <ImageButton
+            android:id="@+id/btnNextPage"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_arrow_forward"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_next_page" />
+
+        <ImageButton
+            android:id="@+id/btnDeletePage"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_margin="2dp"
+            android:src="@drawable/ic_delete"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_delete_page" />
 
     </LinearLayout>
 
