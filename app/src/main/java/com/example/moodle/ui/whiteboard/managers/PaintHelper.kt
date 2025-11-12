@@ -74,8 +74,7 @@ class PaintHelper {
             DrawingTool.CUBE, DrawingTool.CYLINDER, DrawingTool.PYRAMID, DrawingTool.SPHERE, DrawingTool.CONE,
             DrawingTool.RIGHT_TRIANGLE, DrawingTool.ISOSCELES_TRIANGLE, DrawingTool.PARALLELOGRAM, 
             DrawingTool.TRAPEZOID, DrawingTool.PENTAGON, DrawingTool.HEXAGON, DrawingTool.STAR, 
-            DrawingTool.DIAMOND, DrawingTool.ELLIPSE, DrawingTool.ARROW,
-            DrawingTool.RULER, DrawingTool.BAG, DrawingTool.CONVEYOR -> drawPaint.apply {
+            DrawingTool.DIAMOND, DrawingTool.ELLIPSE, DrawingTool.ARROW -> drawPaint.apply {
                 this.color = color
                 this.strokeWidth = strokeWidth
                 xfermode = null

@@ -91,11 +91,6 @@
     <string name="shapes">اشکال</string>
     
     <!-- Measurement Tools -->
-    <string name="precision_millimeter">میلی‌متر</string>
-    <string name="precision_centimeter">سانتی‌متر</string>
-    <string name="desc_ruler_tool">انتخاب ابزار خط‌کش</string>
-    <string name="desc_bag_tool">انتخاب ابزار کیسه</string>
-    <string name="desc_conveyor_tool">انتخاب ابزار نوار نقاله</string>
     <string name="desc_undo_button">برگشت از آخرین عمل</string>
     <string name="desc_redo_button">بازگردانی آخرین عمل</string>
     <string name="desc_clear_button">پاک کردن رویاگرانی</string>
@@ -277,9 +272,4 @@
     <string name="toggle_toolbar">نمایش/مخفی کردن نوار ابزار</string>
     <string name="desc_toggle_toolbar">دکمه نمایش/مخفی کردن نوار ابزار</string>
     
-    <!-- Ruler Tools -->
-    <string name="ruler_tools_title">ابزارهای اندازه‌گیری</string>
-    <string name="desc_ruler_button">نمایش ابزارهای اندازه‌گیری</string>
-    <string name="precision_settings">دقت اندازه‌گیری</string>
-    <string name="ruler_info_text">ابزار را انتخاب کنید و دقت مورد نظر را تنظیم نمایید</string>
-</resources>
+  </resources>
