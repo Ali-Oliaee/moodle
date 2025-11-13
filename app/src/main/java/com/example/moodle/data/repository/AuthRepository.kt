@@ -1,6 +1,5 @@
 package com.example.moodle.data.repository
 
-import com.example.moodle.data.api.ApiClient
 import com.example.moodle.data.api.ApiService
 import com.example.moodle.data.datastore.UserPreferences
 import com.example.moodle.data.model.LoginRequest
@@ -9,8 +8,16 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * Repository handling authentication operations
+ * Dependencies are injected via constructor (managed by Koin)
+ *
+ * @param prefs UserPreferences for storing auth tokens and user data
+ * @param apiService ApiService for making network requests
+ */
 class AuthRepository(
-    private val prefs: UserPreferences
+    private val prefs: UserPreferences,
+    private val apiService: ApiService
 ) {
     
     suspend fun login(
@@ -18,7 +25,6 @@ class AuthRepository(
         password: String, 
     ): Result<LoginResponse> = withContext(Dispatchers.IO) {
         try {
-            val apiService = ApiClient.createApiService()
             val request = LoginRequest(username, password)
             val response = apiService.login(request).execute()
         

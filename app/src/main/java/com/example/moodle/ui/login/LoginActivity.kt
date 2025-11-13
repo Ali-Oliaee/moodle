@@ -14,6 +14,8 @@ import android.arch.lifecycle.Observer
 import android.arch.lifecycle.ViewModelProviders
 
 import com.example.moodle.R
+import com.example.moodle.MoodleApplication
+import com.example.moodle.di.ViewModelFactory
 import com.example.moodle.utils.FontHelper
 import com.example.moodle.ui.whiteboard.WhiteboardActivity
 
@@ -25,14 +27,18 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var errorText: TextView
     private lateinit var viewModel: LoginViewModel
+    
     // TODO: remove this button after testing
     private lateinit var btnSkip: Button
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
-
-        viewModel = ViewModelProviders.of(this).get(LoginViewModel::class.java)
+        
+        // Get dependency container and create ViewModel using factory
+        val dependencies = (application as MoodleApplication).dependencyContainer
+        val factory = ViewModelFactory(application, dependencies)
+        viewModel = ViewModelProviders.of(this, factory).get(LoginViewModel::class.java)
 
         initializeViews()
         applyFonts()
