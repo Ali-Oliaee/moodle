@@ -25,6 +25,8 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var errorText: TextView
     private lateinit var viewModel: LoginViewModel
+    // TODO: remove this button after testing
+    private lateinit var btnSkip: Button
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +47,7 @@ class LoginActivity : AppCompatActivity() {
         btnLogin = findViewById(R.id.btnLogin)
         progressBar = findViewById(R.id.progressBar)
         errorText = findViewById(R.id.errorText)
+        btnSkip = findViewById(R.id.btnSkip)
     }
 
     private fun applyFonts() {
@@ -63,6 +66,9 @@ class LoginActivity : AppCompatActivity() {
             val username = inputUsername.text.toString()
             val password = inputPassword.text.toString()
             viewModel.performLogin(username, password)
+        }
+        btnSkip.setOnClickListener {
+            navigateToWhiteboard()
         }
     }
 
