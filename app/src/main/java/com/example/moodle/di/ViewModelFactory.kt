@@ -4,6 +4,7 @@ import android.app.Application
 import android.arch.lifecycle.ViewModel
 import android.arch.lifecycle.ViewModelProvider
 import com.example.moodle.ui.login.LoginViewModel
+import com.example.moodle.ui.whiteboard.WhiteboardViewModel
 
 /**
  * Factory for creating ViewModels with constructor dependencies
@@ -19,12 +20,25 @@ class ViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return when {
+            // Auth Section ViewModels
             modelClass.isAssignableFrom(LoginViewModel::class.java) -> {
                 LoginViewModel(
                     application = application,
                     authRepository = dependencies.authRepository
                 ) as T
             }
+            
+            // Whiteboard Section ViewModels
+            modelClass.isAssignableFrom(WhiteboardViewModel::class.java) -> {
+                WhiteboardViewModel(
+                    application = application,
+                    userPreferences = dependencies.userPreferences,
+                    pageManager = dependencies.pageManager,
+                    exportManager = dependencies.exportManager,
+                    importManager = dependencies.importManager
+                ) as T
+            }
+            
             // Add more ViewModels here as needed
             // modelClass.isAssignableFrom(OtherViewModel::class.java) -> { ... }
             

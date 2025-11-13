@@ -22,14 +22,22 @@ import kotlin.math.absoluteValue
  * ViewModel for WhiteboardActivity
  * Manages UI state and business logic following MVVM architecture
  * Consolidates functionality from ToolsController, PaginationController, and ImportExportController
+ * 
+ * @param application Application context
+ * @param userPreferences UserPreferences for storing settings
+ * @param pageManager PageManager for page navigation and state
+ * @param exportManager ExportManager for exporting whiteboard content
+ * @param importManager ImportManager for importing content
  */
-class WhiteboardViewModel(application: Application) : AndroidViewModel(application) {
+class WhiteboardViewModel(
+    application: Application,
+    private val userPreferences: UserPreferences,
+    val pageManager: PageManager,
+    val exportManager: ExportManager,
+    val importManager: ImportManager
+) : AndroidViewModel(application) {
     
-    // Managers (business logic)
-    private val userPreferences = UserPreferences(application)
-    val pageManager = PageManager(userPreferences)
-    val exportManager = ExportManager(application)
-    val importManager = ImportManager(application)
+    // Managers (business logic) - injected via constructor
     
     // ========== UI State - Observable LiveData ==========
     

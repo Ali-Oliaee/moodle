@@ -5,6 +5,9 @@ import com.example.moodle.data.api.ApiClient
 import com.example.moodle.data.api.ApiService
 import com.example.moodle.data.datastore.UserPreferences
 import com.example.moodle.data.repository.AuthRepository
+import com.example.moodle.ui.whiteboard.managers.PageManager
+import com.example.moodle.ui.whiteboard.managers.ExportManager
+import com.example.moodle.ui.whiteboard.managers.ImportManager
 
 /**
  * Simple dependency injection container
@@ -15,7 +18,7 @@ import com.example.moodle.data.repository.AuthRepository
  */
 class DependencyContainer(private val applicationContext: Context) {
     
-    // ==================== Singletons ====================
+    // ==================== Auth Section Singletons ====================
     
     /**
      * UserPreferences singleton
@@ -42,6 +45,35 @@ class DependencyContainer(private val applicationContext: Context) {
             prefs = userPreferences,
             apiService = apiService
         )
+    }
+    
+    // ==================== Whiteboard Section Singletons ====================
+    
+    /**
+     * PageManager singleton
+     * Manages multiple pages in the whiteboard application
+     * Depends on: userPreferences
+     */
+    val pageManager: PageManager by lazy {
+        PageManager(userPreferences)
+    }
+    
+    /**
+     * ExportManager singleton
+     * Manages exporting whiteboard content to various formats
+     * Depends on: applicationContext
+     */
+    val exportManager: ExportManager by lazy {
+        ExportManager(applicationContext)
+    }
+    
+    /**
+     * ImportManager singleton
+     * Manages importing content into the whiteboard
+     * Depends on: applicationContext
+     */
+    val importManager: ImportManager by lazy {
+        ImportManager(applicationContext)
     }
     
     // ==================== Factory Methods ====================
