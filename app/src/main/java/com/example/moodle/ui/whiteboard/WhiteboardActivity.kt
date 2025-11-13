@@ -826,7 +826,6 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Update button visual state
         btnPinchMode.isSelected = isPinchModeActive
-  
     }
     
     /**
