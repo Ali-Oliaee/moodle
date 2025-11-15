@@ -1,9 +1,5 @@
 package com.example.moodle.ui.whiteboard.managers
 import com.example.moodle.ui.whiteboard.models.*
-import com.example.moodle.ui.whiteboard.views.*
-import com.example.moodle.ui.whiteboard.listeners.*
-import com.example.moodle.ui.whiteboard.controllers.*
-import com.example.moodle.ui.whiteboard.utils.*
 
 import android.graphics.*
 

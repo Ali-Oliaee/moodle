@@ -44,7 +44,6 @@ class LoginActivity : AppCompatActivity() {
         applyFonts()
         setupClickListeners()
         observeViewModel()
-        checkLoginStatus()
     }
 
     private fun initializeViews() {

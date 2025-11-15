@@ -1,14 +1,14 @@
 package com.example.moodle.ui.whiteboard.managers
 import com.example.moodle.ui.whiteboard.models.*
-import com.example.moodle.ui.whiteboard.views.*
 import com.example.moodle.ui.whiteboard.listeners.*
-import com.example.moodle.ui.whiteboard.controllers.*
-import com.example.moodle.ui.whiteboard.utils.*
 
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Rect
+import android.graphics.RectF
+import android.graphics.Region
 
 /**
  * Manager responsible for maintaining drawing state and object collections
@@ -459,9 +459,119 @@ class DrawingStateManager {
         return false
     }
     
+    /**
+     * Erases elements that intersect with the selection area
+     * Removes entire paths/strokes, text objects, shape objects, and image objects
+     * that intersect with the selection
+     */
     fun eraseElementsInSelection(selectionPath: Path?) {
-        // Simplified version - just clear for now
-        // Full implementation would check intersection with selection path
+        if (selectionPath == null) return
+        
+        // Create a region from the selection path for intersection testing
+        val selectionBounds = RectF()
+        selectionPath.computeBounds(selectionBounds, true)
+        val selectionRegion = Region().apply {
+            setPath(selectionPath, Region(
+                selectionBounds.left.toInt(),
+                selectionBounds.top.toInt(),
+                selectionBounds.right.toInt(),
+                selectionBounds.bottom.toInt()
+            ))
+        }
+        
+        // Handle drawing paths - remove paths that intersect with selection
+        val pathsToRemove = mutableListOf<DrawingPath>()
+        
+        for (drawingPath in paths) {
+            // Check if path intersects with selection region
+            val pathBounds = RectF()
+            drawingPath.path.computeBounds(pathBounds, true)
+            
+            // Quick bounds check first
+            if (!RectF.intersects(pathBounds, selectionBounds)) {
+                continue
+            }
+            
+            // More precise region-based intersection check
+            val pathRegion = Region().apply {
+                setPath(drawingPath.path, Region(
+                    pathBounds.left.toInt(),
+                    pathBounds.top.toInt(),
+                    pathBounds.right.toInt(),
+                    pathBounds.bottom.toInt()
+                ))
+            }
+            
+            // Create a copy of selection region for testing (since op modifies it)
+            val testRegion = Region(selectionRegion)
+            if (testRegion.op(pathRegion, Region.Op.INTERSECT) && !testRegion.isEmpty) {
+                // Path intersects with selection, mark for removal
+                pathsToRemove.add(drawingPath)
+            }
+        }
+        
+        // Apply path changes
+        paths.removeAll(pathsToRemove)
+        
+        // Handle text objects - remove if they intersect with selection
+        val textObjectsToRemove = mutableListOf<TextObject>()
+        for (textObj in textObjects) {
+            // Get text bounds
+            val textPaint = Paint().apply {
+                textSize = textObj.textSize
+            }
+            val textBounds = Rect()
+            textPaint.getTextBounds(textObj.text, 0, textObj.text.length, textBounds)
+            
+            val textRectF = RectF(
+                textObj.x - 10f,
+                textObj.y + textBounds.top - 10f,
+                textObj.x + textBounds.width() + 10f,
+                textObj.y + textBounds.bottom + 10f
+            )
+            
+            // Check if text intersects with selection
+            if (RectF.intersects(textRectF, selectionBounds)) {
+                textObjectsToRemove.add(textObj)
+            }
+        }
+        textObjects.removeAll(textObjectsToRemove)
+        if (selectedTextObject in textObjectsToRemove) {
+            selectedTextObject = null
+        }
+        
+        // Handle shape objects - remove if they intersect with selection
+        val shapeObjectsToRemove = mutableListOf<ShapeObject>()
+        for (shapeObj in shapeObjects) {
+            val shapeBounds = shapeObj.getBounds()
+            
+            // Check if shape intersects with selection
+            if (RectF.intersects(shapeBounds, selectionBounds)) {
+                shapeObjectsToRemove.add(shapeObj)
+            }
+        }
+        shapeObjects.removeAll(shapeObjectsToRemove)
+        if (selectedShapeObject in shapeObjectsToRemove) {
+            selectedShapeObject = null
+        }
+        
+        // Handle image objects - remove if they intersect with selection
+        val imageObjectsToRemove = mutableListOf<ImageObject>()
+        for (imageObj in imageObjects) {
+            val imageBounds = imageObj.getBounds()
+            
+            // Check if image intersects with selection
+            if (RectF.intersects(imageBounds, selectionBounds)) {
+                imageObjectsToRemove.add(imageObj)
+            }
+        }
+        imageObjects.removeAll(imageObjectsToRemove)
+        if (selectedImageObject in imageObjectsToRemove) {
+            selectedImageObject = null
+        }
+        
+        // Clear undo stack since we've modified the drawing
+        undoStack.clear()
     }
 }
 

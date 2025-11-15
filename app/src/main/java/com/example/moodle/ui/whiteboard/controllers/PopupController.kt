@@ -6,7 +6,6 @@ import com.example.moodle.ui.whiteboard.models.BackgroundPattern
 import com.example.moodle.ui.whiteboard.models.DrawingTool
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
 
-import android.content.Context
 import android.graphics.Color
 import android.support.v7.app.AppCompatActivity
 import android.view.Gravity
@@ -215,7 +214,6 @@ class PopupController(
             onToolSelected?.invoke(DrawingTool.ERASER)
             onEraserModeSelected?.invoke(false)
             eraserModePopupWindow?.dismiss()
-            Toast.makeText(activity, "پاک کن معمولی انتخاب شد", Toast.LENGTH_SHORT).show()
         }
         
         // Selective eraser option
@@ -224,7 +222,6 @@ class PopupController(
             onToolSelected?.invoke(DrawingTool.SELECTIVE_ERASER)
             onEraserModeSelected?.invoke(true)
             eraserModePopupWindow?.dismiss()
-            Toast.makeText(activity, "پاک کن انتخابی انتخاب شد", Toast.LENGTH_SHORT).show()
         }
         
         // Show popup above the anchor view
@@ -294,8 +291,6 @@ class PopupController(
             val centerX = whiteboardView.getVisibleCanvasCenterX()
             val centerY = whiteboardView.getVisibleCanvasCenterY()
             whiteboardView.addText(formulaText, centerX, centerY)
-            
-            Toast.makeText(activity, "فرمول به تخته اضافه شد - با قلم اعداد را پر کنید", Toast.LENGTH_SHORT).show()
         }
     }
     

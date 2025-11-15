@@ -14,7 +14,6 @@ import com.example.moodle.MoodleApplication
 import com.example.moodle.R
 import com.example.moodle.data.datastore.UserPreferences
 import com.example.moodle.di.ViewModelFactory
-// import com.example.moodle.ui.attendance.AttendanceActivity
 import com.example.moodle.ui.login.LoginActivity
 import com.example.moodle.ui.whiteboard.controllers.PopupController
 import com.example.moodle.ui.whiteboard.controllers.RecordingController
@@ -22,8 +21,6 @@ import com.example.moodle.ui.whiteboard.controllers.SplitModeController
 import com.example.moodle.ui.whiteboard.listeners.OnDrawingChangeListener
 import com.example.moodle.ui.whiteboard.listeners.OnTextInputListener
 import com.example.moodle.ui.whiteboard.managers.PageManager
-import com.example.moodle.ui.whiteboard.models.BackgroundColor
-import com.example.moodle.ui.whiteboard.models.BackgroundPattern
 import com.example.moodle.ui.whiteboard.models.DrawingTool
 import com.example.moodle.ui.whiteboard.models.WhiteboardViewState
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
@@ -98,21 +95,11 @@ class WhiteboardActivity : AppCompatActivity() {
         
         setContentView(R.layout.activity_whiteboard)
         
-        // Initialize views
         initializeViews()
-        
-        // Initialize UI controllers
         initializeUIControllers()
-        
-        // Setup listeners
         setupListeners()
-        
-        // Observe ViewModel
         observeViewModel()
-        
-        // Apply fonts
         applyFonts()
-        
         // Load initial page
         loadCurrentPageFromViewModel()
     }

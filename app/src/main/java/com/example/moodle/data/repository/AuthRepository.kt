@@ -4,7 +4,6 @@ import com.example.moodle.data.api.ApiService
 import com.example.moodle.data.datastore.UserPreferences
 import com.example.moodle.data.model.LoginRequest
 import com.example.moodle.data.model.LoginResponse
-import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -33,7 +32,6 @@ class AuthRepository(
                 
                 when {
                     body == null -> {
-                        Log.d("Moodle-Auth", "Login failed: Empty response body")
                         Result.failure(Exception("Empty response from server"))
                     }
                     !body.accessToken.isNullOrBlank() -> {
@@ -43,10 +41,6 @@ class AuthRepository(
                         Result.success(body)
                     }
                     else -> {
-                        Log.d("Moodle-Auth", "Login failed: No token received")
-                        Log.d("Moodle-Auth", "Success flag: ${body.success}")
-                        Log.d("Moodle-Auth", "Message: ${body.message}")
-                        
                         val errorMsg = body.message ?: "Login failed - No authentication token received"
                         Result.failure(Exception(errorMsg))
                     }
@@ -57,7 +51,6 @@ class AuthRepository(
                 Result.failure(Exception(errorMsg))
             }
         } catch (t: Throwable) {
-            Log.e("Moodle", "Login exception: ${t.message}", t)
             val errorMsg = when (t) {
                 is java.net.UnknownHostException -> "Cannot connect to server. Check your internet connection and server URL."
                 is java.net.ConnectException -> "Connection failed. Please check the server URL."

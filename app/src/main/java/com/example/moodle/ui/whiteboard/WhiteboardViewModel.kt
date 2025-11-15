@@ -4,7 +4,6 @@ import android.app.Application
 import android.arch.lifecycle.AndroidViewModel
 import android.arch.lifecycle.MutableLiveData
 import android.arch.lifecycle.LiveData
-import android.graphics.Color
 import android.net.Uri
 import com.example.moodle.data.datastore.UserPreferences
 import com.example.moodle.ui.whiteboard.managers.ExportManager
@@ -16,7 +15,6 @@ import com.example.moodle.ui.whiteboard.models.DrawingTool
 import com.example.moodle.ui.whiteboard.models.PageData
 import com.example.moodle.ui.whiteboard.models.WhiteboardViewState
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
-import kotlin.math.absoluteValue
 
 /**
  * ViewModel for WhiteboardActivity
