@@ -1,9 +1,6 @@
 package com.example.moodle.ui.whiteboard.managers
 import com.example.moodle.ui.whiteboard.models.*
-import com.example.moodle.ui.whiteboard.views.*
-import com.example.moodle.ui.whiteboard.listeners.*
 import com.example.moodle.ui.whiteboard.controllers.*
-import com.example.moodle.ui.whiteboard.utils.*
 
 import android.graphics.*
 
@@ -33,11 +30,9 @@ class CanvasRenderManager(
     }
     
     fun drawCanvas(canvas: Canvas, activePaths: Map<Int, Path>, selectionPath: Path?, previewPath: Path?, pointerSectionMap: Map<Int, SectionManager.Section>, currentActiveSection: SectionManager.Section?) {
-        if (sectionManager.isSplitModeEnabled()) {
+        if (sectionManager.isSplitModeEnabled()) 
             drawSplitMode(canvas, activePaths, previewPath, pointerSectionMap, currentActiveSection)
-        } else {
-            drawNormalMode(canvas, activePaths, selectionPath, previewPath)
-        }
+        else drawNormalMode(canvas, activePaths, selectionPath, previewPath)
     }
     
     private fun drawSplitMode(canvas: Canvas, activePaths: Map<Int, Path>, previewPath: Path?, pointerSectionMap: Map<Int, SectionManager.Section>, currentActiveSection: SectionManager.Section?) {
@@ -457,16 +452,14 @@ class CanvasRenderManager(
     
     fun redrawCanvas() {
         bitmapManager.drawingCanvas?.let { canvas ->
-            canvas.drawColor(Color.WHITE, PorterDuff.Mode.SRC)
+            canvas.drawColor(Color.BLACK, PorterDuff.Mode.SRC)
             drawBackgroundColor(canvas)
             drawBackgroundPattern(canvas)
             
             for (drawingPath in stateManager.paths) {
-                if (drawingPath.tool == DrawingTool.TEXT && drawingPath.text != null) {
+                if (drawingPath.tool == DrawingTool.TEXT && drawingPath.text != null) 
                     canvas.drawText(drawingPath.text, drawingPath.textX, drawingPath.textY, drawingPath.paint)
-                } else {
-                    canvas.drawPath(drawingPath.path, drawingPath.paint)
-                }
+                else canvas.drawPath(drawingPath.path, drawingPath.paint)
             }
         }
     }

@@ -1,6 +1,4 @@
 package com.example.moodle.ui.whiteboard.controllers
-import com.example.moodle.ui.whiteboard.models.*
-import com.example.moodle.ui.whiteboard.views.*
 
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
 

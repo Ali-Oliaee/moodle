@@ -82,6 +82,18 @@
             android:layout_marginBottom="20dp"
             android:visibility="gone" />
 
+            <!-- TODO: remove this button after testing -->
+            <Button 
+            android:id="@+id/btnSkip"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="رد کردن"
+            android:textSize="16sp"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="@android:color/holo_red_dark"
+            android:textColor="@android:color/white" />
+
     </LinearLayout>
 
 </ScrollView>

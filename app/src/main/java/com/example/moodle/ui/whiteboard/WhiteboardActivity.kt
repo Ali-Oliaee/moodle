@@ -10,9 +10,10 @@ import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.view.ViewGroup
 import android.widget.*
+import com.example.moodle.MoodleApplication
 import com.example.moodle.R
 import com.example.moodle.data.datastore.UserPreferences
-// import com.example.moodle.ui.attendance.AttendanceActivity
+import com.example.moodle.di.ViewModelFactory
 import com.example.moodle.ui.login.LoginActivity
 import com.example.moodle.ui.whiteboard.controllers.PopupController
 import com.example.moodle.ui.whiteboard.controllers.RecordingController
@@ -20,8 +21,6 @@ import com.example.moodle.ui.whiteboard.controllers.SplitModeController
 import com.example.moodle.ui.whiteboard.listeners.OnDrawingChangeListener
 import com.example.moodle.ui.whiteboard.listeners.OnTextInputListener
 import com.example.moodle.ui.whiteboard.managers.PageManager
-import com.example.moodle.ui.whiteboard.models.BackgroundColor
-import com.example.moodle.ui.whiteboard.models.BackgroundPattern
 import com.example.moodle.ui.whiteboard.models.DrawingTool
 import com.example.moodle.ui.whiteboard.models.WhiteboardViewState
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
@@ -86,29 +85,21 @@ class WhiteboardActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Initialize ViewModel
-        viewModel = ViewModelProviders.of(this).get(WhiteboardViewModel::class.java)
+        // Initialize ViewModel with DI
+        val dependencies = (application as MoodleApplication).dependencyContainer
+        val factory = ViewModelFactory(application, dependencies)
+        viewModel = ViewModelProviders.of(this, factory).get(WhiteboardViewModel::class.java)
         
-        // Initialize preferences
-        userPreferences = UserPreferences(this)
+        // Get UserPreferences from dependency container
+        userPreferences = dependencies.userPreferences
         
         setContentView(R.layout.activity_whiteboard)
         
-        // Initialize views
         initializeViews()
-        
-        // Initialize UI controllers
         initializeUIControllers()
-        
-        // Setup listeners
         setupListeners()
-        
-        // Observe ViewModel
         observeViewModel()
-        
-        // Apply fonts
         applyFonts()
-        
         // Load initial page
         loadCurrentPageFromViewModel()
     }
@@ -826,7 +817,6 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Update button visual state
         btnPinchMode.isSelected = isPinchModeActive
-  
     }
     
     /**

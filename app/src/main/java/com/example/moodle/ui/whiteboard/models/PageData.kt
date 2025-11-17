@@ -1,7 +1,5 @@
 package com.example.moodle.ui.whiteboard.models
 
-import android.graphics.Color
-
 /**
  * Data class representing a single page in the whiteboard
  * Contains all drawing elements and state for that page

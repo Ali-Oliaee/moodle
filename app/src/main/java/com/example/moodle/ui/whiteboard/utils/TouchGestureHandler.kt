@@ -2,8 +2,6 @@ package com.example.moodle.ui.whiteboard.utils
 import com.example.moodle.ui.whiteboard.models.*
 import com.example.moodle.ui.whiteboard.managers.*
 import com.example.moodle.ui.whiteboard.controllers.*
-import com.example.moodle.ui.whiteboard.listeners.*
-import com.example.moodle.ui.whiteboard.views.*
 
 import android.graphics.*
 import android.view.MotionEvent
@@ -67,6 +65,9 @@ class TouchGestureHandler(
     
     // Drawing canvas callback for normal mode
     var getDrawingCanvas: (() -> Canvas?)? = null
+    
+    // Background color callback
+    var getBackgroundColor: (() -> BackgroundColor)? = null
     
     fun handleDrawingTouch(event: MotionEvent, isDrawingMode: Boolean) {
         val action = event.actionMasked
@@ -385,7 +386,8 @@ class TouchGestureHandler(
             
             // Redraw canvas
             getDrawingCanvas?.invoke()?.let { canvas ->
-                canvas.drawColor(Color.WHITE, PorterDuff.Mode.SRC)
+                val bgColor = getBackgroundColor?.invoke()?.colorValue ?: Color.WHITE
+                canvas.drawColor(bgColor, PorterDuff.Mode.SRC)
                 for (path in stateManager.paths) {
                     canvas.drawPath(path.path, path.paint)
                 }

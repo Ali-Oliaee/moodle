@@ -1,9 +1,5 @@
 package com.example.moodle.ui.whiteboard.managers
 import com.example.moodle.ui.whiteboard.models.*
-import com.example.moodle.ui.whiteboard.views.*
-import com.example.moodle.ui.whiteboard.listeners.*
-import com.example.moodle.ui.whiteboard.controllers.*
-import com.example.moodle.ui.whiteboard.utils.*
 
 import android.graphics.Color
 
@@ -155,16 +151,15 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
     fun deletePage(pageId: Int): Boolean {
         if (pages.size <= 1 || !pages.containsKey(pageId)) return false
         
+        val replacePageIndex = getPageIds().indexOf(currentPageId) - 1
         pages.remove(pageId)
-        
+
         // If we deleted the current page, navigate to the first available page
         if (currentPageId == pageId) {
-            currentPageId = getPageIds().first()
+            currentPageId = getPageIds()[replacePageIndex]
             saveState()
             pageChangeListener?.onPageChanged(currentPageId, getTotalPages())
-        } else {
-            saveState()
-        }
+        } else saveState()
         
         return true
     }

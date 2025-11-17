@@ -14,6 +14,8 @@ import android.arch.lifecycle.Observer
 import android.arch.lifecycle.ViewModelProviders
 
 import com.example.moodle.R
+import com.example.moodle.MoodleApplication
+import com.example.moodle.di.ViewModelFactory
 import com.example.moodle.utils.FontHelper
 import com.example.moodle.ui.whiteboard.WhiteboardActivity
 
@@ -26,17 +28,22 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var errorText: TextView
     private lateinit var viewModel: LoginViewModel
     
+    // TODO: remove this button after testing
+    private lateinit var btnSkip: Button
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
-
-        viewModel = ViewModelProviders.of(this).get(LoginViewModel::class.java)
+        
+        // Get dependency container and create ViewModel using factory
+        val dependencies = (application as MoodleApplication).dependencyContainer
+        val factory = ViewModelFactory(application, dependencies)
+        viewModel = ViewModelProviders.of(this, factory).get(LoginViewModel::class.java)
 
         initializeViews()
         applyFonts()
         setupClickListeners()
         observeViewModel()
-        checkLoginStatus()
     }
 
     private fun initializeViews() {
@@ -45,6 +52,7 @@ class LoginActivity : AppCompatActivity() {
         btnLogin = findViewById(R.id.btnLogin)
         progressBar = findViewById(R.id.progressBar)
         errorText = findViewById(R.id.errorText)
+        btnSkip = findViewById(R.id.btnSkip)
     }
 
     private fun applyFonts() {
@@ -63,6 +71,9 @@ class LoginActivity : AppCompatActivity() {
             val username = inputUsername.text.toString()
             val password = inputPassword.text.toString()
             viewModel.performLogin(username, password)
+        }
+        btnSkip.setOnClickListener {
+            navigateToWhiteboard()
         }
     }
 

@@ -1,14 +1,8 @@
 package com.example.moodle.ui.whiteboard.managers
-import com.example.moodle.ui.whiteboard.models.*
-import com.example.moodle.ui.whiteboard.views.*
-import com.example.moodle.ui.whiteboard.listeners.*
-import com.example.moodle.ui.whiteboard.controllers.*
-import com.example.moodle.ui.whiteboard.utils.*
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import kotlin.math.max
 
 /**
  * Manager responsible for bitmap lifecycle and memory management

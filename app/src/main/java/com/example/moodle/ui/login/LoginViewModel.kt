@@ -2,10 +2,9 @@ package com.example.moodle.ui.login
 
 import android.app.Application
 import android.arch.lifecycle.AndroidViewModel
-import android.arch.lifecycle.MutableLiveData
 import android.arch.lifecycle.LiveData
+import android.arch.lifecycle.MutableLiveData
 import com.example.moodle.data.repository.AuthRepository
-import com.example.moodle.data.datastore.UserPreferences
 import kotlinx.coroutines.*
 
 import com.example.moodle.R
@@ -20,9 +19,16 @@ data class LoginViewState(
     val shouldNavigate: Boolean = false
 )
 
-class LoginViewModel(application: Application) : AndroidViewModel(application) {
-
+/**
+ * ViewModel for Login screen
+ * Dependencies are injected via constructor (managed by Koin)
+ *
+ * @param authRepository AuthRepository for handling authentication logic
+ */
+class LoginViewModel(
+    application: Application,
     private val authRepository: AuthRepository
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableLiveData<LoginViewState>()
     val uiState: LiveData<LoginViewState> = _uiState
@@ -31,7 +37,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     private val scope = CoroutineScope(Dispatchers.Main + job)
 
     init {
-        authRepository = AuthRepository(UserPreferences(application))
         _uiState.value = LoginViewState()
     }
 
