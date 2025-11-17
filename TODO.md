@@ -12,7 +12,7 @@
 - color picker
 - selector
 - web search
-- khatkesh
+- ruler
 - mind map
 - sticky note
 - browser search
