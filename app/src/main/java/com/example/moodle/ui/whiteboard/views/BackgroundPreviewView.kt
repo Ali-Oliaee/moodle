@@ -66,30 +66,35 @@ class BackgroundPreviewView @JvmOverloads constructor(
             BackgroundPattern.PLAIN -> {
                 // Already drawn white background
             }
-            BackgroundPattern.GRID_SMALL -> {
-                drawGridPreview(canvas, width, height, 8f)
-            }
-            BackgroundPattern.GRID_LARGE -> {
-                drawGridPreview(canvas, width, height, 12f)
-            }
-            BackgroundPattern.LINES_HORIZONTAL -> {
-                drawHorizontalLinesPreview(canvas, width, height, 8f)
-            }
-            BackgroundPattern.LINES_VERTICAL -> {
-                drawVerticalLinesPreview(canvas, width, height, 8f)
-            }
-            BackgroundPattern.LINES_BOTH -> {
-                drawHorizontalLinesPreview(canvas, width, height, 8f)
-                drawVerticalLinesPreview(canvas, width, height, 8f)
-            }
-            BackgroundPattern.DOT_GRID -> {
-                drawDotGridPreview(canvas, width, height, 8f)
-            }
-            BackgroundPattern.RULED_PAPER -> {
-                drawRuledPaperPreview(canvas, width, height)
-            }
-            BackgroundPattern.GRAPH_PAPER -> {
-                drawGraphPaperPreview(canvas, width, height)
+            c.drawRect(0f, 0f, width, height, borderPaint)
+            
+            // Draw pattern preview
+            when (backgroundPattern) {
+                BackgroundPattern.PLAIN -> {
+                    // Already drawn white background
+                }
+                BackgroundPattern.GRID_SMALL -> {
+                    drawGridPreview(c, width, height, 8f)
+                }
+                BackgroundPattern.GRID_LARGE -> {
+                    drawGridPreview(c, width, height, 12f)
+                }
+                BackgroundPattern.LINES_HORIZONTAL -> {
+                    drawHorizontalLinesPreview(c, width, height, 8f)
+                }
+                BackgroundPattern.LINES_VERTICAL -> {
+                    drawVerticalLinesPreview(c, width, height, 8f)
+                }
+                BackgroundPattern.LINES_BOTH -> {
+                    drawHorizontalLinesPreview(c, width, height, 8f)
+                    drawVerticalLinesPreview(c, width, height, 8f)
+                }
+                BackgroundPattern.DOT_GRID -> {
+                    drawDotGridPreview(c, width, height, 8f)
+                }
+                BackgroundPattern.GRAPH_PAPER -> {
+                    drawGraphPaperPreview(c, width, height)
+                }
             }
         }
     }
@@ -135,23 +140,6 @@ class BackgroundPreviewView @JvmOverloads constructor(
                 x += spacing
             }
             y += spacing
-        }
-    }
-    
-    private fun drawRuledPaperPreview(canvas: Canvas, width: Float, height: Float) {
-        // Draw margin line
-        val marginLeft = width * 0.25f
-        canvas.drawLine(marginLeft, 2f, marginLeft, height - 2f, Paint().apply {
-            color = Color.parseColor("#FF6B6B")
-            strokeWidth = 1f
-        })
-        
-        // Draw horizontal lines
-        val lineSpacing = 8f
-        var y = lineSpacing
-        while (y < height) {
-            canvas.drawLine(2f, y, width - 2f, y, linePaint)
-            y += lineSpacing
         }
     }
     

@@ -58,7 +58,9 @@ object ApiClient {
     }
     
     fun createApiService(): ApiService {
-        val baseUrl = "http://62.60.210.162:8080/"
+        // Use 10.0.2.2 for Android Emulator (maps to host's 127.0.0.1)
+        // For physical device, replace with your computer's actual IP address
+        val baseUrl = "http://10.0.2.2:8083/"
         
         return Retrofit.Builder()
             .baseUrl(baseUrl)

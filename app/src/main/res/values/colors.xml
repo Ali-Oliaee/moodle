@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-   
+   <!-- Whiteboard -->
+   <color name="whiteboard_background_color">#F5F5F5</color>
+   <color name="whiteboard_toolbar_background_color">#FFFFFF</color>
+   <color name="whiteboard_toolbar_text_color">#000000</color>
+   <color name="whiteboard_toolbar_icon_color">#000000</color>
+   <color name="whiteboard_toolbar_button_color">#000000</color>
+   <color name="whiteboard_toolbar_button_background_color">#000000</color>
+   <color name="whiteboard_toolbar_button_text_color">#000000</color>
+   <color name="whiteboard_toolbar_button_icon_color">#000000</color>
+   <color name="whiteboard_toolbar_separator_color">#E0E0E0</color>
+   <color name="whiteboard_section_background_color">#FFFFFF</color>
+   <color name="whiteboard_section_border_color">#333333</color>
+   <color name="whiteboard_section_divider_color">#DDDDDD</color>
 </resources>

@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Pyramid representation with 3D perspective -->
+    <!-- Front face -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="@android:color/black"
+        android:strokeWidth="1.5"
+        android:pathData="M 12,5 L 7,18 L 17,18 Z"/>
+    <!-- Right face -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="@android:color/black"
+        android:strokeWidth="1.5"
+        android:pathData="M 12,5 L 17,18 L 19,16"/>
+    <!-- Base line for depth -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="@android:color/black"
+        android:strokeWidth="1.5"
+        android:pathData="M 7,18 L 19,16"/>
+</vector>
+

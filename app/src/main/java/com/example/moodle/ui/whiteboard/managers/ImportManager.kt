@@ -1,9 +1,6 @@
 package com.example.moodle.ui.whiteboard.managers
 import com.example.moodle.ui.whiteboard.models.*
 import com.example.moodle.ui.whiteboard.views.*
-import com.example.moodle.ui.whiteboard.listeners.*
-import com.example.moodle.ui.whiteboard.controllers.*
-import com.example.moodle.ui.whiteboard.utils.*
 
 import android.content.Context
 import android.graphics.*
@@ -11,10 +8,7 @@ import android.net.Uri
 import android.util.Base64
 import android.widget.Toast
 import com.example.moodle.R
-import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
-import java.io.FileInputStream
 import java.io.InputStream
 
 /**

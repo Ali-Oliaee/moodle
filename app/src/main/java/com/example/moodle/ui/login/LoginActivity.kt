@@ -8,45 +8,49 @@ import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.textfield.TextInputEditText
-import com.example.moodle.BuildConfig
+import android.arch.lifecycle.Observer
+import android.arch.lifecycle.ViewModelProviders
+
 import com.example.moodle.R
-import com.example.moodle.ui.whiteboard.WhiteboardActivity
-import com.example.moodle.data.repository.AuthRepository
-import com.example.moodle.data.datastore.UserPreferences
+import com.example.moodle.MoodleApplication
+import com.example.moodle.di.ViewModelFactory
 import com.example.moodle.utils.FontHelper
-import kotlinx.coroutines.*
+import com.example.moodle.ui.whiteboard.WhiteboardActivity
 
 class LoginActivity : AppCompatActivity() {
 
-    private lateinit var authRepository: AuthRepository
-    private lateinit var etUsername: TextInputEditText
-    private lateinit var etPassword: TextInputEditText
+    private lateinit var inputUsername: TextInputEditText
+    private lateinit var inputPassword: TextInputEditText
     private lateinit var btnLogin: Button
     private lateinit var progressBar: ProgressBar
-    private lateinit var tvError: TextView
+    private lateinit var errorText: TextView
+    private lateinit var viewModel: LoginViewModel
     
-    private val job = SupervisorJob()
-    private val scope = CoroutineScope(Dispatchers.Main + job)
-
+    // TODO: remove this button after testing
+    private lateinit var btnSkip: Button
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
+        
+        // Get dependency container and create ViewModel using factory
+        val dependencies = (application as MoodleApplication).dependencyContainer
+        val factory = ViewModelFactory(application, dependencies)
+        viewModel = ViewModelProviders.of(this, factory).get(LoginViewModel::class.java)
 
-        authRepository = AuthRepository(UserPreferences(this))
         initializeViews()
         applyFonts()
         setupClickListeners()
-        checkLoginStatus()
+        observeViewModel()
     }
 
     private fun initializeViews() {
-        etUsername = findViewById(R.id.etUsername)
-        etPassword = findViewById(R.id.etPassword)
+        inputUsername = findViewById(R.id.inputUsername)
+        inputPassword = findViewById(R.id.inputPassword)
         btnLogin = findViewById(R.id.btnLogin)
         progressBar = findViewById(R.id.progressBar)
-        tvError = findViewById(R.id.tvError)
+        errorText = findViewById(R.id.errorText)
+        btnSkip = findViewById(R.id.btnSkip)
     }
 
     private fun applyFonts() {
@@ -55,83 +59,61 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun checkLoginStatus() {
-        // Skip login in debug builds for development
-        if (BuildConfig.SKIP_LOGIN) {
-            navigateToWhiteboard()
-            return
-        }
-        
-        if (authRepository.isLoggedIn()) {
+        if (viewModel.getIsLoggedIn()) {
             navigateToWhiteboard()
         }
     }
 
     private fun setupClickListeners() {
         btnLogin.setOnClickListener {
-            performLogin()
+            val username = inputUsername.text.toString()
+            val password = inputPassword.text.toString()
+            viewModel.performLogin(username, password)
+        }
+        btnSkip.setOnClickListener {
+            navigateToWhiteboard()
         }
     }
 
-    private fun performLogin() {
-        val username = etUsername.text.toString().trim()
-        val password = etPassword.text.toString().trim()
+    private fun observeViewModel() {
+        viewModel.uiState.observe(this, Observer { state ->
+            state?.let { handleState(it) }
+        })
+    }
 
-        // Validate inputs
-        if (username.isBlank()) {
-            showError("نام کاربری نمی تواند خالی باشد")
-            return
-        }
+    private fun handleState(state: LoginViewState) {
+        updateLoadingState(state.isLoading)
+        updateErrorState(state.error)
         
-        if (password.isBlank()) {
-            showError("رمز عبور نمی تواند خالی باشد")
-            return
-        }
-
-        showLoading()
-        hideError()
-        
-        scope.launch {
-            try {
-                val result = authRepository.login(username, password)
-                
-                result.fold(
-                    onSuccess = { loginResponse ->
-                        hideLoading()
-                        Toast.makeText(this@LoginActivity, "ورود با موفقیت انجام شد", Toast.LENGTH_SHORT).show()
-                        navigateToWhiteboard()
-                    },
-                    onFailure = { exception ->
-                        hideLoading()
-                        showError(exception.message ?: "مشکلی در ورود به سامانه رخ داده است")
-                    }
-                )
-            } catch (e: Exception) {
-                hideLoading()
-                showError("مشکلی در ورود به سامانه رخ داده است: ${e.message}")
+        if (state.shouldNavigate) {
+            state.successMessage?.let { message ->
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
             }
+            navigateToWhiteboard()
+            viewModel.onNavigationHandled()
         }
     }
 
-    private fun showLoading() {
-        progressBar.visibility = View.VISIBLE
-        btnLogin.isEnabled = false
-        btnLogin.text = "در حال ورود..."
+    private fun updateLoadingState(isLoading: Boolean) {
+        if (isLoading) {
+            progressBar.visibility = View.VISIBLE
+            btnLogin.isEnabled = false
+            btnLogin.text = getString(R.string.login_loading)
+        } else {
+            progressBar.visibility = View.GONE
+            btnLogin.isEnabled = true
+            btnLogin.text = getString(R.string.login)
+        }
     }
 
-    private fun hideLoading() {
-        progressBar.visibility = View.GONE
-        btnLogin.isEnabled = true
-        btnLogin.text = "ورود"
-    }
-
-    private fun showError(error: String) {
-        tvError.text = error
-        tvError.visibility = View.VISIBLE
-    }
-
-    private fun hideError() {
-        tvError.visibility = View.GONE
-        tvError.text = ""
+    private fun updateErrorState(error: String?) {
+        if (error != null) {
+            errorText.text = error
+            errorText.visibility = View.VISIBLE
+        } else {
+            errorText.visibility = View.GONE
+            errorText.text = ""
+        }
     }
 
     private fun navigateToWhiteboard() {
@@ -143,6 +125,6 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        job.cancel()
+        viewModel.cancelJob()
     }
 }

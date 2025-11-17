@@ -1,92 +1,123 @@
 package com.example.moodle.ui.login
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
+import android.arch.lifecycle.AndroidViewModel
+import android.arch.lifecycle.LiveData
+import android.arch.lifecycle.MutableLiveData
 import com.example.moodle.data.repository.AuthRepository
-import com.example.moodle.data.datastore.UserPreferences
 import kotlinx.coroutines.*
 
-class LoginViewModel(application: Application) : AndroidViewModel(application) {
-    
-    private val authRepository = AuthRepository(UserPreferences(application))
-    
-    // UI State
-    private val _isLoading = MutableLiveData<Boolean>()
-    val isLoading: LiveData<Boolean> = _isLoading
-    
-    private val _loginSuccess = MutableLiveData<Boolean>()
-    val loginSuccess: LiveData<Boolean> = _loginSuccess
-    
-    private val _errorMessage = MutableLiveData<String>()
-    val errorMessage: LiveData<String> = _errorMessage
-    
-    private val _isLoggedIn = MutableLiveData<Boolean>()
-    val isLoggedIn: LiveData<Boolean> = _isLoggedIn
-    
+import com.example.moodle.R
+
+data class LoginViewState(
+    val username: String = "",
+    val password: String = "",
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val isLoginSuccessful: Boolean = false,
+    val successMessage: String? = null,
+    val shouldNavigate: Boolean = false
+)
+
+/**
+ * ViewModel for Login screen
+ * Dependencies are injected via constructor (managed by Koin)
+ *
+ * @param authRepository AuthRepository for handling authentication logic
+ */
+class LoginViewModel(
+    application: Application,
+    private val authRepository: AuthRepository
+) : AndroidViewModel(application) {
+
+    private val _uiState = MutableLiveData<LoginViewState>()
+    val uiState: LiveData<LoginViewState> = _uiState
+
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.Main + job)
+
     init {
-        checkLoginStatus()
+        _uiState.value = LoginViewState()
     }
-    
-    fun checkLoginStatus() {
-        _isLoggedIn.value = authRepository.isLoggedIn()
-    }
-    
-    fun login(username: String, password: String) {
+
+    fun performLogin(username: String, password: String) {
+        val context = getApplication<Application>()
+        
         if (username.isBlank()) {
-            _errorMessage.value = "Username cannot be empty"
+            updateState(error = context.getString(R.string.login_empty_username))
             return
         }
-        
         if (password.isBlank()) {
-            _errorMessage.value = "Password cannot be empty"
+            updateState(error = context.getString(R.string.login_empty_password))
             return
         }
+
+        updateState(isLoading = true, error = null)
         
-        _isLoading.value = true
-        _errorMessage.value = ""
-        
-        viewModelScope.launch {
+        scope.launch {
             try {
                 val result = authRepository.login(username, password)
                 
                 result.fold(
                     onSuccess = { loginResponse ->
-                        _isLoading.value = false
-                        _loginSuccess.value = true
-                        _isLoggedIn.value = true
+                        updateState(
+                            isLoading = false,
+                            isLoginSuccessful = true,
+                            successMessage = context.getString(R.string.login_success),
+                            shouldNavigate = true
+                        )
                     },
                     onFailure = { exception ->
-                        _isLoading.value = false
-                        _errorMessage.value = exception.message ?: "Login failed"
-                        _loginSuccess.value = false
+                        updateState(
+                            isLoading = false,
+                            error = exception.message ?: context.getString(R.string.login_error)
+                        )
                     }
                 )
             } catch (e: Exception) {
-                _isLoading.value = false
-                _errorMessage.value = "Unexpected error: ${e.message}"
-                _loginSuccess.value = false
+                updateState(
+                    isLoading = false,
+                    error = context.getString(R.string.login_error) + ": ${e.message}"
+                )
             }
         }
     }
-    
-    fun logout() {
-        authRepository.logout()
-        _isLoggedIn.value = false
-        _loginSuccess.value = false
+
+    private fun updateState(
+        username: String? = null,
+        password: String? = null,
+        isLoading: Boolean? = null,
+        error: String? = null,
+        isLoginSuccessful: Boolean? = null,
+        successMessage: String? = null,
+        shouldNavigate: Boolean? = null
+    ) {
+        val currentState = _uiState.value ?: LoginViewState()
+        _uiState.value = currentState.copy(
+            username = username ?: currentState.username,
+            password = password ?: currentState.password,
+            isLoading = isLoading ?: currentState.isLoading,
+            error = error,
+            isLoginSuccessful = isLoginSuccessful ?: currentState.isLoginSuccessful,
+            successMessage = successMessage,
+            shouldNavigate = shouldNavigate ?: currentState.shouldNavigate
+        )
     }
-    
-    fun getAuthToken(): String? {
-        return authRepository.getAuthToken()
+
+    fun getIsLoggedIn(): Boolean {
+        return _uiState.value?.isLoginSuccessful ?: false
     }
-    
-    fun getUsername(): String? {
-        return authRepository.getUsername()
+
+    fun onNavigationHandled() {
+        updateState(shouldNavigate = false)
     }
-    
-    fun clearError() {
-        _errorMessage.value = ""
+
+    fun cancelJob() {
+        job.cancel()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        job.cancel()
     }
 }

@@ -1,46 +1,46 @@
 package com.example.moodle.data.repository
 
-import com.example.moodle.data.api.ApiClient
 import com.example.moodle.data.api.ApiService
 import com.example.moodle.data.datastore.UserPreferences
+import com.example.moodle.data.model.LoginRequest
 import com.example.moodle.data.model.LoginResponse
-import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * Repository handling authentication operations
+ * Dependencies are injected via constructor (managed by Koin)
+ *
+ * @param prefs UserPreferences for storing auth tokens and user data
+ * @param apiService ApiService for making network requests
+ */
 class AuthRepository(
-    private val prefs: UserPreferences
+    private val prefs: UserPreferences,
+    private val apiService: ApiService
 ) {
     
     suspend fun login(
         username: String, 
         password: String, 
-        service: String = "moodle_mobile_app"
     ): Result<LoginResponse> = withContext(Dispatchers.IO) {
         try {
-            val apiService = ApiClient.createApiService()
-
-            val response = apiService.login(username, password, service).execute()
+            val request = LoginRequest(username, password)
+            val response = apiService.login(request).execute()
         
             if (response.isSuccessful) {
                 val body = response.body()
                 
                 when {
                     body == null -> {
-                        Log.d("Moodle-Auth", "Login failed: Empty response body")
                         Result.failure(Exception("Empty response from server"))
                     }
-                    !body.token.isNullOrBlank() -> {
-                        prefs.saveAuthToken(body.token)
+                    !body.accessToken.isNullOrBlank() -> {
+                        prefs.saveAuthToken(body.accessToken)
                         prefs.saveUsername(username)
                         
                         Result.success(body)
                     }
                     else -> {
-                        Log.d("Moodle-Auth", "Login failed: No token received")
-                        Log.d("Moodle-Auth", "Success flag: ${body.success}")
-                        Log.d("Moodle-Auth", "Message: ${body.message}")
-                        
                         val errorMsg = body.message ?: "Login failed - No authentication token received"
                         Result.failure(Exception(errorMsg))
                     }
@@ -51,7 +51,6 @@ class AuthRepository(
                 Result.failure(Exception(errorMsg))
             }
         } catch (t: Throwable) {
-            Log.e("Moodle", "Login exception: ${t.message}", t)
             val errorMsg = when (t) {
                 is java.net.UnknownHostException -> "Cannot connect to server. Check your internet connection and server URL."
                 is java.net.ConnectException -> "Connection failed. Please check the server URL."

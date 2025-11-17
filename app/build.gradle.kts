@@ -51,13 +51,11 @@ android {
     }
     
     buildTypes {
-        debug {
-            buildConfigField("boolean", "SKIP_LOGIN", "true")
+        getByName("debug") {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
         }
-        release {
-            buildConfigField("boolean", "SKIP_LOGIN", "true")
+        getByName("release") {
             if (signingConfigs.findByName("release") != null) {
                 signingConfig = signingConfigs.getByName("release")
             }

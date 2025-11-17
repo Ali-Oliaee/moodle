@@ -6,7 +6,6 @@ import com.example.moodle.ui.whiteboard.models.BackgroundPattern
 import com.example.moodle.ui.whiteboard.models.DrawingTool
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
 
-import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -30,17 +29,14 @@ class PopupController(
     private var eraserModePopupWindow: PopupWindow? = null
     private var formulaPopupWindow: PopupWindow? = null
     private var backgroundPopupWindow: PopupWindow? = null
-    private var zoomPopupWindow: PopupWindow? = null
     private var shapesPopupWindow: PopupWindow? = null
-    
-    // State
-    private var isUpdatingZoomFromSlider = false
     
     // Callbacks
     var onColorSelected: ((Int) -> Unit)? = null
     var onStrokeWidthChanged: ((Float) -> Unit)? = null
     var onBackgroundPatternSelected: ((BackgroundPattern) -> Unit)? = null
     var onBackgroundColorSelected: ((BackgroundColor) -> Unit)? = null
+    var onBackgroundImageUploadRequested: (() -> Unit)? = null
     var onToolSelected: ((DrawingTool) -> Unit)? = null
     var onEraserModeSelected: ((Boolean) -> Unit)? = null
     
@@ -118,62 +114,6 @@ class PopupController(
     }
     
     /**
-     * Show zoom slider popup
-     */
-    fun showZoomPopup(anchorView: View) {
-        val inflater = LayoutInflater.from(activity)
-        val popupView = inflater.inflate(R.layout.popup_zoom_slider, null)
-        
-        zoomPopupWindow = PopupWindow(
-            popupView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-        
-        val zoomSlider = popupView.findViewById<SeekBar>(R.id.zoomSlider)
-        val btnResetZoom = popupView.findViewById<Button>(R.id.btnResetZoom)
-        
-        // Get current zoom level and range
-        val currentZoom = whiteboardView.getZoomLevel()
-        val minZoom = whiteboardView.getMinZoomLevel()
-        val maxZoom = whiteboardView.getMaxZoomLevel()
-        
-        // Convert zoom level to progress (0-100)
-        val progress = ((currentZoom - minZoom) / (maxZoom - minZoom) * 100f).toInt()
-        zoomSlider.progress = progress
-        
-        // Setup slider listener
-        zoomSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser && !isUpdatingZoomFromSlider) {
-                    // Convert progress (0-100) to zoom level (minZoom-maxZoom)
-                    val zoomLevel = minZoom + (progress / 100f) * (maxZoom - minZoom)
-                    
-                    isUpdatingZoomFromSlider = true
-                    whiteboardView.setZoomLevel(zoomLevel)
-                    isUpdatingZoomFromSlider = false
-                }
-            }
-            
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        
-        // Setup reset button
-        btnResetZoom.setOnClickListener {
-            whiteboardView.setZoomLevel(1.0f)
-            
-            // Update slider
-            val resetProgress = ((1.0f - minZoom) / (maxZoom - minZoom) * 100f).toInt()
-            zoomSlider.progress = resetProgress
-        }
-        
-        // Show popup above the anchor view
-        zoomPopupWindow?.showAsDropDown(anchorView, 0, -anchorView.height - 150, Gravity.CENTER)
-    }
-    
-    /**
      * Show background pattern popup
      */
     fun showBackgroundPatternPopup() {
@@ -212,6 +152,9 @@ class PopupController(
         setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightGreen, BackgroundColor.LIGHT_GREEN)
         setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightYellow, BackgroundColor.LIGHT_YELLOW)
         setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightPink, BackgroundColor.LIGHT_PINK)
+        setupBackgroundColorClickListener(popupView, R.id.backgroundColorDarkBlue, BackgroundColor.DARK_BLUE)
+        setupBackgroundColorClickListener(popupView, R.id.backgroundColorDarkGreen, BackgroundColor.DARK_GREEN)
+        setupBackgroundColorClickListener(popupView, R.id.backgroundColorBlack, BackgroundColor.BLACK)
         
         // Set up click listeners for all patterns
         setupBackgroundPatternClickListener(popupView, R.id.backgroundPlain, BackgroundPattern.PLAIN)
@@ -222,6 +165,13 @@ class PopupController(
         setupBackgroundPatternClickListener(popupView, R.id.backgroundLinesBoth, BackgroundPattern.LINES_BOTH)
         setupBackgroundPatternClickListener(popupView, R.id.backgroundDotGrid, BackgroundPattern.DOT_GRID)
         setupBackgroundPatternClickListener(popupView, R.id.backgroundGraphPaper, BackgroundPattern.GRAPH_PAPER)
+        
+        // Setup upload background image button
+        val btnUploadBackgroundImage = popupView.findViewById<Button>(R.id.btnUploadBackgroundImage)
+        btnUploadBackgroundImage?.setOnClickListener {
+            onBackgroundImageUploadRequested?.invoke()
+            backgroundPopupWindow?.dismiss()
+        }
         
         backgroundPopupWindow?.showAtLocation(whiteboardView, Gravity.CENTER, 0, 0)
     }
@@ -264,7 +214,6 @@ class PopupController(
             onToolSelected?.invoke(DrawingTool.ERASER)
             onEraserModeSelected?.invoke(false)
             eraserModePopupWindow?.dismiss()
-            Toast.makeText(activity, "پاک کن معمولی انتخاب شد", Toast.LENGTH_SHORT).show()
         }
         
         // Selective eraser option
@@ -273,7 +222,6 @@ class PopupController(
             onToolSelected?.invoke(DrawingTool.SELECTIVE_ERASER)
             onEraserModeSelected?.invoke(true)
             eraserModePopupWindow?.dismiss()
-            Toast.makeText(activity, "پاک کن انتخابی انتخاب شد", Toast.LENGTH_SHORT).show()
         }
         
         // Show popup above the anchor view
@@ -343,8 +291,6 @@ class PopupController(
             val centerX = whiteboardView.getVisibleCanvasCenterX()
             val centerY = whiteboardView.getVisibleCanvasCenterY()
             whiteboardView.addText(formulaText, centerX, centerY)
-            
-            Toast.makeText(activity, "فرمول به تخته اضافه شد - با قلم اعداد را پر کنید", Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -362,35 +308,42 @@ class PopupController(
             true
         )
         
-        // Shape buttons in popup
-        val btnLinePopup = popupView.findViewById<ImageButton>(R.id.btnLinePopup)
-        val btnCirclePopup = popupView.findViewById<ImageButton>(R.id.btnCirclePopup)
-        val btnTrianglePopup = popupView.findViewById<ImageButton>(R.id.btnTrianglePopup)
-        val btnRectanglePopup = popupView.findViewById<ImageButton>(R.id.btnRectanglePopup)
+        // Find all shape buttons
+        setupShapeButton(popupView, R.id.btnLinePopup, DrawingTool.LINE)
+        setupShapeButton(popupView, R.id.btnCirclePopup, DrawingTool.CIRCLE)
+        setupShapeButton(popupView, R.id.btnEllipsePopup, DrawingTool.ELLIPSE)
+        setupShapeButton(popupView, R.id.btnRectanglePopup, DrawingTool.RECTANGLE)
+        setupShapeButton(popupView, R.id.btnDiamondPopup, DrawingTool.DIAMOND)
         
-        // Set click listeners
-        btnLinePopup.setOnClickListener {
-            onToolSelected?.invoke(DrawingTool.LINE)
-            shapesPopupWindow?.dismiss()
-        }
+        setupShapeButton(popupView, R.id.btnTrianglePopup, DrawingTool.TRIANGLE)
+        setupShapeButton(popupView, R.id.btnRightTrianglePopup, DrawingTool.RIGHT_TRIANGLE)
+        setupShapeButton(popupView, R.id.btnIsoscelesTrianglePopup, DrawingTool.ISOSCELES_TRIANGLE)
+        setupShapeButton(popupView, R.id.btnStarPopup, DrawingTool.STAR)
+        setupShapeButton(popupView, R.id.btnArrowPopup, DrawingTool.ARROW)
         
-        btnCirclePopup.setOnClickListener {
-            onToolSelected?.invoke(DrawingTool.CIRCLE)
-            shapesPopupWindow?.dismiss()
-        }
+        setupShapeButton(popupView, R.id.btnPentagonPopup, DrawingTool.PENTAGON)
+        setupShapeButton(popupView, R.id.btnHexagonPopup, DrawingTool.HEXAGON)
+        setupShapeButton(popupView, R.id.btnParallelogramPopup, DrawingTool.PARALLELOGRAM)
+        setupShapeButton(popupView, R.id.btnTrapezoidPopup, DrawingTool.TRAPEZOID)
         
-        btnTrianglePopup.setOnClickListener {
-            onToolSelected?.invoke(DrawingTool.TRIANGLE)
-            shapesPopupWindow?.dismiss()
-        }
-        
-        btnRectanglePopup.setOnClickListener {
-            onToolSelected?.invoke(DrawingTool.RECTANGLE)
-            shapesPopupWindow?.dismiss()
-        }
+        setupShapeButton(popupView, R.id.btnCubePopup, DrawingTool.CUBE)
+        setupShapeButton(popupView, R.id.btnCylinderPopup, DrawingTool.CYLINDER)
+        setupShapeButton(popupView, R.id.btnPyramidPopup, DrawingTool.PYRAMID)
+        setupShapeButton(popupView, R.id.btnSpherePopup, DrawingTool.SPHERE)
+        setupShapeButton(popupView, R.id.btnConePopup, DrawingTool.CONE)
         
         // Show popup at center of screen
         shapesPopupWindow?.showAtLocation(anchorView, Gravity.CENTER, 0, 0)
+    }
+    
+    /**
+     * Helper to setup shape button click listener
+     */
+    private fun setupShapeButton(popupView: View, buttonId: Int, tool: DrawingTool) {
+        popupView.findViewById<ImageButton>(buttonId)?.setOnClickListener {
+            onToolSelected?.invoke(tool)
+            shapesPopupWindow?.dismiss()
+        }
     }
     
     /**
@@ -450,13 +403,6 @@ class PopupController(
     }
     
     /**
-     * Dismiss zoom popup if open
-     */
-    fun dismissZoomPopup() {
-        zoomPopupWindow?.dismiss()
-    }
-    
-    /**
      * Clean up all popup windows
      */
     fun cleanup() {
@@ -465,7 +411,6 @@ class PopupController(
         eraserModePopupWindow?.dismiss()
         formulaPopupWindow?.dismiss()
         backgroundPopupWindow?.dismiss()
-        zoomPopupWindow?.dismiss()
         shapesPopupWindow?.dismiss()
     }
     

@@ -100,18 +100,28 @@ class ScreenRecordService : Service() {
             return
         }
         
-        // Prepare recorder
+        // Prepare recorder with audio and video
         mediaRecorder = MediaRecorder().apply {
+            // IMPORTANT: Set audio source first, then video source
+            setAudioSource(MediaRecorder.AudioSource.MIC)
             setVideoSource(MediaRecorder.VideoSource.SURFACE)
             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             setOutputFile(currentOutputFile!!.absolutePath)
+            
+            // Configure audio encoding
+            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            setAudioEncodingBitRate(256_000) // 256 kbps
+            setAudioSamplingRate(48000) // 48 kHz
+            
+            // Configure video encoding
             setVideoEncoder(MediaRecorder.VideoEncoder.H264)
             setVideoEncodingBitRate(8_000_000) // ~8 Mbps
             setVideoFrameRate(30)
             setVideoSize(width, height)
+            
             try {
                 prepare()
-                Log.i("ScreenRecordService", "MediaRecorder prepared successfully")
+                Log.i("ScreenRecordService", "MediaRecorder prepared successfully with audio and video")
             } catch (e: Exception) {
                 Log.e("ScreenRecordService", "prepare() failed", e)
                 Toast.makeText(this@ScreenRecordService, "Failed to prepare recorder: ${e.message}", Toast.LENGTH_LONG).show()

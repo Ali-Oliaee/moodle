@@ -1,6 +1,4 @@
 package com.example.moodle.ui.whiteboard.controllers
-import com.example.moodle.ui.whiteboard.models.*
-import com.example.moodle.ui.whiteboard.views.*
 
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
 
@@ -66,7 +64,8 @@ class SplitModeController(
         val sectionCounts = arrayOf(
             activity.getString(R.string.section_count_2),
             activity.getString(R.string.section_count_3),
-            activity.getString(R.string.section_count_4)
+            activity.getString(R.string.section_count_4),
+            activity.getString(R.string.section_count_6)
         )
         
         AlertDialog.Builder(activity)
@@ -76,6 +75,7 @@ class SplitModeController(
                     0 -> 2
                     1 -> 3
                     2 -> 4
+                    3 -> 6
                     else -> 2
                 }
                 enableSplitMode(sectionCount)

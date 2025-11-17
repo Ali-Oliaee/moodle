@@ -6,13 +6,10 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.ViewGroup
 import android.widget.*
-import androidx.activity.viewModels
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.Observer
+import com.example.moodle.MoodleApplication
 import com.example.moodle.R
 import com.example.moodle.data.datastore.UserPreferences
-import com.example.moodle.ui.attendance.AttendanceActivity
+import com.example.moodle.di.ViewModelFactory
 import com.example.moodle.ui.login.LoginActivity
 import com.example.moodle.ui.whiteboard.controllers.PopupController
 import com.example.moodle.ui.whiteboard.controllers.RecordingController
@@ -20,9 +17,8 @@ import com.example.moodle.ui.whiteboard.controllers.SplitModeController
 import com.example.moodle.ui.whiteboard.listeners.OnDrawingChangeListener
 import com.example.moodle.ui.whiteboard.listeners.OnTextInputListener
 import com.example.moodle.ui.whiteboard.managers.PageManager
-import com.example.moodle.ui.whiteboard.models.BackgroundColor
-import com.example.moodle.ui.whiteboard.models.BackgroundPattern
 import com.example.moodle.ui.whiteboard.models.DrawingTool
+import com.example.moodle.ui.whiteboard.models.WhiteboardViewState
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
 import com.example.moodle.utils.FontHelper
 
@@ -42,6 +38,9 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnExport: ImageButton
     private lateinit var btnImport: ImageButton
     private lateinit var btnPinchMode: ImageButton
+    private lateinit var btnToggleToolbars: ImageButton
+    private lateinit var topToolbar: LinearLayout
+    private lateinit var bottomToolbar: LinearLayout
     
     // Tool Buttons
     private lateinit var btnPen: ImageButton
@@ -53,7 +52,6 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnUndo: ImageButton
     private lateinit var btnRedo: ImageButton
     private lateinit var btnClear: ImageButton
-    private lateinit var btnModeToggle: ImageButton
     private lateinit var btnColorPicker: Button
     private lateinit var btnStrokeWidth: ImageButton
     private lateinit var btnBackground: ImageButton
@@ -77,31 +75,31 @@ class WhiteboardActivity : AppCompatActivity() {
     
     // User preferences
     private lateinit var userPreferences: UserPreferences
+    
+    // Toolbar visibility state
+    private var areToolbarsVisible = true
+    
+    // Pinch mode state
+    private var isPinchModeActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Initialize preferences
-        userPreferences = UserPreferences(this)
+        // Initialize ViewModel with DI
+        val dependencies = (application as MoodleApplication).dependencyContainer
+        val factory = ViewModelFactory(application, dependencies)
+        viewModel = ViewModelProviders.of(this, factory).get(WhiteboardViewModel::class.java)
         
-        // Set layout
-        setContentView(R.layout.activity_whiteboard_split)
+        // Get UserPreferences from dependency container
+        userPreferences = dependencies.userPreferences
         
-        // Initialize views
+        setContentView(R.layout.activity_whiteboard)
+        
         initializeViews()
-        
-        // Initialize UI controllers
         initializeUIControllers()
-        
-        // Setup listeners
         setupListeners()
-        
-        // Observe ViewModel
         observeViewModel()
-        
-        // Apply fonts
         applyFonts()
-        
         // Load initial page
         loadCurrentPageFromViewModel()
     }
@@ -118,6 +116,9 @@ class WhiteboardActivity : AppCompatActivity() {
         btnExport = findViewById(R.id.btnExport)
         btnImport = findViewById(R.id.btnImport)
         btnPinchMode = findViewById(R.id.btnPinchMode)
+        btnToggleToolbars = findViewById(R.id.btnToggleToolbars)
+        topToolbar = findViewById(R.id.topToolbar)
+        bottomToolbar = findViewById(R.id.bottomToolbar)
         
         // Tool buttons
         btnPen = findViewById(R.id.btnPen)
@@ -129,7 +130,6 @@ class WhiteboardActivity : AppCompatActivity() {
         btnUndo = findViewById(R.id.btnUndo)
         btnRedo = findViewById(R.id.btnRedo)
         btnClear = findViewById(R.id.btnClear)
-        btnModeToggle = findViewById(R.id.btnModeToggle)
         btnColorPicker = findViewById(R.id.btnColorPicker)
         btnStrokeWidth = findViewById(R.id.btnStrokeWidth)
         btnBackground = findViewById(R.id.btnBackground)
@@ -166,11 +166,30 @@ class WhiteboardActivity : AppCompatActivity() {
         
         splitModeController.onSplitModeChanged = { enabled ->
             if (enabled) {
-                popupController.dismissZoomPopup()
+                // Disable pinch mode in split mode
+                if (isPinchModeActive) {
+                    isPinchModeActive = false
+                    whiteboardView.setPinchModeEnabled(false)
+                    btnPinchMode.isSelected = false
+                }
+                // Hide toggle button in split mode
+                btnToggleToolbars.visibility = android.view.View.GONE
+                // If toolbars were hidden, show them back in split mode
+                if (!areToolbarsVisible) {
+                    areToolbarsVisible = true
+                    showToolbar(topToolbar)
+                    btnToggleToolbars.setImageResource(R.drawable.ic_chevron_up)
+                }
+            } else {
+                // Show toggle button in normal mode
+                btnToggleToolbars.visibility = android.view.View.VISIBLE
             }
             // Disable background button in split mode, enable in normal mode
             btnBackground.isEnabled = !enabled
             btnBackground.alpha = if (enabled) 0.5f else 1.0f
+            // Disable pinch mode button in split mode
+            btnPinchMode.isEnabled = !enabled
+            btnPinchMode.alpha = if (enabled) 0.5f else 1.0f
         }
         
         // Text Recognition Manager - handles ML Kit text recognition
@@ -187,7 +206,10 @@ class WhiteboardActivity : AppCompatActivity() {
         btnLogout.setOnClickListener { logout() }
         btnExport.setOnClickListener { showExportOptionsDialog() }
         btnImport.setOnClickListener { showImportOptionsDialog() }
-        btnPinchMode.setOnClickListener { popupController.showZoomPopup(btnPinchMode) }
+        btnPinchMode.setOnClickListener { togglePinchMode() }
+        
+        // Toggle toolbars button listener
+        btnToggleToolbars.setOnClickListener { toggleToolbarsVisibility() }
         
         // Tool button listeners
         setupToolListeners()
@@ -243,21 +265,17 @@ class WhiteboardActivity : AppCompatActivity() {
             showClearConfirmDialog()
         }
         
-        btnModeToggle.setOnClickListener {
-            viewModel.toggleDrawingMode()
-        }
-        
         btnColorPicker.setOnClickListener {
             popupController.showColorPickerPopup(
                 btnColorPicker,
-                viewModel.currentColor.value ?: Color.BLACK
+                viewModel.uiState.value?.currentColor ?: Color.BLACK
             )
         }
         
         btnStrokeWidth.setOnClickListener {
             popupController.showStrokeWidthPopup(
                 btnStrokeWidth,
-                viewModel.currentStrokeWidth.value ?: 8f
+                viewModel.uiState.value?.currentStrokeWidth ?: 8f
             )
         }
         
@@ -303,6 +321,7 @@ class WhiteboardActivity : AppCompatActivity() {
         
         popupController.onBackgroundColorSelected = { color ->
             viewModel.selectBackgroundColor(color)
+            whiteboardView.setBackgroundImage(null) // Clear background image when color is selected
         }
         
         popupController.onToolSelected = { tool ->
@@ -312,6 +331,11 @@ class WhiteboardActivity : AppCompatActivity() {
         popupController.onEraserModeSelected = { isSelective ->
             viewModel.setSelectiveEraserMode(isSelective)
         }
+        
+        popupController.onBackgroundImageUploadRequested = {
+            openBackgroundImagePicker()
+        }
+        
     }
     
     /**
@@ -337,126 +361,86 @@ class WhiteboardActivity : AppCompatActivity() {
      * This is the core of MVVM - UI reacts to state changes
      */
     private fun observeViewModel() {
-        // Observe tool changes
-        viewModel.currentTool.observe(this, Observer { tool ->
-            tool?.let { 
-                whiteboardView.setDrawingTool(it)
-                updateToolButtonSelection(it)
-            }
+        viewModel.uiState.observe(this, Observer { state ->
+            state?.let { handleStateUpdate(it) }
         })
+    }
+    
+    /**
+     * Handle UI state updates
+     */
+    private fun handleStateUpdate(state: WhiteboardViewState) {
+        // Update tool
+        whiteboardView.setDrawingTool(state.currentTool)
+        updateToolButtonSelection(state.currentTool)
         
-        // Observe color changes
-        viewModel.currentColor.observe(this, Observer { color ->
-            color?.let {
-                whiteboardView.setColor(it)
-                btnColorPicker.backgroundTintList = android.content.res.ColorStateList.valueOf(it)
-            }
-        })
+        // Update pen button icon based on tool
+        val penIconRes = if (state.currentTool == DrawingTool.SELECTION) {
+            R.drawable.ic_hand
+        } else {
+            R.drawable.ic_pen
+        }
+        btnPen.setImageResource(penIconRes)
         
-        // Observe stroke width changes
-        viewModel.currentStrokeWidth.observe(this, Observer { width ->
-            width?.let { whiteboardView.setStrokeWidth(it) }
-        })
+        // Update color
+        whiteboardView.setColor(state.currentColor)
+        btnColorPicker.backgroundTintList = android.content.res.ColorStateList.valueOf(state.currentColor)
         
-        // Observe drawing mode
-        viewModel.isDrawingMode.observe(this, Observer { isDrawing ->
-            isDrawing?.let {
-                whiteboardView.setDrawingMode(it)
-                btnModeToggle.isSelected = !it
-            }
-        })
+        // Update stroke width
+        whiteboardView.setStrokeWidth(state.currentStrokeWidth)
         
-        // Observe pen selection mode
-        viewModel.isPenInSelectionMode.observe(this, Observer { isSelection ->
-            val iconRes = if (isSelection == true) R.drawable.ic_hand else R.drawable.ic_pen
-            btnPen.setImageResource(iconRes)
-        })
+        // Update drawing mode
+        whiteboardView.setDrawingMode(state.isDrawingMode)
         
-        // Observe undo/redo state
-        viewModel.canUndo.observe(this, Observer { canUndo ->
-            btnUndo.isEnabled = canUndo == true
-            btnUndo.alpha = if (canUndo == true) 1.0f else 0.5f
-        })
+        // Update undo/redo buttons
+        btnUndo.isEnabled = state.canUndo
+        btnUndo.alpha = if (state.canUndo) 1.0f else 0.5f
         
-        viewModel.canRedo.observe(this, Observer { canRedo ->
-            btnRedo.isEnabled = canRedo == true
-            btnRedo.alpha = if (canRedo == true) 1.0f else 0.5f
-        })
+        btnRedo.isEnabled = state.canRedo
+        btnRedo.alpha = if (state.canRedo) 1.0f else 0.5f
         
-        // Observe pagination state
-        viewModel.currentPageNumber.observe(this, Observer { pageNum ->
-            updatePageIndicator()
-        })
+        // Update pagination
+        updatePageIndicatorFromState(state)
         
-        viewModel.totalPages.observe(this, Observer { total ->
-            updatePageIndicator()
-        })
+        btnPreviousPage.isEnabled = state.canGoToPreviousPage
+        btnPreviousPage.alpha = if (state.canGoToPreviousPage) 1.0f else 0.5f
         
-        viewModel.canGoToPreviousPage.observe(this, Observer { canGoPrev ->
-            btnPreviousPage.isEnabled = canGoPrev == true
-            btnPreviousPage.alpha = if (canGoPrev == true) 1.0f else 0.5f
-        })
+        updateNextPageButtonFromState(state)
         
-        viewModel.canGoToNextPage.observe(this, Observer { canGoNext ->
-            updateNextPageButton()
-        })
+        btnDeletePage.isEnabled = state.canDeletePage
+        btnDeletePage.alpha = if (state.canDeletePage) 1.0f else 0.5f
         
-        viewModel.canCreateNewPage.observe(this, Observer { canCreate ->
-            updateNextPageButton()
-        })
+        // Update background
+        whiteboardView.setBackgroundPattern(state.backgroundPattern)
+        whiteboardView.setBackgroundColor(state.backgroundColor)
         
-        viewModel.canDeletePage.observe(this, Observer { canDelete ->
-            btnDeletePage.isEnabled = canDelete == true
-            btnDeletePage.alpha = if (canDelete == true) 1.0f else 0.5f
-        })
+        // Handle page change event
+        if (state.pageChangeEvent) {
+            loadCurrentPageFromViewModel()
+            updateUndoRedoState()
+            viewModel.clearPageChangeEvent()
+        }
         
-        // Observe background pattern
-        viewModel.backgroundPattern.observe(this, Observer { pattern ->
-            pattern?.let { whiteboardView.setBackgroundPattern(it) }
-        })
+        // Handle one-time events
+        state.showTextInputDialog?.let { coords ->
+            showTextInputDialog(coords.first, coords.second)
+            viewModel.clearTextInputDialogEvent()
+        }
         
-        // Observe background color
-        viewModel.backgroundColor.observe(this, Observer { color ->
-            color?.let { whiteboardView.setBackgroundColor(it) }
-        })
+        state.showToastMessage?.let { messageKey ->
+            showToastByKey(messageKey)
+            viewModel.clearToastMessageEvent()
+        }
         
-        // Observe page change events
-        viewModel.pageChangeEvent.observe(this, Observer { changed ->
-            if (changed == true) {
-                loadCurrentPageFromViewModel()
-                updateUndoRedoState()
-                viewModel.clearPageChangeEvent()
-            }
-        })
+        state.errorMessage?.let { error ->
+            Toast.makeText(this, error as CharSequence, Toast.LENGTH_LONG).show()
+            viewModel.clearErrorMessageEvent()
+        }
         
-        // Observe one-time events
-        viewModel.showTextInputDialog.observe(this, Observer { coords ->
-            coords?.let {
-                showTextInputDialog(it.first, it.second)
-                viewModel.clearTextInputDialogEvent()
-            }
-        })
-        
-        viewModel.showToastMessage.observe(this, Observer { messageKey ->
-            messageKey?.let {
-                showToastByKey(it)
-                viewModel.clearToastMessageEvent()
-            }
-        })
-        
-        viewModel.errorMessage.observe(this, Observer { error ->
-            error?.let {
-                Toast.makeText(this, it, Toast.LENGTH_LONG).show()
-                viewModel.clearErrorMessageEvent()
-            }
-        })
-        
-        viewModel.exportSuccess.observe(this, Observer { message ->
-            message?.let {
-                showExportSuccessMessage(it)
-                viewModel.clearExportSuccessEvent()
-            }
-        })
+        state.exportSuccess?.let { message ->
+            showExportSuccessMessage(message)
+            viewModel.clearExportSuccessEvent()
+        }
     }
     
     /**
@@ -472,37 +456,39 @@ class WhiteboardActivity : AppCompatActivity() {
             DrawingTool.PEN, DrawingTool.SELECTION -> btnPen.isSelected = true
             DrawingTool.ERASER, DrawingTool.SELECTIVE_ERASER -> btnEraser.isSelected = true
             DrawingTool.TEXT -> btnText.isSelected = true
-            DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> btnShapes.isSelected = true
+            DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE,
+            DrawingTool.ELLIPSE, DrawingTool.DIAMOND, DrawingTool.STAR, DrawingTool.ARROW,
+            DrawingTool.RIGHT_TRIANGLE, DrawingTool.ISOSCELES_TRIANGLE, DrawingTool.PARALLELOGRAM,
+            DrawingTool.TRAPEZOID, DrawingTool.PENTAGON, DrawingTool.HEXAGON,
+            DrawingTool.CUBE, DrawingTool.CYLINDER, DrawingTool.PYRAMID, DrawingTool.SPHERE, DrawingTool.CONE -> btnShapes.isSelected = true
         }
     }
     
     /**
-     * Update page indicator text
+     * Update page indicator text from state
      */
-    private fun updatePageIndicator() {
-        val pageNum = viewModel.currentPageNumber.value ?: 1
-        val total = viewModel.totalPages.value ?: 1
-        tvPageIndicator.text = getString(R.string.page_indicator_format, pageNum, total)
+    private fun updatePageIndicatorFromState(state: WhiteboardViewState) {
+        tvPageIndicator.text = getString(R.string.page_indicator_format, state.currentPageNumber, state.totalPages)
     }
     
     /**
-     * Update next page button icon and state
+     * Update next page button icon and state from state
      */
-    private fun updateNextPageButton() {
-        val canGoNext = viewModel.canGoToNextPage.value ?: false
-        val canCreate = viewModel.canCreateNewPage.value ?: false
-        
-        if (canGoNext) {
+    private fun updateNextPageButtonFromState(state: WhiteboardViewState) {
+        if (state.canGoToNextPage) {
             btnNextPage.setImageResource(R.drawable.ic_arrow_forward)
             btnNextPage.contentDescription = getString(R.string.desc_next_page)
+            btnNextPage.isEnabled = true
             btnNextPage.alpha = 1.0f
-        } else if (canCreate) {
+        } else if (state.canCreateNewPage) {
             btnNextPage.setImageResource(R.drawable.ic_add)
             btnNextPage.contentDescription = getString(R.string.desc_add_page)
+            btnNextPage.isEnabled = true
             btnNextPage.alpha = 1.0f
         } else {
             btnNextPage.setImageResource(R.drawable.ic_add)
             btnNextPage.contentDescription = getString(R.string.desc_add_page)
+            btnNextPage.isEnabled = false
             btnNextPage.alpha = 0.5f
         }
     }
@@ -595,7 +581,7 @@ class WhiteboardActivity : AppCompatActivity() {
      * Show delete page confirmation dialog
      */
     private fun showDeletePageConfirmDialog() {
-        if (viewModel.totalPages.value ?: 1 <= 1) {
+        if (viewModel.uiState.value?.totalPages ?: 1 <= 1) {
             Toast.makeText(this, getString(R.string.cannot_delete_last_page), Toast.LENGTH_SHORT).show()
             return
         }
@@ -639,7 +625,7 @@ class WhiteboardActivity : AppCompatActivity() {
      * Show PNG export options (current page or all pages)
      */
     private fun showPNGExportOptions() {
-        if (viewModel.totalPages.value ?: 1 > 1) {
+        if (viewModel.uiState.value?.totalPages ?: 1 > 1) {
             val options = arrayOf(
                 getString(R.string.export_current_page),
                 getString(R.string.export_all_pages)
@@ -701,6 +687,45 @@ class WhiteboardActivity : AppCompatActivity() {
     }
     
     /**
+     * Open background image picker
+     */
+    private fun openBackgroundImagePicker() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "image/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        
+        try {
+            startActivityForResult(
+                Intent.createChooser(intent, getString(R.string.upload_background_image)),
+                REQUEST_CODE_BACKGROUND_IMAGE
+            )
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.no_file_manager), Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    /**
+     * Handle background image selection
+     */
+    private fun handleBackgroundImageSelection(uri: android.net.Uri) {
+        try {
+            val inputStream = contentResolver.openInputStream(uri)
+            val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+            
+            if (bitmap != null) {
+                whiteboardView.setBackgroundImage(bitmap)
+                Toast.makeText(this, getString(R.string.background_image_set), Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, getString(R.string.import_image_invalid), Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.import_image_failed), Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    /**
      * Show import Moodle file confirmation dialog
      */
     private fun showImportMoodleConfirmDialog() {
@@ -739,10 +764,6 @@ class WhiteboardActivity : AppCompatActivity() {
      */
     private fun showToastByKey(key: String) {
         val stringRes = when (key) {
-            "selection_mode" -> R.string.selection_mode
-            "pen_mode" -> R.string.pen_mode
-            "drawing_mode" -> R.string.drawing_mode
-            "pan_mode" -> R.string.pan_mode
             "max_pages_reached" -> {
                 Toast.makeText(this, getString(R.string.max_pages_reached, PageManager.MAX_PAGES), Toast.LENGTH_SHORT).show()
                 return
@@ -778,7 +799,7 @@ class WhiteboardActivity : AppCompatActivity() {
      * Open attendance screen
      */
     private fun openAttendanceScreen() {
-        startActivity(Intent(this, AttendanceActivity::class.java))
+        // startActivity(Intent(this, AttendanceActivity::class.java))
     }
 
     /**
@@ -792,6 +813,104 @@ class WhiteboardActivity : AppCompatActivity() {
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
+    }
+    
+    /**
+     * Toggle pinch and zoom mode
+     * When enabled, users can only zoom/pan, drawing is disabled
+     */
+    private fun togglePinchMode() {
+        isPinchModeActive = !isPinchModeActive
+        whiteboardView.setPinchModeEnabled(isPinchModeActive)
+        
+        // Update button visual state
+        btnPinchMode.isSelected = isPinchModeActive
+    }
+    
+    /**
+     * Toggle visibility of top and bottom toolbars with animation
+     */
+    private fun toggleToolbarsVisibility() {
+        areToolbarsVisible = !areToolbarsVisible
+        
+        if (areToolbarsVisible) {
+            // Show toolbars
+            showToolbar(topToolbar)
+            showToolbar(bottomToolbar)
+            // Change icon to chevron up (hide action)
+            btnToggleToolbars.setImageResource(R.drawable.ic_chevron_up)
+        } else {
+            // Hide toolbars
+            hideToolbar(topToolbar)
+            hideToolbar(bottomToolbar)
+            // Change icon to chevron down (show action)
+            btnToggleToolbars.setImageResource(R.drawable.ic_chevron_down)
+        }
+    }
+    
+    /**
+     * Hide toolbar with slide animation
+     */
+    private fun hideToolbar(toolbar: android.view.View) {
+        // Keep visibility VISIBLE but move off-screen and make transparent
+        // to avoid layout recalculation that could affect WhiteboardView
+        toolbar.animate()
+            .alpha(0f)
+            .translationY(if (toolbar.id == R.id.topToolbar) -toolbar.height.toFloat() else toolbar.height.toFloat())
+            .setDuration(300)
+            .withStartAction {
+                // Disable clicks on hidden toolbar
+                toolbar.isClickable = false
+                disableViewGroupClicks(toolbar)
+            }
+            .start()
+    }
+    
+    /**
+     * Show toolbar with slide animation
+     */
+    private fun showToolbar(toolbar: android.view.View) {
+        // Re-enable clicks
+        toolbar.isClickable = true
+        enableViewGroupClicks(toolbar)
+        
+        toolbar.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(300)
+            .start()
+    }
+    
+    /**
+     * Disable all clicks within a ViewGroup
+     */
+    private fun disableViewGroupClicks(view: android.view.View) {
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val child = view.getChildAt(i)
+                child.isClickable = false
+                child.isFocusable = false
+                if (child is ViewGroup) {
+                    disableViewGroupClicks(child)
+                }
+            }
+        }
+    }
+    
+    /**
+     * Enable all clicks within a ViewGroup
+     */
+    private fun enableViewGroupClicks(view: android.view.View) {
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val child = view.getChildAt(i)
+                child.isClickable = true
+                child.isFocusable = true
+                if (child is ViewGroup) {
+                    enableViewGroupClicks(child)
+                }
+            }
+        }
     }
 
     override fun onRequestPermissionsResult(
@@ -825,6 +944,13 @@ class WhiteboardActivity : AppCompatActivity() {
                                 loadCurrentPageFromViewModel()
                                 updateUndoRedoState()
                             }
+                        }
+                    }
+                }
+                REQUEST_CODE_BACKGROUND_IMAGE -> {
+                    if (resultCode == RESULT_OK && data != null) {
+                        data.data?.let { uri ->
+                            handleBackgroundImageSelection(uri)
                         }
                     }
                 }
@@ -966,5 +1092,6 @@ class WhiteboardActivity : AppCompatActivity() {
     companion object {
         private const val REQUEST_CODE_IMPORT_IMAGE = 2001
         private const val REQUEST_CODE_IMPORT_MOODLE = 2002
+        private const val REQUEST_CODE_BACKGROUND_IMAGE = 2003
     }
 }

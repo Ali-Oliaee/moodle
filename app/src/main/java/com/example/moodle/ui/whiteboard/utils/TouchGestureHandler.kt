@@ -2,8 +2,6 @@ package com.example.moodle.ui.whiteboard.utils
 import com.example.moodle.ui.whiteboard.models.*
 import com.example.moodle.ui.whiteboard.managers.*
 import com.example.moodle.ui.whiteboard.controllers.*
-import com.example.moodle.ui.whiteboard.listeners.*
-import com.example.moodle.ui.whiteboard.views.*
 
 import android.graphics.*
 import android.view.MotionEvent
@@ -57,6 +55,9 @@ class TouchGestureHandler(
     
     // View dimensions callback
     var getViewWidth: (() -> Int)? = null
+    
+    // Section control button click callback
+    var onSectionControlButtonClick: ((section: SectionManager.Section, buttonIndex: Int) -> Unit)? = null
     var getViewHeight: (() -> Int)? = null
     
     // Bitmap bounds callback
@@ -64,6 +65,9 @@ class TouchGestureHandler(
     
     // Drawing canvas callback for normal mode
     var getDrawingCanvas: (() -> Canvas?)? = null
+    
+    // Background color callback
+    var getBackgroundColor: (() -> BackgroundColor)? = null
     
     fun handleDrawingTouch(event: MotionEvent, isDrawingMode: Boolean) {
         val action = event.actionMasked
@@ -105,7 +109,8 @@ class TouchGestureHandler(
             if (touchedSection != null) {
                 // Check if touch is in control area
                 if (touchedSection.containsInControlArea(screenX, screenY)) {
-                    // Control area touches are handled separately
+                    // Handle control button clicks
+                    handleSectionControlClick(touchedSection, screenX, screenY)
                     return
                 }
                 
@@ -139,9 +144,13 @@ class TouchGestureHandler(
             DrawingTool.SELECTIVE_ERASER -> {
                 handleSelectiveEraserTouchDown(x, y)
             }
-            DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> {
+            DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE,
+            DrawingTool.CUBE, DrawingTool.CYLINDER, DrawingTool.PYRAMID, DrawingTool.SPHERE, DrawingTool.CONE,
+            DrawingTool.RIGHT_TRIANGLE, DrawingTool.ISOSCELES_TRIANGLE, DrawingTool.PARALLELOGRAM, DrawingTool.TRAPEZOID,
+            DrawingTool.PENTAGON, DrawingTool.HEXAGON, DrawingTool.STAR, DrawingTool.DIAMOND, DrawingTool.ELLIPSE, DrawingTool.ARROW -> {
                 handleShapeTouchDown(x, y, toolToUse, pointerId)
             }
+
             else -> {
                 // Create new path for drawing
                 val newPath = Path()
@@ -175,7 +184,10 @@ class TouchGestureHandler(
                     handleSelectiveEraserTouchMove(x, y)
                     return
                 }
-                DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> {
+                DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE,
+                DrawingTool.CUBE, DrawingTool.CYLINDER, DrawingTool.PYRAMID, DrawingTool.SPHERE, DrawingTool.CONE,
+                DrawingTool.RIGHT_TRIANGLE, DrawingTool.ISOSCELES_TRIANGLE, DrawingTool.PARALLELOGRAM, DrawingTool.TRAPEZOID,
+                DrawingTool.PENTAGON, DrawingTool.HEXAGON, DrawingTool.STAR, DrawingTool.DIAMOND, DrawingTool.ELLIPSE, DrawingTool.ARROW -> {
                     val (x, y) = transformScreenToDrawing(event.x, event.y)
                     handleShapeTouchMove(x, y, toolToUse, id)
                     return
@@ -229,7 +241,10 @@ class TouchGestureHandler(
             DrawingTool.TEXT -> handleTextTouchUp(x, y)
             DrawingTool.SELECTION -> handleSelectionTouchUp(x, y)
             DrawingTool.SELECTIVE_ERASER -> handleSelectiveEraserTouchUp(x, y)
-            DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE -> {
+            DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE,
+            DrawingTool.CUBE, DrawingTool.CYLINDER, DrawingTool.PYRAMID, DrawingTool.SPHERE, DrawingTool.CONE,
+            DrawingTool.RIGHT_TRIANGLE, DrawingTool.ISOSCELES_TRIANGLE, DrawingTool.PARALLELOGRAM, DrawingTool.TRAPEZOID,
+            DrawingTool.PENTAGON, DrawingTool.HEXAGON, DrawingTool.STAR, DrawingTool.DIAMOND, DrawingTool.ELLIPSE, DrawingTool.ARROW -> {
                 handleShapeTouchUp(x, y, toolToUse, pointerId)
             }
             else -> {
@@ -371,7 +386,8 @@ class TouchGestureHandler(
             
             // Redraw canvas
             getDrawingCanvas?.invoke()?.let { canvas ->
-                canvas.drawColor(Color.WHITE, PorterDuff.Mode.SRC)
+                val bgColor = getBackgroundColor?.invoke()?.colorValue ?: Color.WHITE
+                canvas.drawColor(bgColor, PorterDuff.Mode.SRC)
                 for (path in stateManager.paths) {
                     canvas.drawPath(path.path, path.paint)
                 }
@@ -473,6 +489,289 @@ class TouchGestureHandler(
                 path.lineTo(rightX, rightY)
                 path.close()
             }
+            DrawingTool.CUBE -> {
+                val centerX = (startX + endX) / 2
+                val centerY = (startY + endY) / 2
+                val width = abs(endX - startX)
+                val height = abs(endY - startY)
+                val size = min(width, height) / 2
+                
+                val offset = size / 3
+                
+                // Front face
+                path.addRect(
+                    centerX - size, centerY - size / 2,
+                    centerX + size / 2, centerY + size * 1.5f,
+                    Path.Direction.CW
+                )
+                
+                // Top face
+                path.moveTo(centerX - size, centerY - size / 2)
+                path.lineTo(centerX - size + offset, centerY - size / 2 - offset)
+                path.lineTo(centerX + size / 2 + offset, centerY - size / 2 - offset)
+                path.lineTo(centerX + size / 2, centerY - size / 2)
+                path.close()
+                
+                // Right face
+                path.moveTo(centerX + size / 2, centerY - size / 2)
+                path.lineTo(centerX + size / 2 + offset, centerY - size / 2 - offset)
+                path.lineTo(centerX + size / 2 + offset, centerY + size * 1.5f - offset)
+                path.lineTo(centerX + size / 2, centerY + size * 1.5f)
+                path.close()
+            }
+            DrawingTool.CYLINDER -> {
+                val centerX = (startX + endX) / 2
+                val centerY = (startY + endY) / 2
+                val width = abs(endX - startX)
+                val height = abs(endY - startY)
+                val radiusX = width / 3
+                val radiusY = radiusX / 3
+                val cylinderHeight = max(height, width / 2)
+                
+                val top = centerY - cylinderHeight / 2
+                val bottom = centerY + cylinderHeight / 2
+                
+                // Top ellipse
+                path.addOval(
+                    RectF(centerX - radiusX, top - radiusY, centerX + radiusX, top + radiusY),
+                    Path.Direction.CW
+                )
+                
+                // Left vertical line
+                path.moveTo(centerX - radiusX, top)
+                path.lineTo(centerX - radiusX, bottom)
+                
+                // Right vertical line
+                path.moveTo(centerX + radiusX, top)
+                path.lineTo(centerX + radiusX, bottom)
+                
+                // Bottom ellipse
+                val bottomRect = RectF(centerX - radiusX, bottom - radiusY, centerX + radiusX, bottom + radiusY)
+                path.arcTo(bottomRect, 0f, 180f, false)
+            }
+            DrawingTool.PYRAMID -> {
+                val centerX = (startX + endX) / 2
+                val centerY = (startY + endY) / 2
+                val width = abs(endX - startX)
+                val height = abs(endY - startY)
+                val size = max(width, height) / 2
+                
+                val topX = centerX
+                val topY = centerY - size
+                val bottomY = centerY + size
+                
+                // Front face
+                path.moveTo(topX, topY)
+                path.lineTo(centerX - size, bottomY)
+                path.lineTo(centerX + size / 2, bottomY)
+                path.close()
+                
+                // Right face
+                path.moveTo(topX, topY)
+                path.lineTo(centerX + size / 2, bottomY)
+                path.lineTo(centerX + size, bottomY - size / 3)
+                path.close()
+                
+                // Base line
+                path.moveTo(centerX - size, bottomY)
+                path.lineTo(centerX + size, bottomY - size / 3)
+            }
+            DrawingTool.SPHERE -> {
+                val centerX = (startX + endX) / 2
+                val centerY = (startY + endY) / 2
+                val width = abs(endX - startX)
+                val height = abs(endY - startY)
+                val radius = min(width, height) / 2
+                
+                // Outer circle
+                path.addCircle(centerX, centerY, radius, Path.Direction.CW)
+                
+                // Horizontal ellipse
+                val equatorRadiusX = radius * 0.8f
+                val equatorRadiusY = radius * 0.25f
+                path.addOval(
+                    RectF(
+                        centerX - equatorRadiusX, centerY - equatorRadiusY,
+                        centerX + equatorRadiusX, centerY + equatorRadiusY
+                    ),
+                    Path.Direction.CW
+                )
+                
+                // Vertical ellipse
+                val meridianRadiusX = radius * 0.25f
+                val meridianRadiusY = radius * 0.8f
+                path.addOval(
+                    RectF(
+                        centerX - meridianRadiusX, centerY - meridianRadiusY,
+                        centerX + meridianRadiusX, centerY + meridianRadiusY
+                    ),
+                    Path.Direction.CW
+                )
+            }
+            DrawingTool.CONE -> {
+                val centerX = (startX + endX) / 2
+                val centerY = (startY + endY) / 2
+                val width = abs(endX - startX)
+                val height = abs(endY - startY)
+                val size = max(width, height) / 2
+                
+                val topX = centerX
+                val topY = centerY - size
+                val bottomY = centerY + size
+                val radiusX = size * 0.6f
+                val radiusY = radiusX / 3
+                
+                // Left side
+                path.moveTo(topX, topY)
+                path.lineTo(centerX - radiusX, bottomY)
+                
+                // Right side
+                path.moveTo(topX, topY)
+                path.lineTo(centerX + radiusX, bottomY)
+                
+                // Base ellipse
+                path.addOval(
+                    RectF(centerX - radiusX, bottomY - radiusY, centerX + radiusX, bottomY + radiusY),
+                    Path.Direction.CW
+                )
+            }
+            DrawingTool.RIGHT_TRIANGLE -> {
+                val left = min(startX, endX)
+                val top = min(startY, endY)
+                val right = max(startX, endX)
+                val bottom = max(startY, endY)
+                
+                path.moveTo(left, bottom)
+                path.lineTo(right, bottom)
+                path.lineTo(right, top)
+                path.close()
+            }
+            DrawingTool.ISOSCELES_TRIANGLE -> {
+                val centerX = (startX + endX) / 2
+                val centerY = (startY + endY) / 2
+                val width = abs(endX - startX)
+                val height = abs(endY - startY)
+                
+                val topX = centerX
+                val topY = centerY - height / 2
+                val leftX = centerX - width / 2
+                val leftY = centerY + height / 2
+                val rightX = centerX + width / 2
+                val rightY = centerY + height / 2
+                
+                path.moveTo(topX, topY)
+                path.lineTo(leftX, leftY)
+                path.lineTo(rightX, rightY)
+                path.close()
+            }
+            DrawingTool.PARALLELOGRAM -> {
+                val centerX = (startX + endX) / 2
+                val centerY = (startY + endY) / 2
+                val width = abs(endX - startX)
+                val height = abs(endY - startY)
+                val offset = width * 0.25f
+                
+                path.moveTo(centerX - width / 2 + offset, centerY - height / 2)
+                path.lineTo(centerX + width / 2 + offset, centerY - height / 2)
+                path.lineTo(centerX + width / 2 - offset, centerY + height / 2)
+                path.lineTo(centerX - width / 2 - offset, centerY + height / 2)
+                path.close()
+            }
+            DrawingTool.TRAPEZOID -> {
+                val centerX = (startX + endX) / 2
+                val centerY = (startY + endY) / 2
+                val width = abs(endX - startX)
+                val height = abs(endY - startY)
+                val topWidth = width * 0.6f
+                
+                path.moveTo(centerX - topWidth / 2, centerY - height / 2)
+                path.lineTo(centerX + topWidth / 2, centerY - height / 2)
+                path.lineTo(centerX + width / 2, centerY + height / 2)
+                path.lineTo(centerX - width / 2, centerY + height / 2)
+                path.close()
+            }
+            DrawingTool.PENTAGON -> {
+                val centerX = (startX + endX) / 2
+                val centerY = (startY + endY) / 2
+                val width = abs(endX - startX)
+                val height = abs(endY - startY)
+                val radius = min(width, height) / 2
+                
+                for (i in 0..5) {
+                    val angle = Math.toRadians((i * 72 - 90).toDouble())
+                    val x = centerX + radius * kotlin.math.cos(angle).toFloat()
+                    val y = centerY + radius * kotlin.math.sin(angle).toFloat()
+                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+            }
+            DrawingTool.HEXAGON -> {
+                val centerX = (startX + endX) / 2
+                val centerY = (startY + endY) / 2
+                val width = abs(endX - startX)
+                val height = abs(endY - startY)
+                val radius = min(width, height) / 2
+                
+                for (i in 0..6) {
+                    val angle = Math.toRadians((i * 60 - 90).toDouble())
+                    val x = centerX + radius * kotlin.math.cos(angle).toFloat()
+                    val y = centerY + radius * kotlin.math.sin(angle).toFloat()
+                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+            }
+            DrawingTool.STAR -> {
+                val centerX = (startX + endX) / 2
+                val centerY = (startY + endY) / 2
+                val width = abs(endX - startX)
+                val height = abs(endY - startY)
+                val outerRadius = min(width, height) / 2
+                val innerRadius = outerRadius * 0.4f
+                
+                for (i in 0..10) {
+                    val angle = Math.toRadians((i * 36 - 90).toDouble())
+                    val radius = if (i % 2 == 0) outerRadius else innerRadius
+                    val x = centerX + radius * kotlin.math.cos(angle).toFloat()
+                    val y = centerY + radius * kotlin.math.sin(angle).toFloat()
+                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+            }
+            DrawingTool.DIAMOND -> {
+                val centerX = (startX + endX) / 2
+                val centerY = (startY + endY) / 2
+                val width = abs(endX - startX)
+                val height = abs(endY - startY)
+                
+                path.moveTo(centerX, centerY - height / 2)
+                path.lineTo(centerX + width / 2, centerY)
+                path.lineTo(centerX, centerY + height / 2)
+                path.lineTo(centerX - width / 2, centerY)
+                path.close()
+            }
+            DrawingTool.ELLIPSE -> {
+                val left = min(startX, endX)
+                val top = min(startY, endY)
+                val right = max(startX, endX)
+                val bottom = max(startY, endY)
+                path.addOval(RectF(left, top, right, bottom), Path.Direction.CW)
+            }
+            DrawingTool.ARROW -> {
+                val centerY = (startY + endY) / 2
+                val width = abs(endX - startX)
+                val height = abs(endY - startY)
+                val shaftWidth = height * 0.3f
+                val headWidth = height * 0.7f
+                val headLength = width * 0.3f
+                val left = min(startX, endX)
+                val right = max(startX, endX)
+                
+                path.moveTo(left, centerY - shaftWidth / 2)
+                path.lineTo(right - headLength, centerY - shaftWidth / 2)
+                path.lineTo(right - headLength, centerY - headWidth / 2)
+                path.lineTo(right, centerY)
+                path.lineTo(right - headLength, centerY + headWidth / 2)
+                path.lineTo(right - headLength, centerY + shaftWidth / 2)
+                path.lineTo(left, centerY + shaftWidth / 2)
+                path.close()
+            }
             else -> {
                 path.moveTo(startX, startY)
                 path.lineTo(endX, endY)
@@ -488,6 +787,37 @@ class TouchGestureHandler(
         }
     }
     
+    // Handle clicks on section control buttons
+    private fun handleSectionControlClick(section: SectionManager.Section, x: Float, y: Float) {
+        val controlArea = section.controlBounds
+        val sectionWidth = section.bounds.width()
+        
+        val buttonSize = 50f
+        val buttonSpacing = 6f
+        val buttonCount = 7
+        
+        val totalWidth = buttonCount * buttonSize + (buttonCount - 1) * buttonSpacing
+        val startX = controlArea.left + (sectionWidth - totalWidth) / 2
+        val centerY = controlArea.centerY()
+        val buttonTop = centerY - buttonSize / 2
+        
+        for (i in 0 until buttonCount) {
+            val buttonLeft = startX + i * (buttonSize + buttonSpacing)
+            val buttonRight = buttonLeft + buttonSize
+            val buttonBottom = buttonTop + buttonSize
+            val rect = RectF(buttonLeft, buttonTop, buttonRight, buttonBottom)
+            
+            if (rect.contains(x, y)) {
+                // Button index: 0=pen, 1=eraser, 2=clear, 3=black, 4=blue, 5=green, 6=red
+                onSectionControlButtonClick?.invoke(section, i)
+                onInvalidate?.invoke()
+                return
+            }
+        }
+    }
+    
     fun getActivePaths(): Map<Int, Path> = activePaths
+    
+    fun getPointerSectionMap(): Map<Int, SectionManager.Section> = pointerSectionMap
 }
 

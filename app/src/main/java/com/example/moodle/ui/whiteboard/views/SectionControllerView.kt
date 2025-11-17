@@ -27,9 +27,6 @@ class SectionControllerView @JvmOverloads constructor(
     interface OnSectionToolChangeListener {
         fun onToolChanged(sectionId: Int, tool: DrawingTool)
         fun onColorChanged(sectionId: Int, color: Int)
-        fun onStrokeWidthChanged(sectionId: Int, width: Float)
-        fun onUndoClicked(sectionId: Int)
-        fun onRedoClicked(sectionId: Int)
         fun onClearClicked(sectionId: Int)
         fun onSectionSelected(sectionId: Int)
     }
@@ -43,17 +40,15 @@ class SectionControllerView @JvmOverloads constructor(
     private lateinit var btnPen: ImageButton
     private lateinit var btnEraser: ImageButton
     private lateinit var btnText: ImageButton
-    private lateinit var btnUndo: ImageButton
-    private lateinit var btnRedo: ImageButton
     private lateinit var btnClear: ImageButton
-    private lateinit var colorPicker: Button
-    private lateinit var strokeWidthSeekBar: SeekBar
-    private lateinit var strokeWidthLabel: TextView
+    private lateinit var btnColorBlack: Button
+    private lateinit var btnColorBlue: Button
+    private lateinit var btnColorGreen: Button
+    private lateinit var btnColorRed: Button
     
     // State
     private var currentTool = DrawingTool.PEN
     private var currentColor = Color.BLACK
-    private var currentStrokeWidth = 8f
     private var isActive = false
     
     init {
@@ -75,18 +70,15 @@ class SectionControllerView @JvmOverloads constructor(
         btnPen = view.findViewById(R.id.btnPen)
         btnEraser = view.findViewById(R.id.btnEraser)
         btnText = view.findViewById(R.id.btnText)
-        btnUndo = view.findViewById(R.id.btnUndo)
-        btnRedo = view.findViewById(R.id.btnRedo)
         btnClear = view.findViewById(R.id.btnClear)
-        colorPicker = view.findViewById(R.id.colorPicker)
-        strokeWidthSeekBar = view.findViewById(R.id.strokeWidthSeekBar)
-        strokeWidthLabel = view.findViewById(R.id.strokeWidthLabel)
+        btnColorBlack = view.findViewById(R.id.btnColorBlack)
+        btnColorBlue = view.findViewById(R.id.btnColorBlue)
+        btnColorGreen = view.findViewById(R.id.btnColorGreen)
+        btnColorRed = view.findViewById(R.id.btnColorRed)
         
         // Set initial values
-        colorPicker.backgroundTintList = android.content.res.ColorStateList.valueOf(currentColor)
-        strokeWidthSeekBar.progress = (currentStrokeWidth - 1).toInt()
-        strokeWidthLabel.text = currentStrokeWidth.toInt().toString()
         btnPen.isSelected = true
+        updateColorButtonSelection()
     }
     
     private fun setupListeners() {
@@ -95,34 +87,24 @@ class SectionControllerView @JvmOverloads constructor(
         btnEraser.setOnClickListener { selectTool(DrawingTool.ERASER, btnEraser) }
         btnText.setOnClickListener { selectTool(DrawingTool.TEXT, btnText) }
         
-        // Actions
-        btnUndo.setOnClickListener { 
-            listener?.onUndoClicked(sectionId)
-        }
-        btnRedo.setOnClickListener { 
-            listener?.onRedoClicked(sectionId)
-        }
+        // Clear action
         btnClear.setOnClickListener { 
             listener?.onClearClicked(sectionId)
         }
         
-        // Color picker
-        colorPicker.setOnClickListener {
-            showColorPickerDialog()
+        // Color selection
+        btnColorBlack.setOnClickListener { 
+            selectColor(Color.BLACK)
         }
-        
-        // Stroke width
-        strokeWidthSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser) {
-                    currentStrokeWidth = (progress + 1).toFloat()
-                    strokeWidthLabel.text = currentStrokeWidth.toInt().toString()
-                    listener?.onStrokeWidthChanged(sectionId, currentStrokeWidth)
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
+        btnColorBlue.setOnClickListener { 
+            selectColor(Color.parseColor("#2196F3"))
+        }
+        btnColorGreen.setOnClickListener { 
+            selectColor(Color.parseColor("#4CAF50"))
+        }
+        btnColorRed.setOnClickListener { 
+            selectColor(Color.parseColor("#F44336"))
+        }
         
         // Section selection
         sectionLabel.setOnClickListener {
@@ -141,41 +123,18 @@ class SectionControllerView @JvmOverloads constructor(
         listener?.onToolChanged(sectionId, tool)
     }
     
-    private fun showColorPickerDialog() {
-        val colors = arrayOf(
-            Color.BLACK,
-            Color.parseColor("#F44336"), // Red
-            Color.parseColor("#2196F3"), // Blue
-            Color.parseColor("#4CAF50"), // Green
-            Color.parseColor("#FFEB3B"), // Yellow
-            Color.parseColor("#9C27B0"), // Purple
-            Color.parseColor("#FF9800"), // Orange
-            Color.WHITE
-        )
-        
-        val colorNames = arrayOf(
-            context.getString(R.string.color_black),
-            context.getString(R.string.color_red),
-            context.getString(R.string.color_blue),
-            context.getString(R.string.color_green),
-            context.getString(R.string.color_yellow),
-            context.getString(R.string.color_purple),
-            context.getString(R.string.color_orange),
-            context.getString(R.string.color_white)
-        )
-        
-        val builder = AlertDialog.Builder(context)
-        builder.setTitle(context.getString(R.string.colors))
-        builder.setItems(colorNames) { _, which ->
-            selectColor(colors[which])
-        }
-        builder.show()
-    }
-    
     private fun selectColor(color: Int) {
         currentColor = color
-        colorPicker.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
+        updateColorButtonSelection()
         listener?.onColorChanged(sectionId, color)
+    }
+    
+    private fun updateColorButtonSelection() {
+        // Reset all color button elevations/alphas
+        btnColorBlack.alpha = if (currentColor == Color.BLACK) 1.0f else 0.5f
+        btnColorBlue.alpha = if (currentColor == Color.parseColor("#2196F3")) 1.0f else 0.5f
+        btnColorGreen.alpha = if (currentColor == Color.parseColor("#4CAF50")) 1.0f else 0.5f
+        btnColorRed.alpha = if (currentColor == Color.parseColor("#F44336")) 1.0f else 0.5f
     }
     
     fun setSectionInfo(id: Int, name: String) {
@@ -188,12 +147,6 @@ class SectionControllerView @JvmOverloads constructor(
         this.listener = listener
     }
     
-    fun updateUndoRedoButtons(canUndo: Boolean, canRedo: Boolean) {
-        btnUndo.isEnabled = canUndo
-        btnRedo.isEnabled = canRedo
-        btnUndo.alpha = if (canUndo) 1.0f else 0.5f
-        btnRedo.alpha = if (canRedo) 1.0f else 0.5f
-    }
     
     fun setActive(active: Boolean) {
         isActive = active
@@ -208,7 +161,6 @@ class SectionControllerView @JvmOverloads constructor(
     
     fun getCurrentTool(): DrawingTool = currentTool
     fun getCurrentColor(): Int = currentColor
-    fun getCurrentStrokeWidth(): Float = currentStrokeWidth
     
     fun getSectionInfo(): Pair<Int, String> = Pair(sectionId, studentName)
     
@@ -223,14 +175,6 @@ class SectionControllerView @JvmOverloads constructor(
         
         // Update color
         selectColor(section.currentColor)
-        
-        // Update stroke width
-        currentStrokeWidth = section.currentStrokeWidth
-        strokeWidthSeekBar.progress = (currentStrokeWidth - 1).toInt()
-        strokeWidthLabel.text = currentStrokeWidth.toInt().toString()
-        
-        // Update undo/redo buttons
-        updateUndoRedoButtons(section.canUndo(), section.canRedo())
     }
     
     private fun updateToolButtons() {
