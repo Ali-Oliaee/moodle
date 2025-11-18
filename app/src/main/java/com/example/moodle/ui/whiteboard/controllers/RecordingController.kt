@@ -1,11 +1,11 @@
 package com.example.moodle.ui.whiteboard.controllers
 
-import android.Manifest
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Color
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.widget.Button
@@ -28,7 +28,6 @@ class RecordingController(
     
     private var isRecording = false
     private var toggleRecordBtn: Button? = null
-    
     private val permissionManager = PermissionManager(activity)
     
     private val mediaProjectionManager by lazy {
@@ -77,11 +76,8 @@ class RecordingController(
      * Toggle recording on/off
      */
     fun toggleRecording() {
-        if (isRecording) {
-            stopRecording()
-        } else {
-            startRecording()
-        }
+        if (isRecording) stopRecording()
+        else startRecording()
     }
     
     /**
@@ -113,9 +109,7 @@ class RecordingController(
                     ).show()
                 }
             )
-        } else {
-            checkStorageAndAudioPermissions(onGranted)
-        }
+        } else checkStorageAndAudioPermissions(onGranted)
     }
     
     /**
@@ -136,9 +130,7 @@ class RecordingController(
                     ).show()
                 }
             )
-        } else {
-            checkStoragePermission(onGranted)
-        }
+        } else checkStoragePermission(onGranted)
     }
     
     /**
@@ -156,9 +148,7 @@ class RecordingController(
                     ).show()
                 }
             )
-        } else {
-            onGranted()
-        }
+        } else onGranted()
     }
     
     /**
@@ -169,11 +159,9 @@ class RecordingController(
             action = ScreenRecordService.ACTION_STOP
         }
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) 
             activity.startForegroundService(intent)
-        } else {
-            activity.startService(intent)
-        }
+        else activity.startService(intent)
         
         Toast.makeText(activity, R.string.recording_stopped, Toast.LENGTH_SHORT).show()
     }
@@ -196,11 +184,9 @@ class RecordingController(
             putExtra(ScreenRecordService.EXTRA_DATA_INTENT, data)
         }
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) 
             activity.startForegroundService(intent)
-        } else {
-            activity.startService(intent)
-        }
+        else activity.startService(intent)
     }
     
     /**
@@ -219,24 +205,16 @@ class RecordingController(
                 filter,
                 ContextCompat.RECEIVER_NOT_EXPORTED
             )
-        } else {
-            activity.registerReceiver(recordingStateReceiver, filter)
-        }
+        } else activity.registerReceiver(recordingStateReceiver, filter)
     }
-    
+
     /**
      * Update button appearance based on recording state
      */
     private fun updateButtonAppearance() {
         toggleRecordBtn?.apply {
-            text = if (isRecording) {
-                activity.getString(R.string.stop_recording)
-            } else {
-                activity.getString(R.string.start_recording)
-            }
-            
-            // Optional: Change background color or drawable
-            isSelected = isRecording
+            if(!isRecording) setBackgroundColor(Color.DKGRAY)
+            else setBackgroundColor(Color.RED)
         }
     }
     
@@ -249,21 +227,5 @@ class RecordingController(
         } catch (e: IllegalArgumentException) {
             // Receiver was not registered, ignore
         }
-    }
-    
-    /**
-     * Legacy methods for backward compatibility - no longer needed
-     * but kept to avoid breaking changes if called from old code
-     */
-    @Deprecated("Use modern ActivityResultLauncher instead")
-    fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
-        // This method is no longer used with the new API
-        return false
-    }
-    
-    @Deprecated("Use modern permission request instead")
-    fun handlePermissionsResult(requestCode: Int, grantResults: IntArray): Boolean {
-        // This method is no longer used with the new API
-        return false
     }
 }

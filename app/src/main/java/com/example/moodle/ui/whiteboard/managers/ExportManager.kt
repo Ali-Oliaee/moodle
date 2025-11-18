@@ -53,9 +53,7 @@ class ExportManager(private val context: Context) {
             if (file != null) {
                 onSuccess(file)
                 Toast.makeText(context, context.getString(R.string.export_png_success), Toast.LENGTH_LONG).show()
-            } else {
-                onError(context.getString(R.string.export_png_failed))
-            }
+            } else onError(context.getString(R.string.export_png_failed))
         } catch (e: Exception) {
             onError(context.getString(R.string.export_error, e.message))
         }
@@ -254,9 +252,7 @@ class ExportManager(private val context: Context) {
             if (file != null) {
                 onSuccess(file)
                 Toast.makeText(context, context.getString(R.string.export_custom_success), Toast.LENGTH_LONG).show()
-            } else {
-                onError(context.getString(R.string.export_custom_failed))
-            }
+            } else onError(context.getString(R.string.export_custom_failed))
         } catch (e: Exception) {
             onError(context.getString(R.string.export_error, e.message))
         }
@@ -311,9 +307,7 @@ class ExportManager(private val context: Context) {
     private fun saveJsonToFile(jsonString: String, filename: String): File? {
         return try {
             val exportDir = getExportDirectory()
-            if (!exportDir.exists()) {
-                exportDir.mkdirs()
-            }
+            if (!exportDir.exists()) exportDir.mkdirs()
             
             val file = File(exportDir, filename)
             file.writeText(jsonString)
@@ -483,23 +477,20 @@ class ExportManager(private val context: Context) {
         
         // Serialize text objects
         val textArray = JSONArray()
-        for (textObj in page.textObjects) {
+        for (textObj in page.textObjects) 
             textArray.put(serializeTextObject(textObj))
-        }
         pageObj.put("textObjects", textArray)
         
         // Serialize shape objects
         val shapesArray = JSONArray()
-        for (shapeObj in page.shapeObjects) {
+        for (shapeObj in page.shapeObjects) 
             shapesArray.put(serializeShapeObject(shapeObj))
-        }
         pageObj.put("shapeObjects", shapesArray)
         
         // Serialize image objects
         val imagesArray = JSONArray()
-        for (imageObj in page.imageObjects) {
+        for (imageObj in page.imageObjects) 
             imagesArray.put(serializeImageObject(imageObj))
-        }
         pageObj.put("imageObjects", imagesArray)
         
         return pageObj
@@ -512,9 +503,7 @@ class ExportManager(private val context: Context) {
         val pathMeasure = android.graphics.PathMeasure(path, false)
         val length = pathMeasure.length
         
-        if (length == 0f) {
-            return ""
-        }
+        if (length == 0f) return ""
         
         val points = mutableListOf<String>()
         val numPoints = (length / 5f).toInt().coerceAtLeast(2).coerceAtMost(500) // Sample points every 5 pixels, max 500 points

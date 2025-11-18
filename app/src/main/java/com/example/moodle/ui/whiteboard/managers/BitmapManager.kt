@@ -13,14 +13,14 @@ class BitmapManager {
         private set
     var drawingCanvas: Canvas? = null
         private set
-    
+
     // Callbacks
     var onBitmapInitialized: ((Int, Int) -> Unit)? = null
     
     /**
      * Handle view size changes and create/recreate bitmap
      */
-    fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+    fun onSizeChanged(w: Int, h: Int) {
         if (w <= 0 || h <= 0) return
         
         try {
@@ -50,8 +50,6 @@ class BitmapManager {
                 drawingCanvas?.drawColor(Color.WHITE)
                 
                 onBitmapInitialized?.invoke(canvasWidth, canvasHeight)
-                
-                android.util.Log.d("BitmapManager", "Created bitmap: ${canvasWidth}x${canvasHeight} (${bitmapSizeBytes / 1_000_000}MB)")
             }
         } catch (e: OutOfMemoryError) {
             android.util.Log.e("BitmapManager", "OutOfMemoryError creating bitmap, falling back to screen size", e)

@@ -285,9 +285,8 @@ class ImportManager(private val context: Context) {
             val halfWidth = width / 2
             val halfHeight = height / 2
             
-            while ((halfWidth / sampleSize) >= MAX_IMAGE_SIZE && (halfHeight / sampleSize) >= MAX_IMAGE_SIZE) {
+            while ((halfWidth / sampleSize) >= MAX_IMAGE_SIZE && (halfHeight / sampleSize) >= MAX_IMAGE_SIZE) 
                 sampleSize *= 2
-            }
         }
         
         return sampleSize
