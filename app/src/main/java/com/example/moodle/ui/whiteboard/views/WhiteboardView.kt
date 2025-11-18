@@ -442,9 +442,7 @@ class WhiteboardView @JvmOverloads constructor(
     // Gesture listeners
     private inner class GestureListener : GestureDetector.SimpleOnGestureListener() {
         override fun onDoubleTap(e: MotionEvent): Boolean {
-            zoomPanController.resetZoomAndPan(width, height)
-        invalidate()
-            return true
+            return false
         }
     }
 
