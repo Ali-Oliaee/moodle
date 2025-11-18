@@ -38,13 +38,10 @@ class TextRecognitionManager(private val context: Context) {
      * Initialize the recognizer with Persian language model
      */
     private fun initializeRecognizer(callback: TextRecognitionCallback) {
-        if (recognizer != null && isModelDownloaded) {
-            return
-        }
+        if (recognizer != null && isModelDownloaded) return
         
         callback.onRecognitionProgress("در حال آماده‌سازی شناساگر فارسی...")
         
-        // Persian language identifier
         val modelIdentifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag("fa")
         
         if (modelIdentifier == null) {
@@ -209,7 +206,7 @@ class TextRecognitionManager(private val context: Context) {
                         x = textX,
                         y = textY,
                         textSize = (bounds.height() * 0.8f).coerceIn(32f, 120f),
-                        color = android.graphics.Color.BLACK
+                        color = drawingPaths.firstOrNull()?.paint?.color ?: android.graphics.Color.BLACK
                     )
                     
                     callback.onRecognitionSuccess(listOf(textObject), 1)
@@ -236,9 +233,7 @@ class TextRecognitionManager(private val context: Context) {
             // Extract points from the Path
             val points = extractPointsFromPath(drawingPath)
             
-            if (points.isEmpty()) {
-                continue
-            }
+            if (points.isEmpty()) continue
             
             // Add points to stroke with timestamps
             var timestamp = 0L
@@ -268,9 +263,7 @@ class TextRecognitionManager(private val context: Context) {
         val pathMeasure = android.graphics.PathMeasure(path, false)
         val length = pathMeasure.length
         
-        if (length == 0f) {
-            return points
-        }
+        if (length == 0f) return points
         
         // Sample points along the path
         val sampleInterval = 5f // Sample every 5 pixels
@@ -306,14 +299,10 @@ class TextRecognitionManager(private val context: Context) {
             if (isFirst) {
                 bounds.set(pathBounds)
                 isFirst = false
-            } else {
-                bounds.union(pathBounds)
-            }
+            } else bounds.union(pathBounds)
         }
         
-        if (bounds.isEmpty) {
-            bounds.set(0f, 0f, 100f, 100f)
-        }
+        if (bounds.isEmpty) bounds.set(0f, 0f, 100f, 100f)
         
         return bounds
     }
