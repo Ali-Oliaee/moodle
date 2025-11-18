@@ -20,7 +20,7 @@ class BitmapManager {
     /**
      * Handle view size changes and create/recreate bitmap
      */
-    fun onSizeChanged(w: Int, h: Int) {
+    fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         if (w <= 0 || h <= 0) return
         
         try {

@@ -924,39 +924,36 @@ class WhiteboardActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        recordingController.handlePermissionsResult(requestCode, grantResults)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         
-        if (!recordingController.handleActivityResult(requestCode, resultCode, data)) {
-            when (requestCode) {
-                REQUEST_CODE_IMPORT_IMAGE -> {
-                    if (resultCode == RESULT_OK && data != null) {
-                        data.data?.let { uri ->
-                            viewModel.importImage(uri, whiteboardView) {
-                                loadCurrentPageFromViewModel()
-                                updateUndoRedoState()
-                            }
+        when (requestCode) {
+            REQUEST_CODE_IMPORT_IMAGE -> {
+                if (resultCode == RESULT_OK && data != null) {
+                    data.data?.let { uri ->
+                        viewModel.importImage(uri, whiteboardView) {
+                            loadCurrentPageFromViewModel()
+                            updateUndoRedoState()
                         }
                     }
                 }
-                REQUEST_CODE_IMPORT_MOODLE -> {
-                    if (resultCode == RESULT_OK && data != null) {
-                        data.data?.let { uri ->
-                            viewModel.importMoodleFile(uri, whiteboardView) {
-                                loadCurrentPageFromViewModel()
-                                updateUndoRedoState()
-                            }
+            }
+            REQUEST_CODE_IMPORT_MOODLE -> {
+                if (resultCode == RESULT_OK && data != null) {
+                    data.data?.let { uri ->
+                        viewModel.importMoodleFile(uri, whiteboardView) {
+                            loadCurrentPageFromViewModel()
+                            updateUndoRedoState()
                         }
                     }
                 }
-                REQUEST_CODE_BACKGROUND_IMAGE -> {
-                    if (resultCode == RESULT_OK && data != null) {
-                        data.data?.let { uri ->
-                            handleBackgroundImageSelection(uri)
-                        }
+            }
+            REQUEST_CODE_BACKGROUND_IMAGE -> {
+                if (resultCode == RESULT_OK && data != null) {
+                    data.data?.let { uri ->
+                        handleBackgroundImageSelection(uri)
                     }
                 }
             }
