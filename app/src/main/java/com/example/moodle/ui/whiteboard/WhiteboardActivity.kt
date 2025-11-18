@@ -6,6 +6,8 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.ViewGroup
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.ViewModelProvider
 import com.example.moodle.MoodleApplication
 import com.example.moodle.R
 import com.example.moodle.data.datastore.UserPreferences
@@ -21,6 +23,8 @@ import com.example.moodle.ui.whiteboard.models.DrawingTool
 import com.example.moodle.ui.whiteboard.models.WhiteboardViewState
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
 import com.example.moodle.utils.FontHelper
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
 
 /**
  * Main activity for the whiteboard functionality
@@ -63,7 +67,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var tvPageIndicator: TextView
     
     // ViewModel - Single source of truth for state
-    private val viewModel: WhiteboardViewModel by viewModels()
+    private lateinit var viewModel: WhiteboardViewModel
     
     // UI-specific controllers (Android components)
     private lateinit var recordingController: RecordingController
@@ -88,7 +92,7 @@ class WhiteboardActivity : AppCompatActivity() {
         // Initialize ViewModel with DI
         val dependencies = (application as MoodleApplication).dependencyContainer
         val factory = ViewModelFactory(application, dependencies)
-        viewModel = ViewModelProviders.of(this, factory).get(WhiteboardViewModel::class.java)
+        viewModel = ViewModelProvider(this, factory).get(WhiteboardViewModel::class.java)
         
         // Get UserPreferences from dependency container
         userPreferences = dependencies.userPreferences
@@ -542,7 +546,7 @@ class WhiteboardActivity : AppCompatActivity() {
         val editText = EditText(this)
         editText.hint = getString(R.string.enter_text)
         editText.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
-        
+
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.add_text))
             .setView(editText)

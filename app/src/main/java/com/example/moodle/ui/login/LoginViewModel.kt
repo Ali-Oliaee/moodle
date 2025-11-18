@@ -1,9 +1,9 @@
 package com.example.moodle.ui.login
 
 import android.app.Application
-import android.arch.lifecycle.AndroidViewModel
-import android.arch.lifecycle.LiveData
-import android.arch.lifecycle.MutableLiveData
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import com.example.moodle.data.repository.AuthRepository
 import kotlinx.coroutines.*
 

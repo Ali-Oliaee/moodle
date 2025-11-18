@@ -8,14 +8,16 @@ import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
-import android.arch.lifecycle.Observer
-import android.arch.lifecycle.ViewModelProviders
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 
 import com.example.moodle.R
 import com.example.moodle.MoodleApplication
 import com.example.moodle.di.ViewModelFactory
 import com.example.moodle.utils.FontHelper
 import com.example.moodle.ui.whiteboard.WhiteboardActivity
+import com.google.android.material.textfield.TextInputEditText
 
 class LoginActivity : AppCompatActivity() {
 
@@ -36,7 +38,7 @@ class LoginActivity : AppCompatActivity() {
         // Get dependency container and create ViewModel using factory
         val dependencies = (application as MoodleApplication).dependencyContainer
         val factory = ViewModelFactory(application, dependencies)
-        viewModel = ViewModelProviders.of(this, factory).get(LoginViewModel::class.java)
+        viewModel = ViewModelProvider(this, factory).get(LoginViewModel::class.java)
 
         initializeViews()
         applyFonts()

@@ -196,6 +196,14 @@
             android:contentDescription="@string/desc_eraser_tool" />
 
         <ImageButton
+            android:id="@+id/btnTextRecognition"
+            android:layout_height="40dp"
+            android:layout_width="40dp"
+            android:background="@drawable/tool_button_background"
+            android:contentDescription="@string/desc_text_recognition_tool"
+            android:src="@android:drawable/ic_menu_search" />
+
+        <ImageButton
             android:id="@+id/btnText"
             android:layout_width="36dp"
             android:layout_height="36dp"

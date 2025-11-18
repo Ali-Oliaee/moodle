@@ -72,6 +72,7 @@
     <string name="desc_pen_tool">انتخاب قلم</string>   
     <string name="desc_eraser_tool">انتخاب روشن کننده</string>
     <string name="desc_text_tool">انتخاب ابزار متن</string>
+    <string name="desc_text_recognition_tool">ابزار تشخیص متن</string>
     <string name="desc_formula_tool">انتخاب فرمول ریاضی</string>
     <string name="desc_line_tool">انتخاب ابزار خط</string>
     <string name="desc_circle_tool">انتخاب ابزار دایره</string>

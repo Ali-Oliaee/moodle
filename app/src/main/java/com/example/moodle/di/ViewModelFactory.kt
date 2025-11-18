@@ -1,8 +1,8 @@
 package com.example.moodle.di
 
 import android.app.Application
-import android.arch.lifecycle.ViewModel
-import android.arch.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import com.example.moodle.ui.login.LoginViewModel
 import com.example.moodle.ui.whiteboard.WhiteboardViewModel
 

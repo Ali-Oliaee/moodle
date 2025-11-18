@@ -40,12 +40,12 @@ android {
     signingConfigs {
         if (keystorePath != null && keystorePassword != null && keyAliasValue != null && keyPasswordValue != null) {
             create("release") {
-                val path = keystorePath!!
+                val path = keystorePath
                 require(file(path).exists()) { "Keystore not found at $path" }
                 storeFile = file(path)
-                storePassword = keystorePassword!!
-                keyAlias = keyAliasValue!!
-                keyPassword = keyPasswordValue!!
+                storePassword = keystorePassword
+                keyAlias = keyAliasValue
+                keyPassword = keyPasswordValue
             }
         }
     }
