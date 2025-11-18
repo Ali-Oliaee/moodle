@@ -8,6 +8,7 @@ import com.example.moodle.data.repository.AuthRepository
 import com.example.moodle.ui.whiteboard.managers.PageManager
 import com.example.moodle.ui.whiteboard.managers.ExportManager
 import com.example.moodle.ui.whiteboard.managers.ImportManager
+import com.example.moodle.ui.whiteboard.managers.TextRecognitionManager
 
 /**
  * Simple dependency injection container
@@ -75,7 +76,17 @@ class DependencyContainer(private val applicationContext: Context) {
     val importManager: ImportManager by lazy {
         ImportManager(applicationContext)
     }
-    
+
+
+    /**
+     * TextRecognitionManager singleton
+     * Manages text recognition functionality
+     * Depends on: applicationContext
+     */
+    val textRecognitionManager: TextRecognitionManager by lazy {
+        TextRecognitionManager(applicationContext)
+    }
+
     // ==================== Factory Methods ====================
     
     /**

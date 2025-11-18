@@ -119,7 +119,7 @@ class TextRecognitionManager(private val context: Context) {
         callback: TextRecognitionCallback
     ) {
         if (paths.isEmpty()) {
-            callback.onRecognitionFailure("هیچ رسمی برای تحلیل وجود ندارد")
+            callback.onRecognitionFailure("چیزی برای تحلیل وجود ندارد")
             return
         }
         
@@ -129,7 +129,7 @@ class TextRecognitionManager(private val context: Context) {
         }
         
         if (drawingPaths.isEmpty()) {
-            callback.onRecognitionFailure("هیچ خط قلمی برای تحلیل وجود ندارد")
+            callback.onRecognitionFailure("چیزی برای تحلیل وجود ندارد")
             return
         }
         
@@ -170,7 +170,7 @@ class TextRecognitionManager(private val context: Context) {
         drawingPaths: List<DrawingPath>,
         callback: TextRecognitionCallback
     ) {
-        callback.onRecognitionProgress("در حال تحلیل دست‌نویس فارسی...")
+        callback.onRecognitionProgress("در حال تحلیل...")
         
         try {
             // Convert DrawingPath objects to Ink
@@ -190,7 +190,7 @@ class TextRecognitionManager(private val context: Context) {
                     Log.d(TAG, "Recognition returned ${candidates.size} candidates")
                     
                     if (candidates.isEmpty()) {
-                        callback.onRecognitionFailure("متنی شناسایی نشد. لطفاً با خط واضح‌تر بنویسید")
+                        callback.onRecognitionFailure("متنی شناسایی نشد. لطفاً با خط واضح‌ تر بنویسید")
                         return@addOnSuccessListener
                     }
                     

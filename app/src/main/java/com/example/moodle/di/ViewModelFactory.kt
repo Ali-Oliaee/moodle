@@ -35,7 +35,8 @@ class ViewModelFactory(
                     userPreferences = dependencies.userPreferences,
                     pageManager = dependencies.pageManager,
                     exportManager = dependencies.exportManager,
-                    importManager = dependencies.importManager
+                    importManager = dependencies.importManager,
+                    textRecognitionManager = dependencies.textRecognitionManager
                 ) as T
             }
             

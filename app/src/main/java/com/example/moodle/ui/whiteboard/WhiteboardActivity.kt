@@ -19,6 +19,7 @@ import com.example.moodle.ui.whiteboard.controllers.SplitModeController
 import com.example.moodle.ui.whiteboard.listeners.OnDrawingChangeListener
 import com.example.moodle.ui.whiteboard.listeners.OnTextInputListener
 import com.example.moodle.ui.whiteboard.managers.PageManager
+import com.example.moodle.ui.whiteboard.managers.TextRecognitionManager
 import com.example.moodle.ui.whiteboard.models.DrawingTool
 import com.example.moodle.ui.whiteboard.models.WhiteboardViewState
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
@@ -75,7 +76,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var splitModeController: SplitModeController
     
     // Text recognition manager
-    private lateinit var textRecognitionManager: com.example.moodle.ui.whiteboard.managers.TextRecognitionManager
+    private lateinit var textRecognitionManager: TextRecognitionManager
     
     // User preferences
     private lateinit var userPreferences: UserPreferences
@@ -197,7 +198,7 @@ class WhiteboardActivity : AppCompatActivity() {
         }
         
         // Text Recognition Manager - handles ML Kit text recognition
-        textRecognitionManager = com.example.moodle.ui.whiteboard.managers.TextRecognitionManager(this)
+        textRecognitionManager = TextRecognitionManager(this)
     }
     
     /**
@@ -987,7 +988,7 @@ class WhiteboardActivity : AppCompatActivity() {
                     recognizedCount: Int
                 ) {
                     runOnUiThread {
-                        showTextRecognitionResultDialog(textObjects, recognizedCount)
+                        replaceDrawingWithRecognizedText(textObjects)
                     }
                 }
                 
@@ -1009,33 +1010,6 @@ class WhiteboardActivity : AppCompatActivity() {
     }
     
     /**
-     * Show dialog with text recognition results
-     */
-    private fun showTextRecognitionResultDialog(
-        textObjects: List<com.example.moodle.ui.whiteboard.models.TextObject>,
-        recognizedCount: Int
-    ) {
-        if (textObjects.isEmpty()) {
-            Toast.makeText(this, getString(R.string.text_recognition_no_text), Toast.LENGTH_SHORT).show()
-            return
-        }
-        
-        val message = getString(R.string.text_recognition_success, recognizedCount)
-        
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.text_recognition))
-            .setMessage("$message\n\n${getString(R.string.text_recognition_replace_confirm)}")
-            .setPositiveButton(getString(R.string.text_recognition_replace)) { _, _ ->
-                replaceDrawingWithRecognizedText(textObjects)
-            }
-            .setNegativeButton(getString(R.string.text_recognition_keep_both)) { _, _ ->
-                addRecognizedTextToDrawing(textObjects)
-            }
-            .setNeutralButton(getString(R.string.cancel), null)
-            .show()
-    }
-    
-    /**
      * Replace drawn strokes with recognized text
      */
     private fun replaceDrawingWithRecognizedText(
@@ -1044,30 +1018,6 @@ class WhiteboardActivity : AppCompatActivity() {
         // Clear the drawing paths
         val currentPage = viewModel.getCurrentPage()
         currentPage.paths.clear()
-        
-        // Add recognized text objects
-        for (textObject in textObjects) {
-            currentPage.textObjects.add(textObject)
-        }
-        
-        // Reload the page
-        loadCurrentPageFromViewModel()
-        updateUndoRedoState()
-        
-        Toast.makeText(
-            this,
-            getString(R.string.text_recognition_success, textObjects.size),
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-    
-    /**
-     * Add recognized text without removing drawn strokes
-     */
-    private fun addRecognizedTextToDrawing(
-        textObjects: List<com.example.moodle.ui.whiteboard.models.TextObject>
-    ) {
-        val currentPage = viewModel.getCurrentPage()
         
         // Add recognized text objects
         for (textObject in textObjects) {

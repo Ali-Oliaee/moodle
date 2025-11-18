@@ -273,7 +273,7 @@
     <string name="text_recognition_replace_confirm">آیا می‌خواهید رسم‌ها را با متن شناسایی شده جایگزین کنید؟</string>
     <string name="text_recognition_keep_both">نگه داشتن هر دو</string>
     <string name="text_recognition_replace">جایگزینی</string>
-    <string name="text_recognition_no_strokes">رسمی برای تشخیص وجود ندارد</string>
+    <string name="text_recognition_no_strokes">چیزی برای تشخیص وجود ندارد</string>
     <string name="desc_text_recognition_button">تشخیص دست‌نویس فارسی</string>
     
     <!-- Export/Import Titles and Messages -->

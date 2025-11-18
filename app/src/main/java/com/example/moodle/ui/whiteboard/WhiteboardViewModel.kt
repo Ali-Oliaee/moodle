@@ -9,6 +9,7 @@ import com.example.moodle.data.datastore.UserPreferences
 import com.example.moodle.ui.whiteboard.managers.ExportManager
 import com.example.moodle.ui.whiteboard.managers.ImportManager
 import com.example.moodle.ui.whiteboard.managers.PageManager
+import com.example.moodle.ui.whiteboard.managers.TextRecognitionManager
 import com.example.moodle.ui.whiteboard.models.BackgroundColor
 import com.example.moodle.ui.whiteboard.models.BackgroundPattern
 import com.example.moodle.ui.whiteboard.models.DrawingTool
@@ -26,13 +27,15 @@ import com.example.moodle.ui.whiteboard.views.WhiteboardView
  * @param pageManager PageManager for page navigation and state
  * @param exportManager ExportManager for exporting whiteboard content
  * @param importManager ImportManager for importing content
+ * @param textRecognitionManager TextRecognitionManager for text recognition functionality
  */
 class WhiteboardViewModel(
     application: Application,
     private val userPreferences: UserPreferences,
     val pageManager: PageManager,
     val exportManager: ExportManager,
-    val importManager: ImportManager
+    val importManager: ImportManager,
+    val textRecognitionManager: TextRecognitionManager
 ) : AndroidViewModel(application) {
     
     // Managers (business logic) - injected via constructor
