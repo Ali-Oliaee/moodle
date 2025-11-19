@@ -452,10 +452,13 @@ class CanvasRenderManager(
     
     fun redrawCanvas() {
         bitmapManager.drawingCanvas?.let { canvas ->
-            canvas.drawColor(Color.BLACK, PorterDuff.Mode.SRC)
+            // Clear and draw background (includes image if set)
             drawBackgroundColor(canvas)
+            
+            // Draw background pattern (grid, lines, etc.)
             drawBackgroundPattern(canvas)
             
+            // Draw all paths
             for (drawingPath in stateManager.paths) {
                 if (drawingPath.tool == DrawingTool.TEXT && drawingPath.text != null) 
                     canvas.drawText(drawingPath.text, drawingPath.textX, drawingPath.textY, drawingPath.paint)

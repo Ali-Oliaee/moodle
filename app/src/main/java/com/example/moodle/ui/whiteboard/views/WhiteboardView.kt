@@ -61,6 +61,7 @@ class WhiteboardView @JvmOverloads constructor(
         }
         touchHandler.getDrawingCanvas = { bitmapManager.drawingCanvas }
         touchHandler.getBackgroundColor = { renderManager.getBackgroundColor() }
+        touchHandler.onRedrawCanvas = { renderManager.redrawCanvas() }
         touchHandler.onSectionControlButtonClick = { section, buttonIndex ->
             handleSectionControlButtonClick(section, buttonIndex)
         }

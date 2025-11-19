@@ -69,6 +69,9 @@ class TouchGestureHandler(
     // Background color callback
     var getBackgroundColor: (() -> BackgroundColor)? = null
     
+    // Render manager callback for proper canvas redrawing
+    var onRedrawCanvas: (() -> Unit)? = null
+    
     fun handleDrawingTouch(event: MotionEvent, isDrawingMode: Boolean) {
         val action = event.actionMasked
         val pointerIndex = event.actionIndex
@@ -384,14 +387,8 @@ class TouchGestureHandler(
             isDrawingSelection = false
             onDrawingChanged?.invoke()
             
-            // Redraw canvas
-            getDrawingCanvas?.invoke()?.let { canvas ->
-                val bgColor = getBackgroundColor?.invoke()?.colorValue ?: Color.WHITE
-                canvas.drawColor(bgColor, PorterDuff.Mode.SRC)
-                for (path in stateManager.paths) {
-                    canvas.drawPath(path.path, path.paint)
-                }
-            }
+            // Properly redraw canvas with background pattern and image support
+            onRedrawCanvas?.invoke()
             
             onInvalidate?.invoke()
         }
