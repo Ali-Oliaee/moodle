@@ -24,6 +24,7 @@ import com.example.moodle.ui.whiteboard.models.DrawingTool
 import com.example.moodle.ui.whiteboard.models.WhiteboardViewState
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
 import com.example.moodle.utils.FontHelper
+import com.example.moodle.utils.PermissionManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 
@@ -77,6 +78,9 @@ class WhiteboardActivity : AppCompatActivity() {
     
     // Text recognition manager
     private lateinit var textRecognitionManager: TextRecognitionManager
+    
+    // Permission manager
+    private lateinit var permissionManager: PermissionManager
     
     // User preferences
     private lateinit var userPreferences: UserPreferences
@@ -199,6 +203,9 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Text Recognition Manager - handles ML Kit text recognition
         textRecognitionManager = TextRecognitionManager(this)
+        
+        // Permission Manager - handles runtime permissions
+        permissionManager = PermissionManager(this)
     }
     
     /**
@@ -619,7 +626,9 @@ class WhiteboardActivity : AppCompatActivity() {
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> showPNGExportOptions()
-                    1 -> viewModel.exportToMoodleFormat(whiteboardView)
+                    1 -> requestStoragePermissionsForExport {
+                        viewModel.exportToMoodleFormat(whiteboardView)
+                    }
                 }
             }
             .setNegativeButton(getString(R.string.cancel), null)
@@ -630,24 +639,27 @@ class WhiteboardActivity : AppCompatActivity() {
      * Show PNG export options (current page or all pages)
      */
     private fun showPNGExportOptions() {
-        if (viewModel.uiState.value?.totalPages ?: 1 > 1) {
-            val options = arrayOf(
-                getString(R.string.export_current_page),
-                getString(R.string.export_all_pages)
-            )
-            
-            AlertDialog.Builder(this)
-                .setTitle(getString(R.string.export_png))
-                .setItems(options) { _, which ->
-                    when (which) {
-                        0 -> viewModel.exportCurrentPageToPNG(whiteboardView)
-                        1 -> viewModel.exportAllPagesToPNG(whiteboardView)
+        // Request storage permissions before exporting
+        requestStoragePermissionsForExport {
+            if (viewModel.uiState.value?.totalPages ?: 1 > 1) {
+                val options = arrayOf(
+                    getString(R.string.export_current_page),
+                    getString(R.string.export_all_pages)
+                )
+                
+                AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.export_png))
+                    .setItems(options) { _, which ->
+                        when (which) {
+                            0 -> viewModel.exportCurrentPageToPNG(whiteboardView)
+                            1 -> viewModel.exportAllPagesToPNG(whiteboardView)
+                        }
                     }
-                }
-                .setNegativeButton(getString(R.string.cancel), null)
-                .show()
-        } else {
-            viewModel.exportCurrentPageToPNG(whiteboardView)
+                    .setNegativeButton(getString(R.string.cancel), null)
+                    .show()
+            } else {
+                viewModel.exportCurrentPageToPNG(whiteboardView)
+            }
         }
     }
     
@@ -789,6 +801,30 @@ class WhiteboardActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.exported_pages, count), Toast.LENGTH_SHORT).show()
         } else {
             Toast.makeText(this, getString(R.string.export_success), Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    /**
+     * Request storage permissions for export operations
+     */
+    private fun requestStoragePermissionsForExport(onGranted: () -> Unit) {
+        // For Android 10+ (API 29+), MediaStore API doesn't require runtime permissions
+        // But we still request them for older versions
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            // Android 10+ - No permission needed for MediaStore writes to Downloads
+            onGranted()
+        } else {
+            // Below Android 10 - Need WRITE_EXTERNAL_STORAGE permission
+            permissionManager.requestStoragePermissions(
+                onGranted = onGranted,
+                onDenied = { deniedPermissions ->
+                    Toast.makeText(
+                        this,
+                        getString(R.string.storage_permission_required_for_export),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            )
         }
     }
     

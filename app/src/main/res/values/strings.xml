@@ -26,6 +26,7 @@
     <string name="notification_permission_required">دسترسی نمایش اعلان برای ضبط صفحه لازم است (اندروید 13+)</string>
     <string name="audio_permission_required">دسترسی ضبط صدا برای ضبط صفحه لازم است</string>
     <string name="storage_permission_required">دسترسی ذخیره‌سازی برای ذخیره فایل لازم است</string>
+    <string name="storage_permission_required_for_export">دسترسی ذخیره‌سازی برای خروجی گرفتن از تخته لازم است</string>
     <string name="permissions_granted">دسترسی‌ها اعطا شد</string>
     <string name="permissions_denied">دسترسی‌های لازم داده نشد</string>
     
@@ -220,11 +221,14 @@
     
     <!-- Export Messages -->
     <string name="export_png_success">تصویر PNG با موفقیت ذخیره شد در Downloads/MoodleWhiteboard/</string>
+    <string name="export_png_success_location">تصویر PNG با موفقیت ذخیره شد در %1$s</string>
     <string name="export_png_failed">خروج تصویر PNG ناموفق بود</string>
     <string name="export_custom_success">فایل Moodle با موفقیت ذخیره شد در Downloads/MoodleWhiteboard/</string>
+    <string name="export_custom_success_location">فایل Moodle با موفقیت ذخیره شد در %1$s</string>
     <string name="export_custom_failed">خروج فایل Moodle ناموفق بود</string>
     <string name="export_error">خطا در خروج: %1$s</string>
     <string name="export_multiple_pages_success">%1$d تصویر PNG با موفقیت ذخیره شد در Downloads/MoodleWhiteboard/</string>
+    <string name="export_multiple_pages_success_location">%1$d تصویر PNG با موفقیت ذخیره شد در %2$s</string>
     
     <!-- Multi-page Export Dialog -->
     <string name="export_page_selection">انتخاب صفحات</string>
