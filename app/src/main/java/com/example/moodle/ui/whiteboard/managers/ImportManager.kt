@@ -207,45 +207,6 @@ class ImportManager(private val context: Context) {
         
         // Load all data into whiteboard view
         whiteboardView.loadPageData(paths, textObjects, shapeObjects, imageObjects)
-        
-        // Import split mode data if present
-        if (pageData.optBoolean("splitModeEnabled", false) && pageData.has("sections")) {
-            val sectionsArray = pageData.getJSONArray("sections")
-            // Enable split mode with appropriate section count
-            whiteboardView.enableSplitMode(sectionsArray.length())
-            
-            // Import section data
-            for (i in 0 until sectionsArray.length()) {
-                val sectionData = sectionsArray.getJSONObject(i)
-                importSectionData(sectionData, whiteboardView)
-            }
-        }
-    }
-    
-    /**
-     * Import section data for split mode
-     */
-    private fun importSectionData(sectionData: JSONObject, whiteboardView: WhiteboardView) {
-        val sectionId = sectionData.optInt("id", 1)
-        
-        // Set section tool and properties
-        val toolName = sectionData.optString("currentTool", "PEN")
-        val tool = try {
-            DrawingTool.valueOf(toolName)
-        } catch (e: IllegalArgumentException) {
-            DrawingTool.PEN
-        }
-        
-        val color = sectionData.optInt("currentColor", Color.BLACK)
-        val strokeWidth = sectionData.optDouble("currentStrokeWidth", 8.0).toFloat()
-        
-        whiteboardView.updateSectionTool(sectionId, tool)
-        whiteboardView.updateSectionColor(sectionId, color)
-        whiteboardView.updateSectionStrokeWidth(sectionId, strokeWidth)
-        
-        // Import section paths and text objects
-        // Note: This would require extending the WhiteboardView API to support
-        // importing data directly into sections
     }
     
     /**

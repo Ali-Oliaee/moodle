@@ -30,6 +30,7 @@ class ExportManager(private val context: Context) {
     
     companion object {
         private const val EXPORT_FOLDER = "MoodleWhiteboard"
+        // Note: For PNG, quality is ignored by Bitmap.compress().
         private const val PNG_QUALITY = 90
         private const val CUSTOM_FORMAT_VERSION = "1.0"
         
