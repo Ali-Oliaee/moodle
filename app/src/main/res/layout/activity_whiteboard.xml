@@ -33,8 +33,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
-        android:paddingVertical="8dp"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="6dp"
         android:background="@drawable/glassy_toolbar_background"
         android:elevation="12dp"
         android:gravity="center"
@@ -170,7 +170,7 @@
         android:src="@drawable/ic_chevron_up"
         android:background="@drawable/floating_button_ripple"
         android:elevation="12dp"
-        android:padding="4dp"
+        android:padding="6dp"
         android:scaleType="fitCenter"
         android:layout_margin="16dp"
         android:contentDescription="@string/desc_toggle_toolbar"
@@ -195,8 +195,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:background="@drawable/glassy_toolbar_background"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="8dp"
             android:gravity="center">
 
             <!-- Drawing Tools Group -->
@@ -207,7 +207,7 @@
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_pen"
                 android:background="@drawable/modern_tool_button_ripple"
-                android:padding="10dp"
+                android:padding="6dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/desc_pen_tool" />
 
@@ -218,7 +218,7 @@
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_eraser"
                 android:background="@drawable/modern_tool_button_ripple"
-                android:padding="10dp"
+                android:padding="6dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/desc_eraser_tool" />
 
@@ -228,7 +228,7 @@
                 android:layout_height="32dp"
                 android:layout_margin="4dp"
                 android:background="@drawable/modern_tool_button_ripple"
-                android:padding="10dp"
+                android:padding="6dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/desc_text_recognition_tool"
                 android:src="@android:drawable/ic_menu_search" />
@@ -240,7 +240,7 @@
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_text"
                 android:background="@drawable/modern_tool_button_ripple"
-                android:padding="10dp"
+                android:padding="6dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/desc_text_tool" />
 
@@ -251,7 +251,7 @@
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_formula"
                 android:background="@drawable/modern_tool_button_ripple"
-                android:padding="10dp"
+                android:padding="6dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/desc_formula_tool" />
 
@@ -262,7 +262,7 @@
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_shapes"
                 android:background="@drawable/modern_tool_button_ripple"
-                android:padding="10dp"
+                android:padding="6dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/desc_shapes_tool" />
 
@@ -281,7 +281,7 @@
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_undo"
                 android:background="@drawable/modern_tool_button_ripple"
-                android:padding="10dp"
+                android:padding="6dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/desc_undo_button" />
 
@@ -292,7 +292,7 @@
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_redo"
                 android:background="@drawable/modern_tool_button_ripple"
-                android:padding="10dp"
+                android:padding="6dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/desc_redo_button" />
 
@@ -303,7 +303,7 @@
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_clear"
                 android:background="@drawable/modern_tool_button_ripple"
-                android:padding="10dp"
+                android:padding="6dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/desc_clear_button" />
 
@@ -322,7 +322,7 @@
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_move_4d"
                 android:background="@drawable/modern_tool_button_ripple"
-                android:padding="10dp"
+                android:padding="6dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/desc_pinch_mode" />
 
@@ -350,7 +350,7 @@
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_stroke_width"
                 android:background="@drawable/modern_tool_button_ripple"
-                android:padding="10dp"
+                android:padding="6dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/stroke_width" />
 
@@ -361,7 +361,7 @@
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_background"
                 android:background="@drawable/modern_tool_button_ripple"
-                android:padding="10dp"
+                android:padding="6dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/desc_background_button" />
 
@@ -380,7 +380,7 @@
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_arrow_back"
                 android:background="@drawable/modern_tool_button_ripple"
-                android:padding="10dp"
+                android:padding="6dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/desc_previous_page" />
 
@@ -404,7 +404,7 @@
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_arrow_forward"
                 android:background="@drawable/modern_tool_button_ripple"
-                android:padding="10dp"
+                android:padding="6dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/desc_next_page" />
 
@@ -415,7 +415,7 @@
                 android:layout_margin="4dp"
                 android:src="@drawable/ic_delete"
                 android:background="@drawable/modern_tool_button_ripple"
-                android:padding="10dp"
+                android:padding="6dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/desc_delete_page" />
 

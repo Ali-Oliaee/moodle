@@ -11,16 +11,16 @@
         <shape android:shape="oval">
             <solid android:color="#F5FFFFFF" />
             <stroke 
-                android:width="2dp"
-                android:color="#806366F1" />
+                android:width="1.5dp"
+                android:color="#D0D0D0" />
         </shape>
     </item>
     <!-- Inner highlight -->
     <item android:top="2dp" android:left="2dp" android:right="2dp" android:bottom="2dp">
         <shape android:shape="oval">
             <stroke 
-                android:width="1dp"
-                android:color="#99FFFFFF" />
+                android:width="0.5dp"
+                android:color="#F0FFFFFF" />
         </shape>
     </item>
 </layer-list>

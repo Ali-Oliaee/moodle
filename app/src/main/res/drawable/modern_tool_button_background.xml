@@ -5,11 +5,7 @@
         <layer-list>
             <item>
                 <shape android:shape="oval">
-                    <gradient
-                        android:startColor="#6366F1"
-                        android:endColor="#4F46E5"
-                        android:angle="135"
-                        android:type="linear" />
+                    <solid android:color="#d6d6d6" />
                     <stroke 
                         android:width="2dp"
                         android:color="#6366F1" />
