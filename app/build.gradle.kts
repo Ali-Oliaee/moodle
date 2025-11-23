@@ -78,7 +78,6 @@ dependencies {
     
     // Activity
     implementation("androidx.activity:activity-ktx:1.8.2")
-    implementation("androidx.fragment:fragment-ktx:1.6.2")
     
     // Networking
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
