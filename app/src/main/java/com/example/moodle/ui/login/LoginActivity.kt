@@ -13,12 +13,12 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 
 import com.example.moodle.R
-import com.example.moodle.MoodleApplication
-import com.example.moodle.di.ViewModelFactory
 import com.example.moodle.utils.FontHelper
 import com.example.moodle.ui.whiteboard.WhiteboardActivity
 import com.google.android.material.textfield.TextInputEditText
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var inputUsername: TextInputEditText
@@ -35,10 +35,8 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
         
-        // Get dependency container and create ViewModel using factory
-        val dependencies = (application as MoodleApplication).dependencyContainer
-        val factory = ViewModelFactory(application, dependencies)
-        viewModel = ViewModelProvider(this, factory).get(LoginViewModel::class.java)
+        // Initialize ViewModel using Hilt
+        viewModel = ViewModelProvider(this).get(LoginViewModel::class.java)
 
         initializeViews()
         applyFonts()

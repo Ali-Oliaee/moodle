@@ -16,11 +16,14 @@ import com.example.moodle.ui.whiteboard.models.DrawingTool
 import com.example.moodle.ui.whiteboard.models.PageData
 import com.example.moodle.ui.whiteboard.models.WhiteboardViewState
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
 /**
  * ViewModel for WhiteboardActivity
  * Manages UI state and business logic following MVVM architecture
  * Consolidates functionality from ToolsController, PaginationController, and ImportExportController
+ * Dependencies are injected via Hilt
  * 
  * @param application Application context
  * @param userPreferences UserPreferences for storing settings
@@ -29,7 +32,8 @@ import com.example.moodle.ui.whiteboard.views.WhiteboardView
  * @param importManager ImportManager for importing content
  * @param textRecognitionManager TextRecognitionManager for text recognition functionality
  */
-class WhiteboardViewModel(
+@HiltViewModel
+class WhiteboardViewModel @Inject constructor(
     application: Application,
     private val userPreferences: UserPreferences,
     val pageManager: PageManager,

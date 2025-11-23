@@ -5,7 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.moodle.data.repository.AuthRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
+import javax.inject.Inject
 
 import com.example.moodle.R
 
@@ -21,11 +23,12 @@ data class LoginViewState(
 
 /**
  * ViewModel for Login screen
- * Dependencies are injected via constructor (managed by Koin)
+ * Dependencies are injected via Hilt
  *
  * @param authRepository AuthRepository for handling authentication logic
  */
-class LoginViewModel(
+@HiltViewModel
+class LoginViewModel @Inject constructor(
     application: Application,
     private val authRepository: AuthRepository
 ) : AndroidViewModel(application) {

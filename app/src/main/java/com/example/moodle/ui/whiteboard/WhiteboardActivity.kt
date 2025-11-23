@@ -12,10 +12,8 @@ import android.view.WindowInsetsController
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.ViewModelProvider
-import com.example.moodle.MoodleApplication
 import com.example.moodle.R
 import com.example.moodle.data.datastore.UserPreferences
-import com.example.moodle.di.ViewModelFactory
 import com.example.moodle.ui.login.LoginActivity
 import com.example.moodle.ui.whiteboard.controllers.PopupController
 import com.example.moodle.ui.whiteboard.controllers.RecordingController
@@ -31,12 +29,15 @@ import com.example.moodle.utils.FontHelper
 import com.example.moodle.utils.PermissionManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
  * Main activity for the whiteboard functionality
  * Uses MVVM architecture with WhiteboardViewModel
  * Keeps UI-specific controllers for Android components
  */
+@AndroidEntryPoint
 class WhiteboardActivity : AppCompatActivity() {
 
     // UI Components
@@ -86,8 +87,9 @@ class WhiteboardActivity : AppCompatActivity() {
     // Permission manager
     private lateinit var permissionManager: PermissionManager
     
-    // User preferences
-    private lateinit var userPreferences: UserPreferences
+    // Injected dependencies
+    @Inject
+    lateinit var userPreferences: UserPreferences
     
     // Toolbar visibility state
     private var areToolbarsVisible = true
@@ -98,13 +100,8 @@ class WhiteboardActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Initialize ViewModel with DI
-        val dependencies = (application as MoodleApplication).dependencyContainer
-        val factory = ViewModelFactory(application, dependencies)
-        viewModel = ViewModelProvider(this, factory).get(WhiteboardViewModel::class.java)
-        
-        // Get UserPreferences from dependency container
-        userPreferences = dependencies.userPreferences
+        // Initialize ViewModel using Hilt
+        viewModel = ViewModelProvider(this).get(WhiteboardViewModel::class.java)
         
         setContentView(R.layout.activity_whiteboard)
         
@@ -208,8 +205,8 @@ class WhiteboardActivity : AppCompatActivity() {
             btnPinchMode.alpha = if (enabled) 0.5f else 1.0f
         }
         
-        // Text Recognition Manager - handles ML Kit text recognition
-        textRecognitionManager = TextRecognitionManager(this)
+        // Text Recognition Manager - get from ViewModel (injected by Hilt)
+        textRecognitionManager = viewModel.textRecognitionManager
         
         // Permission Manager - handles runtime permissions
         permissionManager = PermissionManager(this)
