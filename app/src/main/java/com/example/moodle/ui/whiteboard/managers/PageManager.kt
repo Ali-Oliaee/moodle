@@ -147,7 +147,10 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
 
         // If we deleted the current page, navigate to the first available page
         if (currentPageId == pageId) {
-            currentPageId = getPageIds()[replacePageIndex]
+            currentPageId = when(replacePageIndex){
+                -1 -> getPageIds()[0]
+                else -> replacePageIndex
+            }
             saveState()
             pageChangeListener?.onPageChanged(currentPageId, getTotalPages())
         } else saveState()
