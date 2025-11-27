@@ -14,6 +14,7 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import androidx.core.graphics.toColorInt
 
 /**
  * Custom view for whiteboard drawing functionality
@@ -91,9 +92,18 @@ class WhiteboardView @JvmOverloads constructor(
                 stateManager.drawingChangeListener?.onDrawingChanged()
             }
             3 -> section.currentColor = Color.BLACK
-            4 -> section.currentColor = Color.parseColor("#2196F3")  // Blue
-            5 -> section.currentColor = Color.parseColor("#4CAF50")  // Green
-            6 -> section.currentColor = Color.parseColor("#F44336")  // Red
+            4 -> {
+                section.currentColor = "#2196F3".toColorInt()
+                section.currentTool = DrawingTool.PEN
+            }  // Blue
+            5 -> {
+                section.currentColor = "#4CAF50".toColorInt()
+                section.currentTool = DrawingTool.PEN
+            }  // Green
+            6 -> {
+                section.currentColor = "#F44336".toColorInt()
+                section.currentTool = DrawingTool.PEN
+            }  // Red
         }
         invalidate()
     }
@@ -133,10 +143,8 @@ class WhiteboardView @JvmOverloads constructor(
             gestureDetector.onTouchEvent(event)
             
             // Allow panning when not scaling
-            if (!zoomPanController.isScaling) {
-                touchHandler.handlePanningTouch(event)
-            }
-            
+            if (!zoomPanController.isScaling) touchHandler.handlePanningTouch(event)
+
             return true
         }
         
@@ -144,11 +152,9 @@ class WhiteboardView @JvmOverloads constructor(
         gestureDetector.onTouchEvent(event)
         
         // Handle drawing or panning based on mode
-        if (isDrawingMode) {
-            touchHandler.handleDrawingTouch(event, isDrawingMode)
-        } else {
-            touchHandler.handlePanningTouch(event)
-        }
+        if (isDrawingMode) touchHandler.handleDrawingTouch(event, isDrawingMode)
+        else touchHandler.handlePanningTouch(event)
+
         
         return true
     }
@@ -197,10 +203,8 @@ class WhiteboardView @JvmOverloads constructor(
                 it.selectedTextObject = textObject
                 textObject.isSelected = true
             }
-        } else {
-            stateManager.addTextObject(textObject)
-        }
-        
+        } else stateManager.addTextObject(textObject)
+
         stateManager.drawingChangeListener?.onDrawingChanged()
         invalidate()
     }

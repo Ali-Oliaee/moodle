@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Color
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.widget.Button
@@ -213,8 +212,8 @@ class RecordingController(
      */
     private fun updateButtonAppearance() {
         toggleRecordBtn?.apply {
-            if(!isRecording) setBackgroundColor(Color.DKGRAY)
-            else setBackgroundColor(Color.RED)
+            if (!isRecording) setBackgroundResource(R.drawable.circle_button_idle)
+            else setBackgroundResource(R.drawable.circle_button_recording) //TODO: Change to recording icon
         }
     }
     

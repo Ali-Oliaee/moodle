@@ -180,17 +180,7 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
         }
         saveState()
     }
-    
-    fun undoCurrentPage(): Boolean {
-        val currentPage = getCurrentPage()
-        return currentPage.undo() != null
-    }
-    
-    fun redoCurrentPage(): Boolean {
-        val currentPage = getCurrentPage()
-        return currentPage.redo() != null
-    }
-    
+
     private fun loadSavedState() {
         if (userPreferences != null) {
             // Load shared settings

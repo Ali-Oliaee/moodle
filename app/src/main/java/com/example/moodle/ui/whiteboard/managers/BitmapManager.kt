@@ -25,12 +25,9 @@ class BitmapManager {
         
         try {
             // Use smaller canvas multiplier on Android 8+ to avoid hardware acceleration limits
-            val multiplier = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                2f  // 2x screen size for Android 8+
-            } else {
-                3f  // 3x for older versions
-            }
-            
+            val multiplier = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) 2f  // 2x screen size for Android 8+
+            else 3f  // 3x for older versions
+
             val canvasWidth = (w * multiplier).toInt()
             val canvasHeight = (h * multiplier).toInt()
             

@@ -803,8 +803,6 @@ class WhiteboardActivity : AppCompatActivity() {
         if (message.startsWith("exported_") && message.endsWith("_pages")) {
             val count = message.substringAfter("exported_").substringBefore("_pages")
             Toast.makeText(this, getString(R.string.exported_pages, count), Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(this, getString(R.string.export_success), Toast.LENGTH_SHORT).show()
         }
     }
     

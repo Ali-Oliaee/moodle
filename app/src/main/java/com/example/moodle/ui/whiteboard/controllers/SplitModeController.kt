@@ -5,7 +5,6 @@ import com.example.moodle.ui.whiteboard.views.WhiteboardView
 import android.view.View
 import android.widget.ImageButton
 import android.widget.LinearLayout
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.moodle.R
@@ -98,12 +97,6 @@ class SplitModeController(
         bottomToolbar.visibility = View.GONE
         
         onSplitModeChanged?.invoke(true)
-        
-        Toast.makeText(
-            activity,
-            activity.getString(R.string.split_mode_enabled),
-            Toast.LENGTH_SHORT
-        ).show()
     }
     
     /**
@@ -120,12 +113,6 @@ class SplitModeController(
         bottomToolbar.visibility = View.VISIBLE
         
         onSplitModeChanged?.invoke(false)
-        
-        Toast.makeText(
-            activity,
-            activity.getString(R.string.split_mode_disabled),
-            Toast.LENGTH_SHORT
-        ).show()
     }
 }
 

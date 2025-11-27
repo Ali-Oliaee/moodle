@@ -1,6 +1,5 @@
 package com.example.moodle.ui.whiteboard.views
 import com.example.moodle.ui.whiteboard.models.*
-import com.example.moodle.ui.whiteboard.managers.*
 
 import android.content.Context
 import android.graphics.Color
@@ -9,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.*
 import com.example.moodle.R
+import androidx.core.graphics.toColorInt
 
 /**
  * Individual controller widget for each section
@@ -28,7 +28,6 @@ class SectionControllerView @JvmOverloads constructor(
     }
 
     private var sectionId: Int = 0
-    private var studentName: String = ""
     private var listener: OnSectionToolChangeListener? = null
     
     // UI Components
@@ -45,8 +44,7 @@ class SectionControllerView @JvmOverloads constructor(
     // State
     private var currentTool = DrawingTool.PEN
     private var currentColor = Color.BLACK
-    private var isActive = false
-    
+
     init {
         orientation = VERTICAL
         setupView()
@@ -93,13 +91,13 @@ class SectionControllerView @JvmOverloads constructor(
             selectColor(Color.BLACK)
         }
         btnColorBlue.setOnClickListener { 
-            selectColor(Color.parseColor("#2196F3"))
+            selectColor("#2196F3".toColorInt())
         }
         btnColorGreen.setOnClickListener { 
-            selectColor(Color.parseColor("#4CAF50"))
+            selectColor("#4CAF50".toColorInt())
         }
         btnColorRed.setOnClickListener { 
-            selectColor(Color.parseColor("#F44336"))
+            selectColor("#F44336".toColorInt())
         }
         
         // Section selection
@@ -128,9 +126,9 @@ class SectionControllerView @JvmOverloads constructor(
     private fun updateColorButtonSelection() {
         // Reset all color button elevations/alphas
         btnColorBlack.alpha = if (currentColor == Color.BLACK) 1.0f else 0.5f
-        btnColorBlue.alpha = if (currentColor == Color.parseColor("#2196F3")) 1.0f else 0.5f
-        btnColorGreen.alpha = if (currentColor == Color.parseColor("#4CAF50")) 1.0f else 0.5f
-        btnColorRed.alpha = if (currentColor == Color.parseColor("#F44336")) 1.0f else 0.5f
+        btnColorBlue.alpha = if (currentColor == "#2196F3".toColorInt()) 1.0f else 0.5f
+        btnColorGreen.alpha = if (currentColor == "#4CAF50".toColorInt()) 1.0f else 0.5f
+        btnColorRed.alpha = if (currentColor == "#F44336".toColorInt()) 1.0f else 0.5f
     }
 
     private fun updateToolButtons() {

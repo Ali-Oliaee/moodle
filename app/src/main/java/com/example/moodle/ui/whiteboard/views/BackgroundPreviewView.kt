@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.graphics.toColorInt
 
 class BackgroundPreviewView @JvmOverloads constructor(
     context: Context,
@@ -16,21 +17,21 @@ class BackgroundPreviewView @JvmOverloads constructor(
     
     // Paint objects for preview
     private val gridPaint = Paint().apply {
-        color = Color.parseColor("#E0E0E0")
+        color = "#E0E0E0".toColorInt()
         style = Paint.Style.STROKE
         strokeWidth = 1f
         isAntiAlias = true
     }
     
     private val linePaint = Paint().apply {
-        color = Color.parseColor("#D0D0D0")
+        color = "#D0D0D0".toColorInt()
         style = Paint.Style.STROKE
         strokeWidth = 1f
         isAntiAlias = true
     }
     
     private val dotPaint = Paint().apply {
-        color = Color.parseColor("#C0C0C0")
+        color = "#C0C0C0".toColorInt()
         style = Paint.Style.FILL
         isAntiAlias = true
     }
@@ -51,7 +52,7 @@ class BackgroundPreviewView @JvmOverloads constructor(
 
         // Draw border
         val borderPaint = Paint().apply {
-            color = Color.parseColor("#CCCCCC")
+            color = "#CCCCCC".toColorInt()
             style = Paint.Style.STROKE
             strokeWidth = 2f
         }
@@ -59,38 +60,17 @@ class BackgroundPreviewView @JvmOverloads constructor(
 
             // Draw pattern preview
         when (backgroundPattern) {
-            BackgroundPattern.PLAIN -> {
-                // Already drawn white background
-            }
-
-            BackgroundPattern.GRID_SMALL -> {
-                drawGridPreview(canvas, width, height, 8f)
-            }
-
-            BackgroundPattern.GRID_LARGE -> {
-                drawGridPreview(canvas, width, height, 12f)
-            }
-
-            BackgroundPattern.LINES_HORIZONTAL -> {
-                drawHorizontalLinesPreview(canvas, width, height, 8f)
-            }
-
-            BackgroundPattern.LINES_VERTICAL -> {
-                drawVerticalLinesPreview(canvas, width, height, 8f)
-            }
-
+            BackgroundPattern.PLAIN -> {}
+            BackgroundPattern.GRID_SMALL -> drawGridPreview(canvas, width, height, 8f)
+            BackgroundPattern.GRID_LARGE -> drawGridPreview(canvas, width, height, 12f)
+            BackgroundPattern.LINES_HORIZONTAL -> drawHorizontalLinesPreview(canvas, width, height, 8f)
+            BackgroundPattern.LINES_VERTICAL -> drawVerticalLinesPreview(canvas, width, height, 8f)
             BackgroundPattern.LINES_BOTH -> {
                 drawHorizontalLinesPreview(canvas, width, height, 8f)
                 drawVerticalLinesPreview(canvas, width, height, 8f)
             }
-
-            BackgroundPattern.DOT_GRID -> {
-                drawDotGridPreview(canvas, width, height, 8f)
-            }
-
-            BackgroundPattern.GRAPH_PAPER -> {
-                drawGraphPaperPreview(canvas, width, height)
-            }
+            BackgroundPattern.DOT_GRID -> drawDotGridPreview(canvas, width, height, 8f)
+            BackgroundPattern.GRAPH_PAPER -> drawGraphPaperPreview(canvas, width, height)
         }
     }
     
@@ -144,7 +124,7 @@ class BackgroundPreviewView @JvmOverloads constructor(
         
         // Draw small grid
         val lightGridPaint = Paint().apply {
-            color = Color.parseColor("#F0F0F0")
+            color = "#F0F0F0".toColorInt()
             style = Paint.Style.STROKE
             strokeWidth = 0.5f
         }
@@ -164,7 +144,7 @@ class BackgroundPreviewView @JvmOverloads constructor(
         
         // Large grid
         val darkGridPaint = Paint().apply {
-            color = Color.parseColor("#D0D0D0")
+            color = "#D0D0D0".toColorInt()
             style = Paint.Style.STROKE
             strokeWidth = 1f
         }
