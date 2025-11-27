@@ -1,7 +1,6 @@
 package com.example.moodle.utils
 
 import android.Manifest
-import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.result.ActivityResultLauncher
@@ -157,13 +156,6 @@ class PermissionManager(private val activity: AppCompatActivity) {
                 )
             }
         }
-    }
-    
-    /**
-     * Check if the app should show rationale for a permission
-     */
-    fun shouldShowRequestPermissionRationale(permission: String): Boolean {
-        return activity.shouldShowRequestPermissionRationale(permission)
     }
 }
 
