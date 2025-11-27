@@ -263,23 +263,15 @@ class WhiteboardView @JvmOverloads constructor(
 
     // Undo/Redo/Clear operations
     fun undo() {
-        if (sectionManager.isSplitModeEnabled() && touchHandler.currentActiveSection != null) {
-            touchHandler.currentActiveSection!!.undo()
-        } else {
-            stateManager.undo()
-            renderManager.redrawCanvas()
-        }
+        stateManager.undo()
+        renderManager.redrawCanvas()
         stateManager.drawingChangeListener?.onDrawingChanged()
             invalidate()
     }
 
     fun redo() {
-        if (sectionManager.isSplitModeEnabled() && touchHandler.currentActiveSection != null) {
-            touchHandler.currentActiveSection!!.redo()
-        } else {
-            stateManager.redo()
-            renderManager.redrawCanvas()
-        }
+        stateManager.redo()
+        renderManager.redrawCanvas()
         stateManager.drawingChangeListener?.onDrawingChanged()
             invalidate()
     }

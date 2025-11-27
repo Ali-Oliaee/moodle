@@ -272,7 +272,6 @@ class TouchGestureHandler(
                     val sectionPaint = paintHelper.getPaintForSection(pointerSection.currentTool, pointerSection.currentColor, pointerSection.currentStrokeWidth)
                     val drawingPath = DrawingPath(pathCopy, sectionPaint, pointerSection.currentTool)
                     pointerSection.paths.add(drawingPath)
-                    pointerSection.undoStack.clear()
                 }
                 pointerSectionMap.remove(pointerId)
             } else {

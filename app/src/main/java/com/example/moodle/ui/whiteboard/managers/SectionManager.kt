@@ -33,30 +33,12 @@ class SectionManager {
         
         // Drawing data for this section
         val paths: MutableList<DrawingPath> = mutableListOf(),
-        val undoStack: MutableList<DrawingPath> = mutableListOf(),
         val textObjects: MutableList<TextObject> = mutableListOf(),
         var selectedTextObject: TextObject? = null
     ) {
-        fun canUndo(): Boolean = paths.isNotEmpty()
-        fun canRedo(): Boolean = undoStack.isNotEmpty()
-        
-        fun undo() {
-            if (canUndo()) {
-                val lastPath = paths.removeAt(paths.size - 1)
-                undoStack.add(lastPath)
-            }
-        }
-        
-        fun redo() {
-            if (canRedo()) {
-                val pathToRedo = undoStack.removeAt(undoStack.size - 1)
-                paths.add(pathToRedo)
-            }
-        }
-        
+
         fun clear() {
             paths.clear()
-            undoStack.clear()
             textObjects.clear()
             selectedTextObject = null
         }
