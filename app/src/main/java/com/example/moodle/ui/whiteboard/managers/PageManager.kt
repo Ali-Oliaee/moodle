@@ -139,15 +139,6 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
         }
     }
     
-    fun updateSharedBackgroundColor(color: BackgroundColor) {
-        sharedBackgroundColor = color
-        userPreferences?.saveSharedBackgroundColor(color.id)
-        // Update background color for all existing pages
-        pages.values.forEach { page ->
-            page.backgroundColor = color
-        }
-    }
-    
     fun deletePage(pageId: Int): Boolean {
         if (pages.size <= 1 || !pages.containsKey(pageId)) return false
         
@@ -235,10 +226,5 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
             prefs.saveSharedBackgroundPattern(sharedBackgroundPattern.id)
             prefs.saveSharedBackgroundColor(sharedBackgroundColor.id)
         }
-    }
-    
-    // Update navigation methods to save state
-    private fun saveStateAfterNavigation() {
-        saveState()
     }
 }

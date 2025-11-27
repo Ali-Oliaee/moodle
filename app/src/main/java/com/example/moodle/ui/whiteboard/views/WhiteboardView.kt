@@ -229,8 +229,6 @@ class WhiteboardView @JvmOverloads constructor(
         isPinchModeEnabled = enabled
     }
 
-    fun isPinchModeEnabled(): Boolean = isPinchModeEnabled
-    
     // Background pattern
     fun setBackgroundPattern(pattern: BackgroundPattern) {
         renderManager.setBackgroundPattern(pattern)
@@ -247,26 +245,12 @@ class WhiteboardView @JvmOverloads constructor(
         invalidate()
     }
     
-    fun getBackgroundColor(): BackgroundColor = renderManager.getBackgroundColor()
-    
     // Background image
     fun setBackgroundImage(bitmap: Bitmap?) {
         renderManager.setBackgroundImage(bitmap)
         renderManager.redrawCanvas()
         invalidate()
     }
-    
-    fun getBackgroundImage(): Bitmap? = renderManager.getBackgroundImage()
-    
-    // Zoom controls
-    fun setZoomLevel(zoomLevel: Float) {
-        zoomPanController.setZoomLevel(zoomLevel)
-        invalidate()
-    }
-    
-    fun getZoomLevel(): Float = zoomPanController.scaleFactor
-    fun getMinZoomLevel(): Float = zoomPanController.minScaleFactor
-    fun getMaxZoomLevel(): Float = 5.0f
     
     // Coordinate conversion
     fun getVisibleCanvasCenterX(): Float {
@@ -311,22 +295,6 @@ class WhiteboardView @JvmOverloads constructor(
         invalidate()
     }
 
-    fun canUndo(): Boolean {
-        return if (sectionManager.isSplitModeEnabled() && touchHandler.currentActiveSection != null) {
-            touchHandler.currentActiveSection!!.canUndo()
-            } else {
-            stateManager.paths.isNotEmpty()
-        }
-    }
-
-    fun canRedo(): Boolean {
-        return if (sectionManager.isSplitModeEnabled() && touchHandler.currentActiveSection != null) {
-            touchHandler.currentActiveSection!!.canRedo()
-                } else {
-            stateManager.canRedo()
-        }
-    }
-
     // Split mode management
     fun enableSplitMode(numberOfSections: Int) {
         sectionManager.enableSplitMode(numberOfSections)
@@ -338,81 +306,6 @@ class WhiteboardView @JvmOverloads constructor(
         touchHandler.currentActiveSection = null
         invalidate()
     }
-    
-    fun isSplitModeEnabled(): Boolean = sectionManager.isSplitModeEnabled()
-    
-    fun getAllSections(): List<SectionManager.Section> = sectionManager.getAllSections()
-    
-    fun setActiveSection(sectionId: Int) {
-        val section = sectionManager.getAllSections().find { it.id == sectionId }
-        touchHandler.currentActiveSection = section
-        sectionManager.setActiveSection(section)
-        
-        section?.let {
-            stateManager.currentTool = it.currentTool
-            stateManager.currentColor = it.currentColor
-            stateManager.currentStrokeWidth = it.currentStrokeWidth
-        }
-        invalidate()
-    }
-    
-    fun getActiveSection(): SectionManager.Section? = touchHandler.currentActiveSection
-    
-    fun updateSectionTool(sectionId: Int, tool: DrawingTool) {
-        val section = sectionManager.getAllSections().find { it.id == sectionId }
-        section?.currentTool = tool
-        if (section == touchHandler.currentActiveSection) {
-            stateManager.currentTool = tool
-        }
-    }
-    
-    fun updateSectionColor(sectionId: Int, color: Int) {
-        val section = sectionManager.getAllSections().find { it.id == sectionId }
-        section?.currentColor = color
-        if (section == touchHandler.currentActiveSection) {
-            stateManager.currentColor = color
-        }
-    }
-    
-    fun updateSectionStrokeWidth(sectionId: Int, width: Float) {
-        val section = sectionManager.getAllSections().find { it.id == sectionId }
-        section?.currentStrokeWidth = width
-        if (section == touchHandler.currentActiveSection) {
-            stateManager.currentStrokeWidth = width
-        }
-    }
-    
-    fun undoSection(sectionId: Int) {
-        val section = sectionManager.getAllSections().find { it.id == sectionId }
-        section?.undo()
-        stateManager.drawingChangeListener?.onDrawingChanged()
-        invalidate()
-    }
-    
-    fun redoSection(sectionId: Int) {
-        val section = sectionManager.getAllSections().find { it.id == sectionId }
-        section?.redo()
-        stateManager.drawingChangeListener?.onDrawingChanged()
-        invalidate()
-    }
-    
-    fun clearSection(sectionId: Int) {
-        val section = sectionManager.getAllSections().find { it.id == sectionId }
-        section?.clear()
-        stateManager.drawingChangeListener?.onDrawingChanged()
-        invalidate()
-    }
-    
-    fun clearAllSections() {
-        sectionManager.clearAllSections()
-        stateManager.drawingChangeListener?.onDrawingChanged()
-        invalidate()
-    }
-
-    // Getters for current state
-    fun getCurrentTool(): DrawingTool = stateManager.currentTool
-    fun getCurrentColor(): Int = stateManager.currentColor
-    fun getCurrentStrokeWidth(): Float = stateManager.currentStrokeWidth
     
     // Page management
     fun getAllPaths(): List<DrawingPath> = stateManager.paths.toList()

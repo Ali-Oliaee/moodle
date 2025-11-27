@@ -2,7 +2,6 @@ package com.example.moodle.ui.whiteboard.managers
 import com.example.moodle.ui.whiteboard.models.*
 import com.example.moodle.ui.whiteboard.listeners.*
 
-import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
@@ -66,18 +65,6 @@ class DrawingStateManager {
     var initialImageScaleX = 1f
     var initialImageScaleY = 1f
     var initialImageRotation = 0f
-    
-    // Active drawing paths (multi-touch support)
-    val activePaths = mutableMapOf<Int, Path>()
-    val activePathsLastX = mutableMapOf<Int, Float>()
-    val activePathsLastY = mutableMapOf<Int, Float>()
-    
-    // Selection state
-    var selectionStartX = 0f
-    var selectionStartY = 0f
-    var selectionEndX = 0f
-    var selectionEndY = 0f
-    var isSelecting = false
     
     /**
      * Add a completed drawing path
@@ -221,77 +208,6 @@ class DrawingStateManager {
         shapeObjects.clear()
         imageObjects.clear()
         deselectAll()
-    }
-    
-    /**
-     * Draw all objects to canvas
-     */
-    fun drawObjectsToCanvas(canvas: Canvas) {
-        // Draw text objects
-        for (textObject in textObjects) {
-            textObject.draw(canvas)
-        }
-        
-        // Draw shape objects
-        for (shapeObject in shapeObjects) {
-            shapeObject.draw(canvas)
-        }
-        
-        // Draw image objects
-        for (imageObject in imageObjects) {
-            imageObject.draw(canvas)
-        }
-    }
-    
-    /**
-     * Redraw all paths to a bitmap canvas
-     */
-    fun redrawPathsToBitmapCanvas(canvas: Canvas?) {
-        canvas?.let { c ->
-            for (drawingPath in paths) {
-                if (drawingPath.tool == DrawingTool.TEXT && drawingPath.text != null) {
-                    c.drawText(drawingPath.text, drawingPath.textX, drawingPath.textY, drawingPath.paint)
-                } else {
-                    c.drawPath(drawingPath.path, drawingPath.paint)
-                }
-            }
-        }
-    }
-    
-    /**
-     * Get all paths
-     */
-    fun getAllPaths(): List<DrawingPath> = paths.toList()
-    
-    /**
-     * Get all text objects
-     */
-    fun getAllTextObjects(): List<TextObject> = textObjects.toList()
-    
-    /**
-     * Get all shape objects
-     */
-    fun getAllShapeObjects(): List<ShapeObject> = shapeObjects.toList()
-    
-    /**
-     * Get all image objects
-     */
-    fun getAllImageObjects(): List<ImageObject> = imageObjects.toList()
-    
-    /**
-     * Load page data
-     */
-    fun loadPageData(
-        pagePaths: List<DrawingPath>,
-        pageTextObjects: List<TextObject>,
-        pageShapeObjects: List<ShapeObject>,
-        pageImageObjects: List<ImageObject>
-    ) {
-        clear()
-        paths.addAll(pagePaths)
-        textObjects.addAll(pageTextObjects)
-        shapeObjects.addAll(pageShapeObjects)
-        imageObjects.addAll(pageImageObjects)
     }
     
     // Touch handling methods (to be called from TouchGestureHandler)

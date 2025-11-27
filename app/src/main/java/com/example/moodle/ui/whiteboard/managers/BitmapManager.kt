@@ -73,34 +73,6 @@ class BitmapManager {
     }
     
     /**
-     * Get the drawing bitmap
-     */
-    fun getBitmap(): Bitmap? = drawingBitmap
-    
-    /**
-     * Get the drawing canvas
-     */
-    fun getCanvas(): Canvas? = drawingCanvas
-    
-    /**
-     * Get bitmap width
-     */
-    fun getWidth(): Float = drawingBitmap?.width?.toFloat() ?: 0f
-    
-    /**
-     * Get bitmap height
-     */
-    fun getHeight(): Float = drawingBitmap?.height?.toFloat() ?: 0f
-    
-    /**
-     * Check if bitmap is valid
-     */
-    fun isValid(): Boolean {
-        return drawingBitmap != null && !drawingBitmap!!.isRecycled && 
-               drawingBitmap!!.width > 0 && drawingBitmap!!.height > 0
-    }
-    
-    /**
      * Clean up and recycle bitmap
      */
     fun cleanup() {

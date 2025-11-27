@@ -127,10 +127,5 @@ class SplitModeController(
             Toast.LENGTH_SHORT
         ).show()
     }
-    
-    /**
-     * Check if split mode is active
-     */
-    fun isSplitMode(): Boolean = isSplitMode
 }
 

@@ -1,9 +1,6 @@
 package com.example.moodle.ui.whiteboard.views
 import com.example.moodle.ui.whiteboard.models.*
 import com.example.moodle.ui.whiteboard.managers.*
-import com.example.moodle.ui.whiteboard.controllers.*
-import com.example.moodle.ui.whiteboard.listeners.*
-import com.example.moodle.ui.whiteboard.utils.*
 
 import android.content.Context
 import android.graphics.Color
@@ -11,7 +8,6 @@ import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.*
-import androidx.appcompat.app.AlertDialog
 import com.example.moodle.R
 
 /**
@@ -136,47 +132,7 @@ class SectionControllerView @JvmOverloads constructor(
         btnColorGreen.alpha = if (currentColor == Color.parseColor("#4CAF50")) 1.0f else 0.5f
         btnColorRed.alpha = if (currentColor == Color.parseColor("#F44336")) 1.0f else 0.5f
     }
-    
-    fun setSectionInfo(id: Int, name: String) {
-        sectionId = id
-        studentName = name
-        sectionLabel.text = name
-    }
-    
-    fun setListener(listener: OnSectionToolChangeListener?) {
-        this.listener = listener
-    }
-    
-    
-    fun setActive(active: Boolean) {
-        isActive = active
-        // All sections are always active in concurrent mode
-        // Use a consistent, ready-to-use appearance
-        val backgroundColor = Color.parseColor("#F8F9FA") // Light, clean background
-        setBackgroundColor(backgroundColor)
-        
-        // Use consistent text color
-        sectionLabel.setTextColor(Color.parseColor("#495057")) // Dark gray for readability
-    }
-    
-    fun getCurrentTool(): DrawingTool = currentTool
-    fun getCurrentColor(): Int = currentColor
-    
-    fun getSectionInfo(): Pair<Int, String> = Pair(sectionId, studentName)
-    
-    fun updateFromSection(section: SectionManager.Section) {
-        // Update tool selection
-        when (section.currentTool) {
-            DrawingTool.PEN -> selectTool(DrawingTool.PEN, btnPen)
-            DrawingTool.ERASER -> selectTool(DrawingTool.ERASER, btnEraser)
-            DrawingTool.TEXT -> selectTool(DrawingTool.TEXT, btnText)
-            else -> selectTool(DrawingTool.PEN, btnPen)
-        }
-        
-        // Update color
-        selectColor(section.currentColor)
-    }
-    
+
     private fun updateToolButtons() {
         // Initial state - pen selected
         btnPen.isSelected = true

@@ -531,42 +531,6 @@ class ExportManager(private val context: Context) {
     }
     
     /**
-     * Serialize Section to JSON
-     */
-    private fun serializeSection(section: SectionManager.Section): JSONObject {
-        val sectionObj = JSONObject()
-        sectionObj.put("id", section.id)
-        sectionObj.put("studentName", section.studentName)
-        sectionObj.put("currentTool", section.currentTool.name)
-        sectionObj.put("currentColor", section.currentColor)
-        sectionObj.put("currentStrokeWidth", section.currentStrokeWidth.toDouble())
-        
-        // Serialize bounds
-        val boundsObj = JSONObject()
-        boundsObj.put("left", section.bounds.left.toDouble())
-        boundsObj.put("top", section.bounds.top.toDouble())
-        boundsObj.put("right", section.bounds.right.toDouble())
-        boundsObj.put("bottom", section.bounds.bottom.toDouble())
-        sectionObj.put("bounds", boundsObj)
-        
-        // Serialize paths
-        val pathsArray = JSONArray()
-        for (path in section.paths) {
-            pathsArray.put(serializeDrawingPath(path))
-        }
-        sectionObj.put("paths", pathsArray)
-        
-        // Serialize text objects
-        val textArray = JSONArray()
-        for (textObj in section.textObjects) {
-            textArray.put(serializeTextObject(textObj))
-        }
-        sectionObj.put("textObjects", textArray)
-        
-        return sectionObj
-    }
-    
-    /**
      * Serialize Page to JSON
      */
     private fun serializePage(page: PageData): JSONObject {

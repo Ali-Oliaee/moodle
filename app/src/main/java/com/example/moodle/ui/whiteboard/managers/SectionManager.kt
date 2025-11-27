@@ -79,22 +79,7 @@ class SectionManager {
     private var boardWidth = 0f
     private var boardHeight = 0f
     private var currentActiveSection: Section? = null
-    
-    // Paint for drawing section borders - solid divider lines
-    private val sectionBorderPaint = Paint().apply {
-        color = Color.parseColor("#333333")
-        style = Paint.Style.STROKE
-        strokeWidth = 4f
-        // Remove dashed effect for clear solid lines
-    }
-    
-    // Paint for section labels
-    private val sectionLabelPaint = Paint().apply {
-        color = Color.BLUE
-        textSize = 24f
-        isAntiAlias = true
-        textAlign = Paint.Align.CENTER
-    }
+
     
     // Paint for section background (light tint to distinguish sections)
     private val sectionBackgroundPaint = Paint().apply {
@@ -103,35 +88,18 @@ class SectionManager {
     }
     
     fun setBoardDimensions(width: Float, height: Float) {
-        android.util.Log.d("SectionManager", "setBoardDimensions: $width x $height, isSplitMode=$isSplitMode")
         boardWidth = width
         boardHeight = height
-        if (isSplitMode) {
-            android.util.Log.d("SectionManager", "Recalculating sections...")
-            recalculateSections()
-        }
+        if (isSplitMode) recalculateSections()
     }
     
     fun enableSplitMode(numberOfSections: Int) {
-        android.util.Log.d("SectionManager", "enableSplitMode called with $numberOfSections sections, board: $boardWidth x $boardHeight")
-        
-        if (numberOfSections < 2 || numberOfSections > 6) {
-            Log.w("SectionManager", "Invalid number of sections: $numberOfSections. Must be between 2 and 6.")
-            return
-        }
-        
-        if (boardWidth == 0f || boardHeight == 0f) {
-            Log.e("SectionManager", "ERROR: Cannot enable split mode - board dimensions not set!")
-            return
-        }
-        
+        if (numberOfSections < 2 || numberOfSections > 6) return
+
+        if (boardWidth == 0f || boardHeight == 0f) return
+
         isSplitMode = true
         createSections(numberOfSections)
-        
-        // Log section bounds for debugging
-        sections.forEach { section ->
-            Log.d("SectionManager", "Section ${section.id}: bounds=${section.bounds}, drawing=${section.drawingBounds}, control=${section.controlBounds}")
-        }
     }
     
     fun disableSplitMode() {
@@ -269,8 +237,6 @@ class SectionManager {
         currentActiveSection = section
     }
     
-    fun getActiveSection(): Section? = currentActiveSection
-    
     // Get section by touch coordinates - for concurrent drawing
     fun getSectionForDrawing(x: Float, y: Float): Section? {
         return getSectionAt(x, y)
@@ -326,43 +292,5 @@ class SectionManager {
     
     fun clearAllSections() {
         sections.forEach { it.clear() }
-    }
-    
-    fun clearSection(sectionId: Int) {
-        sections.find { it.id == sectionId }?.clear()
-    }
-    
-    // Convert global coordinates to section-local coordinates
-    fun globalToLocal(section: Section, globalX: Float, globalY: Float): Pair<Float, Float> {
-        return Pair(
-            globalX - section.bounds.left,
-            globalY - section.bounds.top
-        )
-    }
-    
-    // Convert section-local coordinates to global coordinates
-    fun localToGlobal(section: Section, localX: Float, localY: Float): Pair<Float, Float> {
-        return Pair(
-            localX + section.bounds.left,
-            localY + section.bounds.top
-        )
-    }
-    
-    // Check if a path is within section bounds
-    fun isPathInSection(section: Section, path: Path): Boolean {
-        val pathBounds = RectF()
-        path.computeBounds(pathBounds, true)
-        return section.bounds.contains(pathBounds)
-    }
-    
-    // Clip a path to section bounds
-    fun clipPathToSection(section: Section, path: Path): Path {
-        val clippedPath = Path()
-        val sectionPath = Path().apply {
-            addRect(section.bounds, Path.Direction.CW)
-        }
-        
-        clippedPath.op(path, sectionPath, Path.Op.INTERSECT)
-        return clippedPath
     }
 }

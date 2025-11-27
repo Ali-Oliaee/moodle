@@ -355,20 +355,6 @@ class WhiteboardViewModel @Inject constructor(
     }
     
     /**
-     * Undo on current page
-     */
-    fun undoCurrentPage(): Boolean {
-        return pageManager.undoCurrentPage()
-    }
-    
-    /**
-     * Redo on current page
-     */
-    fun redoCurrentPage(): Boolean {
-        return pageManager.redoCurrentPage()
-    }
-    
-    /**
      * Update undo/redo state
      */
     fun updateUndoRedoState(canUndo: Boolean, canRedo: Boolean) {
