@@ -126,9 +126,7 @@ class TouchGestureHandler(
                 pointerSectionMap[pointerId] = touchedSection
                 currentActiveSection = touchedSection
                 sectionManager.setActiveSection(touchedSection)
-            } else {
-                return
-            }
+            } else return
         }
         
         // Get coordinates for actual drawing

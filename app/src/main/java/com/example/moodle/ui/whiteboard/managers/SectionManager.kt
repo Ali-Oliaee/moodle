@@ -2,7 +2,6 @@ package com.example.moodle.ui.whiteboard.managers
 import com.example.moodle.ui.whiteboard.models.*
 
 import android.graphics.*
-import android.util.Log
 
 /**
  * Manages board sections for split whiteboard functionality
@@ -24,8 +23,7 @@ class SectionManager {
         val bounds: RectF,               // Total section bounds
         val drawingBounds: RectF,        // Area for drawing (top part)
         val controlBounds: RectF,        // Control toolbar at bottom
-        val studentName: String = "Section $id",
-        
+
         // Tool state for this section
         var currentTool: DrawingTool = DrawingTool.PEN,
         var currentColor: Int = Color.BLACK,
@@ -102,14 +100,11 @@ class SectionManager {
                     bounds = RectF((i - 1) * width, 0f, i * width, boardHeight),
                     drawingBounds = RectF((i - 1) * width, 0f, i * width, boardHeight - CONTROL_TOOLBAR_HEIGHT),
                     controlBounds = RectF((i - 1) * width, boardHeight - CONTROL_TOOLBAR_HEIGHT, i * width, boardHeight),
-                    studentName = "Section $i"
                 ))
             }
         }
         else if (count == 4) create4Sections()
         else create6Sections()
-        
-        Log.d("SectionManager", "Created $count sections")
     }
     
     private fun create4Sections() {
@@ -121,7 +116,6 @@ class SectionManager {
             bounds = RectF(0f, 0f, halfWidth, halfHeight),
             drawingBounds = RectF(0f, 0f, halfWidth, halfHeight - CONTROL_TOOLBAR_HEIGHT),
             controlBounds = RectF(0f, halfHeight - CONTROL_TOOLBAR_HEIGHT, halfWidth, halfHeight),
-            studentName = "Section 1"
         ))
         
         sections.add(Section(
@@ -129,7 +123,6 @@ class SectionManager {
             bounds = RectF(halfWidth, 0f, boardWidth, halfHeight),
             drawingBounds = RectF(halfWidth, 0f, boardWidth, halfHeight - CONTROL_TOOLBAR_HEIGHT),
             controlBounds = RectF(halfWidth, halfHeight - CONTROL_TOOLBAR_HEIGHT, boardWidth, halfHeight),
-            studentName = "Section 2"
         ))
         
         sections.add(Section(
@@ -137,7 +130,6 @@ class SectionManager {
             bounds = RectF(0f, halfHeight, halfWidth, boardHeight),
             drawingBounds = RectF(0f, halfHeight, halfWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
             controlBounds = RectF(0f, boardHeight - CONTROL_TOOLBAR_HEIGHT, halfWidth, boardHeight),
-            studentName = "Section 3"
         ))
         
         sections.add(Section(
@@ -145,7 +137,6 @@ class SectionManager {
             bounds = RectF(halfWidth, halfHeight, boardWidth, boardHeight),
             drawingBounds = RectF(halfWidth, halfHeight, boardWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
             controlBounds = RectF(halfWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT, boardWidth, boardHeight),
-            studentName = "Section 4"
         ))
     }
     
@@ -158,7 +149,6 @@ class SectionManager {
             bounds = RectF(0f, 0f, thirdWidth, halfHeight),
             drawingBounds = RectF(0f, 0f, thirdWidth, halfHeight - CONTROL_TOOLBAR_HEIGHT),
             controlBounds = RectF(0f, halfHeight - CONTROL_TOOLBAR_HEIGHT, thirdWidth, halfHeight),
-            studentName = "Section 1"
         ))
         
         sections.add(Section(
@@ -166,7 +156,6 @@ class SectionManager {
             bounds = RectF(thirdWidth, 0f, thirdWidth * 2f, halfHeight),
             drawingBounds = RectF(thirdWidth, 0f, thirdWidth * 2f, halfHeight - CONTROL_TOOLBAR_HEIGHT),
             controlBounds = RectF(thirdWidth, halfHeight - CONTROL_TOOLBAR_HEIGHT, thirdWidth * 2f, halfHeight),
-            studentName = "Section 2"
         ))
         
         sections.add(Section(
@@ -174,7 +163,6 @@ class SectionManager {
             bounds = RectF(thirdWidth * 2f, 0f, boardWidth, halfHeight),
             drawingBounds = RectF(thirdWidth * 2f, 0f, boardWidth, halfHeight - CONTROL_TOOLBAR_HEIGHT),
             controlBounds = RectF(thirdWidth * 2f, halfHeight - CONTROL_TOOLBAR_HEIGHT, boardWidth, halfHeight),
-            studentName = "Section 3"
         ))
         
         sections.add(Section(
@@ -182,7 +170,6 @@ class SectionManager {
             bounds = RectF(0f, halfHeight, thirdWidth, boardHeight),
             drawingBounds = RectF(0f, halfHeight, thirdWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
             controlBounds = RectF(0f, boardHeight - CONTROL_TOOLBAR_HEIGHT, thirdWidth, boardHeight),
-            studentName = "Section 4"
         ))
         
         sections.add(Section(
@@ -190,7 +177,6 @@ class SectionManager {
             bounds = RectF(thirdWidth, halfHeight, thirdWidth * 2f, boardHeight),
             drawingBounds = RectF(thirdWidth, halfHeight, thirdWidth * 2f, boardHeight - CONTROL_TOOLBAR_HEIGHT),
             controlBounds = RectF(thirdWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT, thirdWidth * 2f, boardHeight),
-            studentName = "Section 5"
         ))
         
         sections.add(Section(
@@ -198,7 +184,6 @@ class SectionManager {
             bounds = RectF(thirdWidth * 2f, halfHeight, boardWidth, boardHeight),
             drawingBounds = RectF(thirdWidth * 2f, halfHeight, boardWidth, boardHeight - CONTROL_TOOLBAR_HEIGHT),
             controlBounds = RectF(thirdWidth * 2f, boardHeight - CONTROL_TOOLBAR_HEIGHT, boardWidth, boardHeight),
-            studentName = "Section 6"
         ))
     }
     
@@ -270,9 +255,5 @@ class SectionManager {
                 )
             }
         }
-    }
-    
-    fun clearAllSections() {
-        sections.forEach { it.clear() }
     }
 }
