@@ -213,7 +213,7 @@ class RecordingController(
     private fun updateButtonAppearance() {
         toggleRecordBtn?.apply {
             if (!isRecording) setBackgroundResource(R.drawable.circle_button_idle)
-            else setBackgroundResource(R.drawable.circle_button_recording) //TODO: Change to recording icon
+            else setBackgroundResource(R.drawable.circle_button_recording) 
         }
     }
     

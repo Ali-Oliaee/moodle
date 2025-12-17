@@ -31,14 +31,10 @@ class SectionManager {
         
         // Drawing data for this section
         val paths: MutableList<DrawingPath> = mutableListOf(),
-        val textObjects: MutableList<TextObject> = mutableListOf(),
-        var selectedTextObject: TextObject? = null
     ) {
 
         fun clear() {
             paths.clear()
-            textObjects.clear()
-            selectedTextObject = null
         }
         
         fun contains(x: Float, y: Float): Boolean {

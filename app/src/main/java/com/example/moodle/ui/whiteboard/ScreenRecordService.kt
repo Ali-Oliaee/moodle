@@ -67,9 +67,7 @@ class ScreenRecordService : Service() {
                 buildNotification("Recording…"),
                 android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
             )
-        } else {
-            startForeground(NOTIF_ID, buildNotification("Recording…"))
-        }
+        } else startForeground(NOTIF_ID, buildNotification("Recording…"))
 
         val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, -1)
         val data = intent.getParcelableExtra<Intent>(EXTRA_DATA_INTENT)
