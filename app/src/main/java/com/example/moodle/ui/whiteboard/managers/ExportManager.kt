@@ -2,11 +2,14 @@ package com.example.moodle.ui.whiteboard.managers
 import com.example.moodle.ui.whiteboard.models.*
 import com.example.moodle.ui.whiteboard.views.*
 
+import android.content.ContentValues
 import android.content.Context
 import android.graphics.*
+import android.os.Build
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.provider.MediaStore
 import android.util.Base64
 import android.widget.Toast
 import com.example.moodle.R
@@ -27,8 +30,18 @@ class ExportManager(private val context: Context) {
     
     companion object {
         private const val EXPORT_FOLDER = "MoodleWhiteboard"
+        // Note: For PNG, quality is ignored by Bitmap.compress().
         private const val PNG_QUALITY = 90
         private const val CUSTOM_FORMAT_VERSION = "1.0"
+        
+        // For display purposes - actual location depends on Android version
+        private fun getExportLocationMessage(): String {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                "Pictures/MoodleWhiteboard/" // Android 10+ uses Pictures for images
+            } else {
+                "Downloads/MoodleWhiteboard/" // Below Android 10 uses Downloads
+            }
+        }
     }
     
     /**
@@ -52,10 +65,13 @@ class ExportManager(private val context: Context) {
             
             if (file != null) {
                 onSuccess(file)
-                Toast.makeText(context, context.getString(R.string.export_png_success), Toast.LENGTH_LONG).show()
-            } else {
-                onError(context.getString(R.string.export_png_failed))
-            }
+                val location = getExportLocationMessage()
+                Toast.makeText(
+                    context, 
+                    context.getString(R.string.export_png_success_location, location), 
+                    Toast.LENGTH_LONG
+                ).show()
+            } else onError(context.getString(R.string.export_png_failed))
         } catch (e: Exception) {
             onError(context.getString(R.string.export_error, e.message))
         }
@@ -85,9 +101,10 @@ class ExportManager(private val context: Context) {
                 
                 if (exportedFiles.isNotEmpty()) {
                     onSuccess(exportedFiles)
+                    val location = getExportLocationMessage()
                     Toast.makeText(
                         context, 
-                        context.getString(R.string.export_multiple_pages_success, exportedFiles.size), 
+                        context.getString(R.string.export_multiple_pages_success_location, exportedFiles.size, location), 
                         Toast.LENGTH_LONG
                     ).show()
                 } else {
@@ -210,18 +227,7 @@ class ExportManager(private val context: Context) {
             }
             currentPageData.put("imageObjects", imagesArray)
             
-            // Export split mode data if enabled
-            if (whiteboardView.isSplitModeEnabled()) {
-                val sectionsArray = JSONArray()
-                for (section in whiteboardView.getAllSections()) {
-                    val sectionData = serializeSection(section)
-                    sectionsArray.put(sectionData)
-                }
-                currentPageData.put("sections", sectionsArray)
-                currentPageData.put("splitModeEnabled", true)
-            } else {
-                currentPageData.put("splitModeEnabled", false)
-            }
+            currentPageData.put("splitModeEnabled", false)
             
             exportData.put("currentPage", currentPageData)
             
@@ -253,10 +259,12 @@ class ExportManager(private val context: Context) {
             
             if (file != null) {
                 onSuccess(file)
-                Toast.makeText(context, context.getString(R.string.export_custom_success), Toast.LENGTH_LONG).show()
-            } else {
-                onError(context.getString(R.string.export_custom_failed))
-            }
+                Toast.makeText(
+                    context, 
+                    context.getString(R.string.export_custom_success_location, "Downloads/MoodleWhiteboard/"), 
+                    Toast.LENGTH_LONG
+                ).show()
+            } else onError(context.getString(R.string.export_custom_failed))
         } catch (e: Exception) {
             onError(context.getString(R.string.export_error, e.message))
         }
@@ -284,44 +292,136 @@ class ExportManager(private val context: Context) {
     
     /**
      * Save bitmap to PNG file
+     * Uses MediaStore API for Android 10+ (scoped storage)
      */
     private fun saveBitmapToFile(bitmap: Bitmap, filename: String): File? {
         return try {
-            val exportDir = getExportDirectory()
-            if (!exportDir.exists()) {
-                exportDir.mkdirs()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Android 10+ - Use MediaStore API
+                saveBitmapUsingMediaStore(bitmap, filename)
+            } else {
+                // Below Android 10 - Use legacy file API
+                saveBitmapLegacy(bitmap, filename)
             }
-            
-            val file = File(exportDir, filename)
-            val outputStream = FileOutputStream(file)
-            
-            bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, outputStream)
-            outputStream.flush()
-            outputStream.close()
-            
-            file
-        } catch (e: IOException) {
+        } catch (e: Exception) {
+            e.printStackTrace()
             null
         }
     }
     
     /**
+     * Save bitmap using MediaStore API (Android 10+)
+     * Images must be saved to Pictures directory, not Downloads
+     */
+    private fun saveBitmapUsingMediaStore(bitmap: Bitmap, filename: String): File? {
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+            // Images can only be saved to Pictures or DCIM, not Downloads
+            put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/$EXPORT_FOLDER")
+            put(MediaStore.Images.Media.IS_PENDING, 1)
+        }
+        
+        val resolver = context.contentResolver
+        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+            ?: return null
+        
+        return try {
+            resolver.openOutputStream(uri)?.use { outputStream ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, outputStream)
+            }
+            
+            contentValues.clear()
+            contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
+            resolver.update(uri, contentValues, null, null)
+            
+            // Return a File representation for compatibility
+            File("${Environment.DIRECTORY_PICTURES}/$EXPORT_FOLDER", filename)
+        } catch (e: IOException) {
+            resolver.delete(uri, null, null)
+            null
+        }
+    }
+    
+    /**
+     * Save bitmap using legacy file API (Below Android 10)
+     */
+    private fun saveBitmapLegacy(bitmap: Bitmap, filename: String): File? {
+        val exportDir = getExportDirectory()
+        if (!exportDir.exists()) exportDir.mkdirs()
+        
+        val file = File(exportDir, filename)
+        val outputStream = FileOutputStream(file)
+        
+        bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, outputStream)
+        outputStream.flush()
+        outputStream.close()
+        
+        return file
+    }
+    
+    /**
      * Save JSON string to file
+     * Uses MediaStore API for Android 10+ (scoped storage)
      */
     private fun saveJsonToFile(jsonString: String, filename: String): File? {
         return try {
-            val exportDir = getExportDirectory()
-            if (!exportDir.exists()) {
-                exportDir.mkdirs()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Android 10+ - Use MediaStore API
+                saveJsonUsingMediaStore(jsonString, filename)
+            } else {
+                // Below Android 10 - Use legacy file API
+                saveJsonLegacy(jsonString, filename)
             }
-            
-            val file = File(exportDir, filename)
-            file.writeText(jsonString)
-            
-            file
-        } catch (e: IOException) {
+        } catch (e: Exception) {
+            e.printStackTrace()
             null
         }
+    }
+    
+    /**
+     * Save JSON using MediaStore API (Android 10+)
+     */
+    private fun saveJsonUsingMediaStore(jsonString: String, filename: String): File? {
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, filename)
+            put(MediaStore.Downloads.MIME_TYPE, "application/json")
+            put(MediaStore.Downloads.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/$EXPORT_FOLDER")
+            put(MediaStore.Downloads.IS_PENDING, 1)
+        }
+        
+        val resolver = context.contentResolver
+        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+            ?: return null
+        
+        return try {
+            resolver.openOutputStream(uri)?.use { outputStream ->
+                outputStream.write(jsonString.toByteArray())
+            }
+            
+            contentValues.clear()
+            contentValues.put(MediaStore.Downloads.IS_PENDING, 0)
+            resolver.update(uri, contentValues, null, null)
+            
+            // Return a File representation for compatibility
+            File("${Environment.DIRECTORY_DOWNLOADS}/$EXPORT_FOLDER", filename)
+        } catch (e: IOException) {
+            resolver.delete(uri, null, null)
+            null
+        }
+    }
+    
+    /**
+     * Save JSON using legacy file API (Below Android 10)
+     */
+    private fun saveJsonLegacy(jsonString: String, filename: String): File? {
+        val exportDir = getExportDirectory()
+        if (!exportDir.exists()) exportDir.mkdirs()
+        
+        val file = File(exportDir, filename)
+        file.writeText(jsonString)
+        
+        return file
     }
     
     /**
@@ -431,42 +531,6 @@ class ExportManager(private val context: Context) {
     }
     
     /**
-     * Serialize Section to JSON
-     */
-    private fun serializeSection(section: SectionManager.Section): JSONObject {
-        val sectionObj = JSONObject()
-        sectionObj.put("id", section.id)
-        sectionObj.put("studentName", section.studentName)
-        sectionObj.put("currentTool", section.currentTool.name)
-        sectionObj.put("currentColor", section.currentColor)
-        sectionObj.put("currentStrokeWidth", section.currentStrokeWidth.toDouble())
-        
-        // Serialize bounds
-        val boundsObj = JSONObject()
-        boundsObj.put("left", section.bounds.left.toDouble())
-        boundsObj.put("top", section.bounds.top.toDouble())
-        boundsObj.put("right", section.bounds.right.toDouble())
-        boundsObj.put("bottom", section.bounds.bottom.toDouble())
-        sectionObj.put("bounds", boundsObj)
-        
-        // Serialize paths
-        val pathsArray = JSONArray()
-        for (path in section.paths) {
-            pathsArray.put(serializeDrawingPath(path))
-        }
-        sectionObj.put("paths", pathsArray)
-        
-        // Serialize text objects
-        val textArray = JSONArray()
-        for (textObj in section.textObjects) {
-            textArray.put(serializeTextObject(textObj))
-        }
-        sectionObj.put("textObjects", textArray)
-        
-        return sectionObj
-    }
-    
-    /**
      * Serialize Page to JSON
      */
     private fun serializePage(page: PageData): JSONObject {
@@ -483,23 +547,20 @@ class ExportManager(private val context: Context) {
         
         // Serialize text objects
         val textArray = JSONArray()
-        for (textObj in page.textObjects) {
+        for (textObj in page.textObjects) 
             textArray.put(serializeTextObject(textObj))
-        }
         pageObj.put("textObjects", textArray)
         
         // Serialize shape objects
         val shapesArray = JSONArray()
-        for (shapeObj in page.shapeObjects) {
+        for (shapeObj in page.shapeObjects) 
             shapesArray.put(serializeShapeObject(shapeObj))
-        }
         pageObj.put("shapeObjects", shapesArray)
         
         // Serialize image objects
         val imagesArray = JSONArray()
-        for (imageObj in page.imageObjects) {
+        for (imageObj in page.imageObjects) 
             imagesArray.put(serializeImageObject(imageObj))
-        }
         pageObj.put("imageObjects", imagesArray)
         
         return pageObj
@@ -512,9 +573,7 @@ class ExportManager(private val context: Context) {
         val pathMeasure = android.graphics.PathMeasure(path, false)
         val length = pathMeasure.length
         
-        if (length == 0f) {
-            return ""
-        }
+        if (length == 0f) return ""
         
         val points = mutableListOf<String>()
         val numPoints = (length / 5f).toInt().coerceAtLeast(2).coerceAtMost(500) // Sample points every 5 pixels, max 500 points

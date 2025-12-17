@@ -1,44 +1,52 @@
 package com.example.moodle.ui.whiteboard.controllers
 
-import android.Manifest
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
 import android.os.Build
-import android.support.v4.content.ContextCompat
-import android.support.v7.app.AppCompatActivity
 import android.widget.Button
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.example.moodle.R
 import com.example.moodle.ui.whiteboard.ScreenRecordService
+import com.example.moodle.utils.PermissionManager
 
 /**
  * Controller responsible for handling screen recording functionality
+ * Updated for Android 13 compatibility with modern permission APIs
  */
 class RecordingController(
     private val activity: AppCompatActivity
 ) {
     
-    companion object {
-        const val REQUEST_CODE_SCREEN_CAPTURE = 1000
-        const val REQUEST_CODE_PERMISSIONS = 1001
-        private val REQUIRED_PERMISSIONS = arrayOf(
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.RECORD_AUDIO
-        )
-    }
-    
     private var isRecording = false
     private var toggleRecordBtn: Button? = null
+    private val permissionManager = PermissionManager(activity)
     
     private val mediaProjectionManager by lazy {
         activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
     }
     
+    // Modern activity result launcher for screen capture
+    private val screenCaptureLauncher: ActivityResultLauncher<Intent> =
+        activity.registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+                startRecordingService(result.resultCode, result.data!!)
+                Toast.makeText(activity, R.string.recording_started, Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(activity, R.string.screen_capture_denied, Toast.LENGTH_SHORT).show()
+            }
+        }
+    
+    // Broadcast receiver for recording state changes
     private val recordingStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -67,22 +75,79 @@ class RecordingController(
      * Toggle recording on/off
      */
     fun toggleRecording() {
-        if (isRecording) {
-            stopRecording()
-        } else {
-            startRecording()
-        }
+        if (isRecording) stopRecording()
+        else startRecording()
     }
     
     /**
      * Start screen recording
      */
     private fun startRecording() {
-        if (checkPermissions()) {
+        // Check and request permissions based on Android version
+        checkAndRequestPermissions {
             requestScreenCapture()
-        } else {
-            requestPermissions()
         }
+    }
+    
+    /**
+     * Check and request all required permissions
+     */
+    private fun checkAndRequestPermissions(onGranted: () -> Unit) {
+        // For Android 13+, we need notification permission for foreground service
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionManager.requestNotificationPermission(
+                onGranted = {
+                    // Then check storage permissions
+                    checkStorageAndAudioPermissions(onGranted)
+                },
+                onDenied = {
+                    Toast.makeText(
+                        activity,
+                        R.string.notification_permission_required,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            )
+        } else checkStorageAndAudioPermissions(onGranted)
+    }
+    
+    /**
+     * Check storage and audio permissions
+     */
+    private fun checkStorageAndAudioPermissions(onGranted: () -> Unit) {
+        // Check audio permission
+        if (!permissionManager.hasAudioPermission()) {
+            permissionManager.requestAudioPermission(
+                onGranted = {
+                    checkStoragePermission(onGranted)
+                },
+                onDenied = {
+                    Toast.makeText(
+                        activity,
+                        R.string.audio_permission_required,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            )
+        } else checkStoragePermission(onGranted)
+    }
+    
+    /**
+     * Check storage permission
+     */
+    private fun checkStoragePermission(onGranted: () -> Unit) {
+        if (!permissionManager.hasStoragePermissions()) {
+            permissionManager.requestStoragePermissions(
+                onGranted = onGranted,
+                onDenied = { deniedPermissions ->
+                    Toast.makeText(
+                        activity,
+                        activity.getString(R.string.storage_permission_required),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            )
+        } else onGranted()
     }
     
     /**
@@ -92,8 +157,12 @@ class RecordingController(
         val intent = Intent(activity, ScreenRecordService::class.java).apply {
             action = ScreenRecordService.ACTION_STOP
         }
-        activity.startService(intent)
-        Toast.makeText(activity, activity.getString(R.string.recording_stopped), Toast.LENGTH_SHORT).show()
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) 
+            activity.startForegroundService(intent)
+        else activity.startService(intent)
+        
+        Toast.makeText(activity, R.string.recording_stopped, Toast.LENGTH_SHORT).show()
     }
     
     /**
@@ -101,64 +170,11 @@ class RecordingController(
      */
     private fun requestScreenCapture() {
         val captureIntent = mediaProjectionManager.createScreenCaptureIntent()
-        activity.startActivityForResult(captureIntent, REQUEST_CODE_SCREEN_CAPTURE)
+        screenCaptureLauncher.launch(captureIntent)
     }
     
     /**
-     * Check if all required permissions are granted
-     */
-    private fun checkPermissions(): Boolean {
-        return REQUIRED_PERMISSIONS.all { permission ->
-            ContextCompat.checkSelfPermission(activity, permission) == PackageManager.PERMISSION_GRANTED
-        }
-    }
-    
-    /**
-     * Request recording permissions
-     */
-    private fun requestPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            activity.requestPermissions(REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
-        }
-    }
-    
-    /**
-     * Handle activity result for screen capture
-     */
-    fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
-        if (requestCode == REQUEST_CODE_SCREEN_CAPTURE) {
-            if (resultCode == Activity.RESULT_OK && data != null) {
-                startRecordingService(resultCode, data)
-                Toast.makeText(activity, activity.getString(R.string.recording_started), Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(activity, activity.getString(R.string.screen_capture_denied), Toast.LENGTH_SHORT).show()
-            }
-            return true
-        }
-        return false
-    }
-    
-    /**
-     * Handle permission request results
-     */
-    fun handlePermissionsResult(
-        requestCode: Int,
-        grantResults: IntArray
-    ): Boolean {
-        if (requestCode == REQUEST_CODE_PERMISSIONS) {
-            if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                Toast.makeText(activity, activity.getString(R.string.permissions_granted), Toast.LENGTH_SHORT).show()
-                startRecording()
-            } else {
-                Toast.makeText(activity, activity.getString(R.string.permissions_denied), Toast.LENGTH_LONG).show()
-            }
-            return true
-        }
-        return false
-    }
-    
-    /**
-     * Start the recording service
+     * Start the recording service with the granted permissions
      */
     private fun startRecordingService(resultCode: Int, data: Intent) {
         val intent = Intent(activity, ScreenRecordService::class.java).apply {
@@ -167,51 +183,48 @@ class RecordingController(
             putExtra(ScreenRecordService.EXTRA_DATA_INTENT, data)
         }
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) 
             activity.startForegroundService(intent)
-        } else {
-            activity.startService(intent)
-        }
+        else activity.startService(intent)
     }
     
     /**
-     * Update the record button appearance based on recording state
-     */
-    private fun updateButtonAppearance() {
-        toggleRecordBtn?.let { button ->
-            if (isRecording) {
-                button.setBackgroundResource(R.drawable.square_button)
-            } else {
-                button.setBackgroundResource(R.drawable.circle_button)
-            }
-        }
-    }
-    
-    /**
-     * Register the broadcast receiver for recording state changes
+     * Register broadcast receiver for recording state updates
      */
     private fun registerRecordingStateReceiver() {
         val filter = IntentFilter().apply {
             addAction("RECORDING_STARTED")
             addAction("RECORDING_STOPPED")
         }
-        activity.registerReceiver(recordingStateReceiver, filter)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.registerReceiver(
+                activity,
+                recordingStateReceiver,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+        } else activity.registerReceiver(recordingStateReceiver, filter)
     }
-    
+
     /**
-     * Clean up resources
+     * Update button appearance based on recording state
      */
-    fun cleanup() {
-        try {
-            activity.unregisterReceiver(recordingStateReceiver)
-        } catch (e: Exception) {
-            // Receiver might not be registered
+    private fun updateButtonAppearance() {
+        toggleRecordBtn?.apply {
+            if (!isRecording) setBackgroundResource(R.drawable.circle_button_idle)
+            else setBackgroundResource(R.drawable.circle_button_recording) 
         }
     }
     
     /**
-     * Check if currently recording
+     * Cleanup resources
      */
-    fun isRecording(): Boolean = isRecording
+    fun cleanup() {
+        try {
+            activity.unregisterReceiver(recordingStateReceiver)
+        } catch (e: IllegalArgumentException) {
+            // Receiver was not registered, ignore
+        }
+    }
 }
-

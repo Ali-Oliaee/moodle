@@ -100,16 +100,6 @@ object FontHelper {
         }
     }
     
-    /**
-     * Apply Shabnam font to a single TextView
-     */
-    fun applyFontToTextView(context: Context, textView: TextView, weight: FontWeight = FontWeight.REGULAR) {
-        val font = getShabnamFont(context, weight)
-        if (font != null) {
-            textView.typeface = font
-        }
-    }
-    
     enum class FontWeight {
         THIN,
         LIGHT,

@@ -11,27 +11,21 @@
 
 
     <!-- Whiteboard Activity -->
-    <string name="welcome_message">خوش آمدید!</string>
-    <string name="welcome_user_message">خوش آمدید, %1$s!</string>
-    <string name="welcome_default_message">خوش آمدید به سامانه!</string>
     <string name="logout">خروج</string>
     <string name="logged_out_successfully">خروج با موفقیت انجام شد</string>
     
     <!-- Recording -->
     <string name="recording_started">ضبط شروع شد</string>
     <string name="recording_stopped">ضبط متوقف شد</string>
-    <string name="permissions_granted">اجازه ها داده شد. حالا می توانید ضبط کنید.</string>
-    <string name="permissions_denied">اجازه ها رد شد. ضبط تصویر ممکن نیست.</string>
-    <string name="screen_capture_denied">اجازه ضبط تصویر رد شد</string>
-    
+    <string name="screen_capture_denied">دسترسی ضبط صفحه رد شد</string>
+    <string name="notification_permission_required">دسترسی نمایش اعلان برای ضبط صفحه لازم است (اندروید 13+)</string>
+    <string name="audio_permission_required">دسترسی ضبط صدا برای ضبط صفحه لازم است</string>
+    <string name="storage_permission_required">دسترسی ذخیره‌سازی برای ذخیره فایل لازم است</string>
+    <string name="storage_permission_required_for_export">دسترسی ذخیره‌سازی برای خروجی گرفتن از تخته لازم است</string>
+
     <!-- Drawing Tools -->
-    <string name="tool_pen">قلم</string>
-    <string name="tool_eraser">روشن کننده</string>
-    <string name="tool_text">متن</string>
-    
+
     <!-- Actions -->
-    <string name="undo">برگشت</string>
-    <string name="redo">بازگردانی</string>
     <string name="clear_all">پاک کردن همه</string>
     <string name="clear_confirm">آیا مطمئن هستید که می خواهید پاک کنید؟</string>
     <string name="yes">بله</string>
@@ -48,25 +42,15 @@
     <string name="color_white">سفید</string>
     
     <!-- Stroke Width -->
-    <string name="stroke_thin">ریز</string>
-    <string name="stroke_medium">متوسط</string>
-    <string name="stroke_thick">سفت</string>
-    
+
     <!-- Gestures -->
-    <string name="double_tap_reset">دوباره کلیک کنید تا تنظیمات رویاگرانی را بازنشانی کنید</string>
-    <string name="pinch_to_zoom">دستگیره کنید تا رویاگرانی را تغییر دهید</string>
-    <string name="zoom_in">بزرگ‌نمایی</string>
-    <string name="zoom_out">کوچک‌نمایی</string>
-    <string name="zoom_percentage">%1$d%%</string>
-    <string name="zoom_level">سطح بزرگنمایی</string>
-    <string name="reset_zoom">بازنشانی</string>
-    <string name="pan_to_move">دستگیره کنید تا رویاگرانی را تغییر دهید</string>
-    
+
     <!-- Content Descriptions for Accessibility -->
     <string name="desc_record_button">ضبط تصویر</string>
     <string name="desc_pen_tool">انتخاب قلم</string>   
     <string name="desc_eraser_tool">انتخاب روشن کننده</string>
     <string name="desc_text_tool">انتخاب ابزار متن</string>
+    <string name="desc_text_recognition_tool">ابزار تشخیص متن</string>
     <string name="desc_formula_tool">انتخاب فرمول ریاضی</string>
     <string name="desc_line_tool">انتخاب ابزار خط</string>
     <string name="desc_circle_tool">انتخاب ابزار دایره</string>
@@ -88,69 +72,32 @@
     <string name="desc_sphere_tool">انتخاب ابزار کره</string>
     <string name="desc_cone_tool">انتخاب ابزار مخروط</string>
     <string name="desc_shapes_tool">انتخاب ابزار اشکال</string>
-    <string name="shapes">اشکال</string>
-    
+
     <!-- Measurement Tools -->
     <string name="desc_undo_button">برگشت از آخرین عمل</string>
     <string name="desc_redo_button">بازگردانی آخرین عمل</string>
     <string name="desc_clear_button">پاک کردن رویاگرانی</string>
-    <string name="desc_color_picker">انتخاب رنگ</string>
     <string name="desc_stroke_width">انتخاب عرض خط</string>
-    <string name="desc_mode_toggle">تغییر بین حالت رسم و حالت پان</string>
     <string name="desc_pinch_mode">فعال/غیرفعال کردن حالت زوم و پان با انگشت</string>
-    <string name="pinch_mode_enabled">حالت زوم فعال - رسم غیرفعال شد، از ۲-۳ انگشت برای ناوبری استفاده کنید</string>
-    <string name="pinch_mode_disabled">حالت زوم غیرفعال - رسم فعال شد</string>
-    
+
     <!-- Navigation Drawer -->
-    <string name="desc_menu_button">باز کردن منو</string>
-    <string name="drawing_tools">ابزار رسم</string>
-    <string name="actions">عملیات</string>
     <string name="colors">رنگ ها</string>
     <string name="stroke_width">عرض خط</string>
-    <string name="current_width">عرض فعلی:</string>
-    <string name="recording">ضبط</string>
-    <string name="account">حساب کاربری</string>
-    <string name="start_recording">شروع ضبط</string>
-    <string name="stop_recording">توقف ضبط</string>
-    
+
     <!-- Tool names -->
-    <string name="tool_eraser_corrected">پاک کن</string>
-    
+
     <!-- Drawer Toggle -->
-    <string name="tools">ابزارها</string>
-    <string name="sliding_drawer">کشویی</string>
-    <string name="fixed_drawer">ثابت</string>
-    <string name="drawer_mode_changed">حالت کشو تغییر کرد</string>
 
     <!-- Attendance -->
     <string name="attendance_title">حضور و غیاب</string>
-    <string name="attendance_present">حاضر</string>
-    <string name="attendance_absent">غایب</string>
-    <string name="attendance_submit">ثبت حضور و غیاب</string>
-    <string name="attendance_submitting">در حال ارسال...</string>
-    <string name="attendance_generic_error">دریافت لیست دانشجویان با خطا مواجه شد</string>
-    <string name="attendance_retry">تلاش مجدد</string>
-    <string name="attendance_empty_state">دانشجویی برای نمایش وجود ندارد</string>
-    <string name="attendance_student_id_format">شماره دانشجویی: %1$s</string>
-    <string name="attendance_empty_submit">ابتدا لیست دانشجویان بارگذاری شود.</string>
-    <string name="attendance_incomplete">%1$d دانشجو هنوز تعیین وضعیت نشده‌اند.</string>
-    <string name="attendance_submit_success">حضور و غیاب با موفقیت ثبت شد.</string>
-    <string name="attendance_submit_failure">ارسال حضور و غیاب با خطا مواجه شد.</string>
-    <string name="desc_back_button">بازگشت</string>
-    
+
     <!-- Split Mode -->
     <string name="enable_split">تقسیم تخته</string>
     <string name="disable_split">حالت عادی</string>
-    <string name="split_mode_enabled">تخته تقسیم شد</string>
-    <string name="split_mode_disabled">تخته به حالت عادی برگشت</string>
     <string name="section_count_2">2 بخش</string>
     <string name="section_count_3">3 بخش</string>
     <string name="section_count_4">4 بخش</string>
     <string name="section_count_6">6 بخش</string>
-    <string name="student_section">بخش دانشجو %1$d</string>
-    <string name="clear_section_confirm">آیا مطمئن هستید که می خواهید این بخش را پاک کنید؟</string>
-    <string name="clear_all_sections_confirm">آیا مطمئن هستید که می خواهید همه بخش ها را پاک کنید؟</string>
-    <string name="section_active">بخش فعال: %1$s</string>
     <string name="choose_section_count">تعداد بخش ها را انتخاب کنید</string>
     <string name="cancel">لغو</string>
     
@@ -163,7 +110,6 @@
     <string name="background_lines_vertical">خطوط عمودی</string>
     <string name="background_lines_both">خطوط متقاطع</string>
     <string name="background_dot_grid">شبکه نقطه‌ای</string>
-    <string name="background_ruled_paper">کاغذ خط‌دار</string>
     <string name="background_graph_paper">کاغذ نموداری</string>
     <string name="desc_background_button">تغییر پس‌زمینه</string>
     
@@ -194,42 +140,27 @@
     <string name="page_deleted">صفحه حذف شد</string>
     
     <!-- Import/Export -->
-    <string name="import_export">ورود/خروج</string>
-    <string name="export_board">خروج تخته</string>
-    <string name="import_board">ورود تخته</string>
     <string name="desc_export_button">خروج تخته</string>
     <string name="desc_import_button">ورود تخته</string>
     
     <!-- Export Options -->
-    <string name="export_options">گزینه‌های خروج</string>
-    <string name="export_as_png">خروج به عنوان تصویر PNG</string>
-    <string name="export_as_moodle">خروج به فرمت Moodle</string>
-    <string name="export_png_description">ذخیره تخته به عنوان تصویر PNG</string>
-    <string name="export_moodle_description">ذخیره تخته در فرمت قابل بازیابی</string>
-    
+
     <!-- Import Options -->
-    <string name="import_options">گزینه‌های ورود</string>
     <string name="import_image">ورود تصویر</string>
     <string name="import_moodle_file">ورود فایل Moodle</string>
-    <string name="import_image_description">افزودن تصویر به تخته</string>
-    <string name="import_moodle_description">بازیابی تخته از فایل Moodle</string>
-    
+
     <!-- Export Messages -->
-    <string name="export_png_success">تصویر PNG با موفقیت ذخیره شد در Downloads/MoodleWhiteboard/</string>
+    <string name="export_png_success_location">تصویر PNG با موفقیت ذخیره شد در %1$s</string>
     <string name="export_png_failed">خروج تصویر PNG ناموفق بود</string>
-    <string name="export_custom_success">فایل Moodle با موفقیت ذخیره شد در Downloads/MoodleWhiteboard/</string>
+    <string name="export_custom_success_location">فایل Moodle با موفقیت ذخیره شد در %1$s</string>
     <string name="export_custom_failed">خروج فایل Moodle ناموفق بود</string>
     <string name="export_error">خطا در خروج: %1$s</string>
-    <string name="export_multiple_pages_success">%1$d تصویر PNG با موفقیت ذخیره شد در Downloads/MoodleWhiteboard/</string>
+    <string name="export_multiple_pages_success_location">%1$d تصویر PNG با موفقیت ذخیره شد در %2$s</string>
     
     <!-- Multi-page Export Dialog -->
-    <string name="export_page_selection">انتخاب صفحات</string>
     <string name="export_current_page">صفحه فعلی</string>
     <string name="export_all_pages">تمام صفحات</string>
-    <string name="export_page_selection_message">چند صفحه در تخته شما وجود دارد. می‌خواهید کدام صفحات را ذخیره کنید؟</string>
-    <string name="export_current_page_description">فقط صفحه فعلی را به عنوان PNG ذخیره کنید</string>
-    <string name="export_all_pages_description">تمام %1$d صفحات را به صورت فایل‌های PNG جداگانه ذخیره کنید</string>
-    
+
     <!-- Import Messages -->
     <string name="import_image_success">تصویر با موفقیت وارد شد</string>
     <string name="import_image_failed">ورود تصویر ناموفق بود</string>
@@ -238,19 +169,14 @@
     <string name="import_custom_failed">ورود فایل Moodle ناموفق بود</string>
     <string name="import_version_mismatch">نسخه فایل (%1$s) با نسخه پشتیبانی شده (%2$s) سازگار نیست</string>
     <string name="import_error">خطا در ورود: %1$s</string>
-    <string name="imported_image_placeholder">تصویر وارد شده (%1$dx%2$d)</string>
-    <string name="image_import_instruction">نوت: در نسخه آینده امکان نمایش کامل تصاویر اضافه خواهد شد</string>
-    
+
     <!-- File Picker -->
     <string name="select_image_file">انتخاب فایل تصویر</string>
     <string name="select_moodle_file">انتخاب فایل Moodle</string>
     <string name="no_file_manager">هیچ مدیر فایلی یافت نشد</string>
     
     <!-- Permissions -->
-    <string name="storage_permission_required">اجازه دسترسی به حافظه مورد نیاز است</string>
-    <string name="storage_permission_denied">اجازه دسترسی به حافظه رد شد</string>
-    <string name="grant_permission">اعطای اجازه</string>
-    
+
     <!-- Confirmation Dialogs -->
     <string name="import_will_clear_board">ورود فایل Moodle محتوای فعلی تخته را پاک خواهد کرد. ادامه می‌دهید؟</string>
     <string name="continue_import">ادامه ورود</string>
@@ -260,16 +186,20 @@
     <string name="add_text">افزودن متن</string>
     <string name="ok">تایید</string>
     
+    <!-- Text Recognition -->
+    <string name="text_recognition_processing">در حال تشخیص دست‌نویس...</string>
+    <string name="text_recognition_success">%1$d متن شناسایی شد</string>
+    <string name="text_recognition_failed">تشخیص دست‌نویس ناموفق بود</string>
+    <string name="text_recognition_no_strokes">چیزی برای تشخیص وجود ندارد</string>
+
     <!-- Export/Import Titles and Messages -->
     <string name="export_png">خروج PNG</string>
     <string name="export_moodle_format">خروج فرمت Moodle</string>
     <string name="export_title">خروج</string>
     <string name="import_title">ورود</string>
-    <string name="export_success">خروج با موفقیت انجام شد</string>
     <string name="exported_pages">%1$s صفحه خروجی گرفته شد</string>
     
     <!-- Toolbar Toggle -->
-    <string name="toggle_toolbar">نمایش/مخفی کردن نوار ابزار</string>
     <string name="desc_toggle_toolbar">دکمه نمایش/مخفی کردن نوار ابزار</string>
     
   </resources>

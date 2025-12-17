@@ -404,34 +404,6 @@ class CanvasRenderManager(
         canvas.drawRoundRect(innerRect, 4f, 4f, borderPaint)
     }
     
-    // Method to detect which button was clicked in section controls
-    fun detectSectionControlButton(section: SectionManager.Section, x: Float, y: Float): Int? {
-        val controlArea = section.controlBounds
-        val sectionWidth = section.bounds.width()
-        
-        val buttonSize = 50f
-        val buttonSpacing = 6f
-        val buttonCount = 7
-        
-        val totalWidth = buttonCount * buttonSize + (buttonCount - 1) * buttonSpacing
-        val startX = controlArea.left + (sectionWidth - totalWidth) / 2
-        val centerY = controlArea.centerY()
-        val buttonTop = centerY - buttonSize / 2
-        
-        for (i in 0 until buttonCount) {
-            val buttonLeft = startX + i * (buttonSize + buttonSpacing)
-            val buttonRight = buttonLeft + buttonSize
-            val buttonBottom = buttonTop + buttonSize
-            val rect = RectF(buttonLeft, buttonTop, buttonRight, buttonBottom)
-            
-            if (rect.contains(x, y)) {
-                return i  // Return button index: 0=pen, 1=eraser, 2=clear, 3=black, 4=blue, 5=green, 6=red
-            }
-        }
-        
-        return null
-    }
-    
     fun setBackgroundPattern(pattern: BackgroundPattern) {
         currentBackgroundPattern = pattern
     }
@@ -452,10 +424,13 @@ class CanvasRenderManager(
     
     fun redrawCanvas() {
         bitmapManager.drawingCanvas?.let { canvas ->
-            canvas.drawColor(Color.BLACK, PorterDuff.Mode.SRC)
+            // Clear and draw background (includes image if set)
             drawBackgroundColor(canvas)
+            
+            // Draw background pattern (grid, lines, etc.)
             drawBackgroundPattern(canvas)
             
+            // Draw all paths
             for (drawingPath in stateManager.paths) {
                 if (drawingPath.tool == DrawingTool.TEXT && drawingPath.text != null) 
                     canvas.drawText(drawingPath.text, drawingPath.textX, drawingPath.textY, drawingPath.paint)

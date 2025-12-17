@@ -139,15 +139,6 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
         }
     }
     
-    fun updateSharedBackgroundColor(color: BackgroundColor) {
-        sharedBackgroundColor = color
-        userPreferences?.saveSharedBackgroundColor(color.id)
-        // Update background color for all existing pages
-        pages.values.forEach { page ->
-            page.backgroundColor = color
-        }
-    }
-    
     fun deletePage(pageId: Int): Boolean {
         if (pages.size <= 1 || !pages.containsKey(pageId)) return false
         
@@ -156,7 +147,10 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
 
         // If we deleted the current page, navigate to the first available page
         if (currentPageId == pageId) {
-            currentPageId = getPageIds()[replacePageIndex]
+            currentPageId = when(replacePageIndex){
+                -1 -> getPageIds()[0]
+                else -> replacePageIndex
+            }
             saveState()
             pageChangeListener?.onPageChanged(currentPageId, getTotalPages())
         } else saveState()
@@ -189,17 +183,7 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
         }
         saveState()
     }
-    
-    fun undoCurrentPage(): Boolean {
-        val currentPage = getCurrentPage()
-        return currentPage.undo() != null
-    }
-    
-    fun redoCurrentPage(): Boolean {
-        val currentPage = getCurrentPage()
-        return currentPage.redo() != null
-    }
-    
+
     private fun loadSavedState() {
         if (userPreferences != null) {
             // Load shared settings
@@ -235,10 +219,5 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
             prefs.saveSharedBackgroundPattern(sharedBackgroundPattern.id)
             prefs.saveSharedBackgroundColor(sharedBackgroundColor.id)
         }
-    }
-    
-    // Update navigation methods to save state
-    private fun saveStateAfterNavigation() {
-        saveState()
     }
 }

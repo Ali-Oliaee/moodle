@@ -1,19 +1,19 @@
 package com.example.moodle.ui.whiteboard
 
-import android.arch.lifecycle.Observer
-import android.arch.lifecycle.ViewModelProviders
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
-import android.support.v7.app.AlertDialog
-import android.support.v7.app.AppCompatActivity
+import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.widget.*
-import com.example.moodle.MoodleApplication
+import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.ViewModelProvider
 import com.example.moodle.R
 import com.example.moodle.data.datastore.UserPreferences
-import com.example.moodle.di.ViewModelFactory
 import com.example.moodle.ui.login.LoginActivity
 import com.example.moodle.ui.whiteboard.controllers.PopupController
 import com.example.moodle.ui.whiteboard.controllers.RecordingController
@@ -21,16 +21,23 @@ import com.example.moodle.ui.whiteboard.controllers.SplitModeController
 import com.example.moodle.ui.whiteboard.listeners.OnDrawingChangeListener
 import com.example.moodle.ui.whiteboard.listeners.OnTextInputListener
 import com.example.moodle.ui.whiteboard.managers.PageManager
+import com.example.moodle.ui.whiteboard.managers.TextRecognitionManager
 import com.example.moodle.ui.whiteboard.models.DrawingTool
 import com.example.moodle.ui.whiteboard.models.WhiteboardViewState
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
 import com.example.moodle.utils.FontHelper
+import com.example.moodle.utils.PermissionManager
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
  * Main activity for the whiteboard functionality
  * Uses MVVM architecture with WhiteboardViewModel
  * Keeps UI-specific controllers for Android components
  */
+@AndroidEntryPoint
 class WhiteboardActivity : AppCompatActivity() {
 
     // UI Components
@@ -50,6 +57,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnPen: ImageButton
     private lateinit var btnEraser: ImageButton
     private lateinit var btnText: ImageButton
+    private lateinit var btnTextRecognition: ImageButton
     private lateinit var btnFormula: ImageButton
     private lateinit var btnShapes: ImageButton
     private lateinit var btnUndo: ImageButton
@@ -73,8 +81,15 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var popupController: PopupController
     private lateinit var splitModeController: SplitModeController
     
-    // User preferences
-    private lateinit var userPreferences: UserPreferences
+    // Text recognition manager
+    private lateinit var textRecognitionManager: TextRecognitionManager
+    
+    // Permission manager
+    private lateinit var permissionManager: PermissionManager
+    
+    // Injected dependencies
+    @Inject
+    lateinit var userPreferences: UserPreferences
     
     // Toolbar visibility state
     private var areToolbarsVisible = true
@@ -85,15 +100,13 @@ class WhiteboardActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Initialize ViewModel with DI
-        val dependencies = (application as MoodleApplication).dependencyContainer
-        val factory = ViewModelFactory(application, dependencies)
-        viewModel = ViewModelProviders.of(this, factory).get(WhiteboardViewModel::class.java)
-        
-        // Get UserPreferences from dependency container
-        userPreferences = dependencies.userPreferences
+        // Initialize ViewModel using Hilt
+        viewModel = ViewModelProvider(this).get(WhiteboardViewModel::class.java)
         
         setContentView(R.layout.activity_whiteboard)
+        
+        // Hide status bar for immersive whiteboard experience (must be after setContentView)
+        hideSystemBars()
         
         initializeViews()
         initializeUIControllers()
@@ -124,6 +137,7 @@ class WhiteboardActivity : AppCompatActivity() {
         btnPen = findViewById(R.id.btnPen)
         btnEraser = findViewById(R.id.btnEraser)
         btnText = findViewById(R.id.btnText)
+        btnTextRecognition = findViewById(R.id.btnTextRecognition)
         btnFormula = findViewById(R.id.btnFormula)
         btnShapes = findViewById(R.id.btnShapes)
         btnUndo = findViewById(R.id.btnUndo)
@@ -190,6 +204,12 @@ class WhiteboardActivity : AppCompatActivity() {
             btnPinchMode.isEnabled = !enabled
             btnPinchMode.alpha = if (enabled) 0.5f else 1.0f
         }
+        
+        // Text Recognition Manager - get from ViewModel (injected by Hilt)
+        textRecognitionManager = viewModel.textRecognitionManager
+        
+        // Permission Manager - handles runtime permissions
+        permissionManager = PermissionManager(this)
     }
     
     /**
@@ -231,6 +251,10 @@ class WhiteboardActivity : AppCompatActivity() {
         
         btnText.setOnClickListener {
             viewModel.selectTool(DrawingTool.TEXT)
+        }
+        
+        btnTextRecognition.setOnClickListener {
+            performTextRecognition()
         }
         
         btnFormula.setOnClickListener {
@@ -534,7 +558,7 @@ class WhiteboardActivity : AppCompatActivity() {
         val editText = EditText(this)
         editText.hint = getString(R.string.enter_text)
         editText.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
-        
+
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.add_text))
             .setView(editText)
@@ -606,7 +630,9 @@ class WhiteboardActivity : AppCompatActivity() {
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> showPNGExportOptions()
-                    1 -> viewModel.exportToMoodleFormat(whiteboardView)
+                    1 -> requestStoragePermissionsForExport {
+                        viewModel.exportToMoodleFormat(whiteboardView)
+                    }
                 }
             }
             .setNegativeButton(getString(R.string.cancel), null)
@@ -617,24 +643,27 @@ class WhiteboardActivity : AppCompatActivity() {
      * Show PNG export options (current page or all pages)
      */
     private fun showPNGExportOptions() {
-        if (viewModel.uiState.value?.totalPages ?: 1 > 1) {
-            val options = arrayOf(
-                getString(R.string.export_current_page),
-                getString(R.string.export_all_pages)
-            )
-            
-            AlertDialog.Builder(this)
-                .setTitle(getString(R.string.export_png))
-                .setItems(options) { _, which ->
-                    when (which) {
-                        0 -> viewModel.exportCurrentPageToPNG(whiteboardView)
-                        1 -> viewModel.exportAllPagesToPNG(whiteboardView)
+        // Request storage permissions before exporting
+        requestStoragePermissionsForExport {
+            if (viewModel.uiState.value?.totalPages ?: 1 > 1) {
+                val options = arrayOf(
+                    getString(R.string.export_current_page),
+                    getString(R.string.export_all_pages)
+                )
+                
+                AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.export_png))
+                    .setItems(options) { _, which ->
+                        when (which) {
+                            0 -> viewModel.exportCurrentPageToPNG(whiteboardView)
+                            1 -> viewModel.exportAllPagesToPNG(whiteboardView)
+                        }
                     }
-                }
-                .setNegativeButton(getString(R.string.cancel), null)
-                .show()
-        } else {
-            viewModel.exportCurrentPageToPNG(whiteboardView)
+                    .setNegativeButton(getString(R.string.cancel), null)
+                    .show()
+            } else {
+                viewModel.exportCurrentPageToPNG(whiteboardView)
+            }
         }
     }
     
@@ -774,8 +803,30 @@ class WhiteboardActivity : AppCompatActivity() {
         if (message.startsWith("exported_") && message.endsWith("_pages")) {
             val count = message.substringAfter("exported_").substringBefore("_pages")
             Toast.makeText(this, getString(R.string.exported_pages, count), Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    /**
+     * Request storage permissions for export operations
+     */
+    private fun requestStoragePermissionsForExport(onGranted: () -> Unit) {
+        // For Android 10+ (API 29+), MediaStore API doesn't require runtime permissions
+        // But we still request them for older versions
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            // Android 10+ - No permission needed for MediaStore writes to Downloads
+            onGranted()
         } else {
-            Toast.makeText(this, getString(R.string.export_success), Toast.LENGTH_SHORT).show()
+            // Below Android 10 - Need WRITE_EXTERNAL_STORAGE permission
+            permissionManager.requestStoragePermissions(
+                onGranted = onGranted,
+                onDenied = { deniedPermissions ->
+                    Toast.makeText(
+                        this,
+                        getString(R.string.storage_permission_required_for_export),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            )
         }
     }
     
@@ -826,50 +877,56 @@ class WhiteboardActivity : AppCompatActivity() {
         areToolbarsVisible = !areToolbarsVisible
         
         if (areToolbarsVisible) {
-            // Show toolbars
             showToolbar(topToolbar)
             showToolbar(bottomToolbar)
-            // Change icon to chevron up (hide action)
             btnToggleToolbars.setImageResource(R.drawable.ic_chevron_up)
         } else {
-            // Hide toolbars
             hideToolbar(topToolbar)
             hideToolbar(bottomToolbar)
-            // Change icon to chevron down (show action)
             btnToggleToolbars.setImageResource(R.drawable.ic_chevron_down)
         }
     }
     
     /**
-     * Hide toolbar with slide animation
+     * Hide toolbar with fade and scale animation for modern glassy effect
      */
     private fun hideToolbar(toolbar: android.view.View) {
-        // Keep visibility VISIBLE but move off-screen and make transparent
-        // to avoid layout recalculation that could affect WhiteboardView
         toolbar.animate()
             .alpha(0f)
-            .translationY(if (toolbar.id == R.id.topToolbar) -toolbar.height.toFloat() else toolbar.height.toFloat())
-            .setDuration(300)
+            .scaleX(0.95f)
+            .scaleY(0.95f)
+            .translationY(if (toolbar.id == R.id.topToolbar) -20f else 20f)
+            .setDuration(250)
             .withStartAction {
                 // Disable clicks on hidden toolbar
                 toolbar.isClickable = false
                 disableViewGroupClicks(toolbar)
             }
+            .withEndAction {
+                toolbar.visibility = android.view.View.GONE
+            }
             .start()
     }
     
     /**
-     * Show toolbar with slide animation
+     * Show toolbar with fade and scale animation for modern glassy effect
      */
     private fun showToolbar(toolbar: android.view.View) {
         // Re-enable clicks
         toolbar.isClickable = true
         enableViewGroupClicks(toolbar)
         
+        toolbar.visibility = android.view.View.VISIBLE
+        toolbar.scaleX = 0.95f
+        toolbar.scaleY = 0.95f
+        toolbar.alpha = 0f
+        
         toolbar.animate()
             .alpha(1f)
+            .scaleX(1f)
+            .scaleY(1f)
             .translationY(0f)
-            .setDuration(300)
+            .setDuration(250)
             .start()
     }
     
@@ -911,42 +968,141 @@ class WhiteboardActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        recordingController.handlePermissionsResult(requestCode, grantResults)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         
-        if (!recordingController.handleActivityResult(requestCode, resultCode, data)) {
-            when (requestCode) {
-                REQUEST_CODE_IMPORT_IMAGE -> {
-                    if (resultCode == RESULT_OK && data != null) {
-                        data.data?.let { uri ->
-                            viewModel.importImage(uri, whiteboardView) {
-                                loadCurrentPageFromViewModel()
-                                updateUndoRedoState()
-                            }
-                        }
-                    }
-                }
-                REQUEST_CODE_IMPORT_MOODLE -> {
-                    if (resultCode == RESULT_OK && data != null) {
-                        data.data?.let { uri ->
-                            viewModel.importMoodleFile(uri, whiteboardView) {
-                                loadCurrentPageFromViewModel()
-                                updateUndoRedoState()
-                            }
-                        }
-                    }
-                }
-                REQUEST_CODE_BACKGROUND_IMAGE -> {
-                    if (resultCode == RESULT_OK && data != null) {
-                        data.data?.let { uri ->
-                            handleBackgroundImageSelection(uri)
+        when (requestCode) {
+            REQUEST_CODE_IMPORT_IMAGE -> {
+                if (resultCode == RESULT_OK && data != null) {
+                    data.data?.let { uri ->
+                        viewModel.importImage(uri, whiteboardView) {
+                            loadCurrentPageFromViewModel()
+                            updateUndoRedoState()
                         }
                     }
                 }
             }
+            REQUEST_CODE_IMPORT_MOODLE -> {
+                if (resultCode == RESULT_OK && data != null) {
+                    data.data?.let { uri ->
+                        viewModel.importMoodleFile(uri, whiteboardView) {
+                            loadCurrentPageFromViewModel()
+                            updateUndoRedoState()
+                        }
+                    }
+                }
+            }
+            REQUEST_CODE_BACKGROUND_IMAGE -> {
+                if (resultCode == RESULT_OK && data != null) {
+                    data.data?.let { uri ->
+                        handleBackgroundImageSelection(uri)
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Perform text recognition on drawn strokes
+     */
+    private fun performTextRecognition() {
+        // Save current page first
+        saveCurrentPageToViewModel()
+        
+        val paths = whiteboardView.getAllPaths()
+        
+        if (paths.isEmpty()) {
+            Toast.makeText(this, getString(R.string.text_recognition_no_strokes), Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        // Show progress
+        Toast.makeText(this, getString(R.string.text_recognition_processing), Toast.LENGTH_SHORT).show()
+        
+        textRecognitionManager.recognizeTextFromPaths(
+            paths,
+            object : com.example.moodle.ui.whiteboard.managers.TextRecognitionManager.TextRecognitionCallback {
+                override fun onRecognitionSuccess(
+                    textObjects: List<com.example.moodle.ui.whiteboard.models.TextObject>,
+                    recognizedCount: Int
+                ) {
+                    runOnUiThread {
+                        replaceDrawingWithRecognizedText(textObjects)
+                    }
+                }
+                
+                override fun onRecognitionFailure(error: String) {
+                    runOnUiThread {
+                        Toast.makeText(
+                            this@WhiteboardActivity,
+                            getString(R.string.text_recognition_failed) + ": $error",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                
+                override fun onRecognitionProgress(message: String) {
+                    // Progress already shown
+                }
+            }
+        )
+    }
+    
+    /**
+     * Replace drawn strokes with recognized text
+     */
+    private fun replaceDrawingWithRecognizedText(
+        textObjects: List<com.example.moodle.ui.whiteboard.models.TextObject>
+    ) {
+        // Clear the drawing paths
+        val currentPage = viewModel.getCurrentPage()
+        currentPage.paths.clear()
+        
+        // Add recognized text objects
+        for (textObject in textObjects) {
+            currentPage.textObjects.add(textObject)
+        }
+        
+        // Reload the page
+        loadCurrentPageFromViewModel()
+        updateUndoRedoState()
+        
+        Toast.makeText(
+            this,
+            getString(R.string.text_recognition_success, textObjects.size),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+    
+    /**
+     * Hide system bars (status bar and navigation bar) for immersive experience
+     */
+    private fun hideSystemBars() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Android 11 (API 30) and above
+                window.insetsController?.let { controller ->
+                    controller.hide(WindowInsets.Type.statusBars())
+                    controller.systemBarsBehavior = 
+                        WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+            } else {
+                // Android 10 and below
+                @Suppress("DEPRECATION")
+                window.decorView.systemUiVisibility = (
+                    View.SYSTEM_UI_FLAG_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                )
+            }
+            
+            // Set status bar color to transparent for smoother appearance
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+        } catch (e: Exception) {
+            // Log error but don't crash the app
+            e.printStackTrace()
         }
     }
     
@@ -955,6 +1111,7 @@ class WhiteboardActivity : AppCompatActivity() {
         recordingController.cleanup()
         popupController.cleanup()
         whiteboardView.cleanup()
+        textRecognitionManager.cleanup()
     }
     
     companion object {

@@ -38,10 +38,6 @@ class PaintHelper {
         alpha = 150
     }
     
-    val backgroundPaint = Paint().apply {
-        color = Color.WHITE
-    }
-    
     /**
      * Get paint configured for the current drawing tool
      * Returns a new Paint instance to avoid shared references

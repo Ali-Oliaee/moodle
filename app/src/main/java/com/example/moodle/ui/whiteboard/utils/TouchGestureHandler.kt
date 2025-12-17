@@ -69,6 +69,9 @@ class TouchGestureHandler(
     // Background color callback
     var getBackgroundColor: (() -> BackgroundColor)? = null
     
+    // Render manager callback for proper canvas redrawing
+    var onRedrawCanvas: (() -> Unit)? = null
+    
     fun handleDrawingTouch(event: MotionEvent, isDrawingMode: Boolean) {
         val action = event.actionMasked
         val pointerIndex = event.actionIndex
@@ -123,9 +126,7 @@ class TouchGestureHandler(
                 pointerSectionMap[pointerId] = touchedSection
                 currentActiveSection = touchedSection
                 sectionManager.setActiveSection(touchedSection)
-            } else {
-                return
-            }
+            } else return
         }
         
         // Get coordinates for actual drawing
@@ -269,7 +270,6 @@ class TouchGestureHandler(
                     val sectionPaint = paintHelper.getPaintForSection(pointerSection.currentTool, pointerSection.currentColor, pointerSection.currentStrokeWidth)
                     val drawingPath = DrawingPath(pathCopy, sectionPaint, pointerSection.currentTool)
                     pointerSection.paths.add(drawingPath)
-                    pointerSection.undoStack.clear()
                 }
                 pointerSectionMap.remove(pointerId)
             } else {
@@ -384,14 +384,8 @@ class TouchGestureHandler(
             isDrawingSelection = false
             onDrawingChanged?.invoke()
             
-            // Redraw canvas
-            getDrawingCanvas?.invoke()?.let { canvas ->
-                val bgColor = getBackgroundColor?.invoke()?.colorValue ?: Color.WHITE
-                canvas.drawColor(bgColor, PorterDuff.Mode.SRC)
-                for (path in stateManager.paths) {
-                    canvas.drawPath(path.path, path.paint)
-                }
-            }
+            // Properly redraw canvas with background pattern and image support
+            onRedrawCanvas?.invoke()
             
             onInvalidate?.invoke()
         }

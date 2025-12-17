@@ -108,48 +108,6 @@ class ZoomPanController(context: Context) {
     }
     
     /**
-     * Clamps drawing coordinates to stay within bitmap boundaries
-     */
-    fun clampToBitmapBounds(x: Float, y: Float): Pair<Float, Float> {
-        val (bitmapWidth, bitmapHeight) = getBitmapDimensions?.invoke() ?: return Pair(x, y)
-        
-        val clampedX = x.coerceIn(0f, bitmapWidth)
-        val clampedY = y.coerceIn(0f, bitmapHeight)
-        
-        return Pair(clampedX, clampedY)
-    }
-    
-    /**
-     * Convert screen coordinates to canvas coordinates
-     */
-    fun screenToCanvasX(screenX: Float): Float {
-        return (screenX + focusX) / scaleFactor
-    }
-    
-    /**
-     * Convert screen coordinates to canvas coordinates
-     */
-    fun screenToCanvasY(screenY: Float): Float {
-        return (screenY + focusY) / scaleFactor
-    }
-    
-    /**
-     * Get visible canvas center X coordinate
-     */
-    fun getVisibleCanvasCenterX(): Float {
-        val (viewWidth, _) = getViewDimensions?.invoke() ?: return 0f
-        return (viewWidth / 2f + focusX) / scaleFactor
-    }
-    
-    /**
-     * Get visible canvas center Y coordinate
-     */
-    fun getVisibleCanvasCenterY(): Float {
-        val (_, viewHeight) = getViewDimensions?.invoke() ?: return 0f
-        return (viewHeight / 2f + focusY) / scaleFactor
-    }
-    
-    /**
      * Set zoom level
      */
     fun setZoomLevel(zoomLevel: Float) {
@@ -161,21 +119,6 @@ class ZoomPanController(context: Context) {
             onInvalidate?.invoke()
         }
     }
-    
-    /**
-     * Get current zoom level
-     */
-    fun getZoomLevel(): Float = scaleFactor
-    
-    /**
-     * Get minimum zoom level
-     */
-    fun getMinZoomLevel(): Float = max(minScaleFactor, minZoomLevel)
-    
-    /**
-     * Get maximum zoom level
-     */
-    fun getMaxZoomLevel(): Float = maxZoomLevel
     
     /**
      * Initialize focus and boundaries for new canvas size
@@ -197,30 +140,6 @@ class ZoomPanController(context: Context) {
             viewHeight.toFloat() / canvasHeight.toFloat()
         )
     }
-    
-    /**
-     * Reset zoom to default
-     */
-    fun resetZoom() {
-        setZoomLevel(1.0f)
-    }
-    
-    /**
-     * Reset zoom and pan to center
-     */
-    fun resetZoomAndPan(viewWidth: Int, viewHeight: Int) {
-        scaleFactor = 1.0f
-        val (bitmapWidth, bitmapHeight) = getBitmapDimensions?.invoke() ?: return
-        focusX = (bitmapWidth - viewWidth) / 2f
-        focusY = (bitmapHeight - viewHeight) / 2f
-        constrainFocusToBounds()
-        onInvalidate?.invoke()
-    }
-    
-    /**
-     * Check if currently panning
-     */
-    fun isPanning(): Boolean = isPanning
     
     /**
      * Scale gesture handling

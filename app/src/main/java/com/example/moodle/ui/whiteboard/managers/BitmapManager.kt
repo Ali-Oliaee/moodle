@@ -13,7 +13,7 @@ class BitmapManager {
         private set
     var drawingCanvas: Canvas? = null
         private set
-    
+
     // Callbacks
     var onBitmapInitialized: ((Int, Int) -> Unit)? = null
     
@@ -25,12 +25,9 @@ class BitmapManager {
         
         try {
             // Use smaller canvas multiplier on Android 8+ to avoid hardware acceleration limits
-            val multiplier = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                2f  // 2x screen size for Android 8+
-            } else {
-                3f  // 3x for older versions
-            }
-            
+            val multiplier = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) 2f  // 2x screen size for Android 8+
+            else 3f  // 3x for older versions
+
             val canvasWidth = (w * multiplier).toInt()
             val canvasHeight = (h * multiplier).toInt()
             
@@ -50,8 +47,6 @@ class BitmapManager {
                 drawingCanvas?.drawColor(Color.WHITE)
                 
                 onBitmapInitialized?.invoke(canvasWidth, canvasHeight)
-                
-                android.util.Log.d("BitmapManager", "Created bitmap: ${canvasWidth}x${canvasHeight} (${bitmapSizeBytes / 1_000_000}MB)")
             }
         } catch (e: OutOfMemoryError) {
             android.util.Log.e("BitmapManager", "OutOfMemoryError creating bitmap, falling back to screen size", e)
@@ -72,34 +67,6 @@ class BitmapManager {
         drawingCanvas?.drawColor(Color.WHITE)
         
         onBitmapInitialized?.invoke(w, h)
-    }
-    
-    /**
-     * Get the drawing bitmap
-     */
-    fun getBitmap(): Bitmap? = drawingBitmap
-    
-    /**
-     * Get the drawing canvas
-     */
-    fun getCanvas(): Canvas? = drawingCanvas
-    
-    /**
-     * Get bitmap width
-     */
-    fun getWidth(): Float = drawingBitmap?.width?.toFloat() ?: 0f
-    
-    /**
-     * Get bitmap height
-     */
-    fun getHeight(): Float = drawingBitmap?.height?.toFloat() ?: 0f
-    
-    /**
-     * Check if bitmap is valid
-     */
-    fun isValid(): Boolean {
-        return drawingBitmap != null && !drawingBitmap!!.isRecycled && 
-               drawingBitmap!!.width > 0 && drawingBitmap!!.height > 0
     }
     
     /**
