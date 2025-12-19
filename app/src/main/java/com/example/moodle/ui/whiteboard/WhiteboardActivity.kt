@@ -174,7 +174,8 @@ class WhiteboardActivity : AppCompatActivity() {
         splitModeController.initialize(
             enableSplit = findViewById(R.id.btnEnableSplit),
             disableSplit = findViewById(R.id.btnDisableSplit),
-            toolbar = findViewById(R.id.bottomToolbar)
+            toolbar = findViewById(R.id.bottomToolbar),
+            dropdownCompose = findViewById(R.id.sectionDropdownCompose)
         )
         
         splitModeController.onSplitModeChanged = { enabled ->

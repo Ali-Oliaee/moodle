@@ -162,6 +162,17 @@
 
     </LinearLayout>
 
+    <!-- Animated Section Dropdown (Compose) -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/sectionDropdownCompose"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="60dp"
+        android:layout_marginEnd="16dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <!-- Floating Toggle Button -->
     <ImageButton
         android:id="@+id/btnToggleToolbars"
