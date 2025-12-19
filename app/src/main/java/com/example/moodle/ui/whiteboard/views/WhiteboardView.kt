@@ -198,9 +198,6 @@ class WhiteboardView @JvmOverloads constructor(
         if (sectionManager.isSplitModeEnabled()) {
             val targetSection = sectionManager.getSectionAt(x, y)
             targetSection?.let {
-                it.textObjects.add(textObject)
-                it.selectedTextObject?.isSelected = false
-                it.selectedTextObject = textObject
                 textObject.isSelected = true
             }
         } else stateManager.addTextObject(textObject)

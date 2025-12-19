@@ -55,12 +55,7 @@ class CanvasRenderManager(
                     canvas.drawPath(drawingPath.path, drawingPath.paint)
                 }
             }
-            
-            // Draw section's text objects
-            for (textObject in section.textObjects) {
-                textObject.draw(canvas)
-            }
-            
+
             canvas.restore()
         }
         
