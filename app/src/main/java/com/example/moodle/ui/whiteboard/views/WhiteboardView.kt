@@ -39,11 +39,17 @@ class WhiteboardView @JvmOverloads constructor(
     private var currentPageData: PageData? = null
     
     // Default undo/redo manager (used when no page is loaded)
-    private val defaultUndoRedoManager = UndoRedoManager()
+    private val defaultCommandManager = CommandManager()
+
+    // Current page's command manager (from page data, or default)
+    private val currentPageCommandManager: CommandManager
+        get() = currentPageData?.commandManager ?: defaultCommandManager
     
-    // Current page's undo/redo manager (from page data, or default)
-    private val currentPageUndoRedoManager: UndoRedoManager
-        get() = currentPageData?.undoRedoManager ?: defaultUndoRedoManager
+    // Command-based undo/redo helper
+    private var commandHelper: CommandBasedUndoRedoHelper? = null
+    
+    // Undo/redo mode: snapshot-based (legacy) or command-based (optimized)
+    private var useCommandBasedUndoRedo = false
     
     // View state
     private var isDrawingMode = true
@@ -64,13 +70,36 @@ class WhiteboardView @JvmOverloads constructor(
     init {
         // Setup callbacks for managers
         setupManagerCallbacks()
+        
+        // Initialize command-based undo/redo helper
+        commandHelper = CommandBasedUndoRedoHelper(
+            commandManager = currentPageCommandManager,
+            stateManager = stateManager,
+            bitmapManager = bitmapManager
+        ).apply {
+            onInvalidateView = { invalidate() }
+            onRedrawCanvas = { renderManager.redrawCanvas() }
+        }
+        
+        // Setup command manager callback for button states
+        setupCommandManagerCallback()
+    }
+    
+    /**
+     * Setup callback for command manager to update button states
+     */
+    private fun setupCommandManagerCallback() {
+        if (useCommandBasedUndoRedo) {
+            currentPageCommandManager.onStackChanged = undoRedoStackChangedCallback
+        }
     }
     
     private fun setupManagerCallbacks() {
         // Touch handler callbacks
         touchHandler.onInvalidate = { invalidate() }
         touchHandler.onDrawingChanged = { 
-            saveStateToUndoStackDebounced()
+            // When drawing changes, save command to undo stack
+            saveDrawingCommand()
             stateManager.drawingChangeListener?.onDrawingChanged()
         }
         touchHandler.onTextInputRequested = { x, y -> stateManager.textInputListener?.onTextInputRequested(x, y) }
@@ -103,82 +132,86 @@ class WhiteboardView @JvmOverloads constructor(
         }
     }
     
+    // Store previous state for undo
+    private var previousPaths = mutableListOf<com.example.moodle.ui.whiteboard.models.DrawingPath>()
+    private var previousTextObjects = mutableListOf<com.example.moodle.ui.whiteboard.models.TextObject>()
+    private var previousShapeObjects = mutableListOf<com.example.moodle.ui.whiteboard.models.ShapeObject>()
+    private var previousImageObjects = mutableListOf<com.example.moodle.ui.whiteboard.models.ImageObject>()
+    
     /**
-     * Save current state to undo stack (immediate)
+     * Save the current drawing state as a command
+     * This creates a snapshot command that captures the PREVIOUS state (before the change)
      */
-    private fun saveStateToUndoStack() {
-        currentPageUndoRedoManager.saveState(
-            bitmap = bitmapManager.drawingBitmap,
-            paths = stateManager.paths,
-            textObjects = stateManager.textObjects,
-            shapeObjects = stateManager.shapeObjects,
-            imageObjects = stateManager.imageObjects,
-        )
+    private fun saveDrawingCommand() {
+        // Create a command that stores the PREVIOUS state and CURRENT state
+        val command = object : com.example.moodle.ui.whiteboard.commands.DrawingCommand {
+            // Save PREVIOUS state (before the drawing action)
+            private val oldPaths = previousPaths.map { it.copy() }
+            private val oldTextObjects = previousTextObjects.map { it.copy() }
+            private val oldShapeObjects = previousShapeObjects.map { it.copy() }
+            private val oldImageObjects = previousImageObjects.map { it.copy() }
+            
+            // Save CURRENT state (after the drawing action)
+            private val newPaths = stateManager.paths.map { it.copy() }
+            private val newTextObjects = stateManager.textObjects.map { it.copy() }
+            private val newShapeObjects = stateManager.shapeObjects.map { it.copy() }
+            private val newImageObjects = stateManager.imageObjects.map { it.copy() }
+            
+            override fun execute() {
+                // Restore NEW state (for redo)
+                stateManager.paths.clear()
+                stateManager.paths.addAll(newPaths)
+                stateManager.textObjects.clear()
+                stateManager.textObjects.addAll(newTextObjects)
+                stateManager.shapeObjects.clear()
+                stateManager.shapeObjects.addAll(newShapeObjects)
+                stateManager.imageObjects.clear()
+                stateManager.imageObjects.addAll(newImageObjects)
+                renderManager.redrawCanvas()
+            }
+            
+            override fun undo() {
+                // Restore PREVIOUS state (before the action)
+                stateManager.paths.clear()
+                stateManager.paths.addAll(oldPaths)
+                stateManager.textObjects.clear()
+                stateManager.textObjects.addAll(oldTextObjects)
+                stateManager.shapeObjects.clear()
+                stateManager.shapeObjects.addAll(oldShapeObjects)
+                stateManager.imageObjects.clear()
+                stateManager.imageObjects.addAll(oldImageObjects)
+                renderManager.redrawCanvas()
+            }
+            
+            override fun getMemoryUsage(): Long {
+                return (oldPaths.size * 800L) + (newPaths.size * 800L) +
+                       (oldTextObjects.size * 200L) + (newTextObjects.size * 200L) +
+                       (oldShapeObjects.size * 300L) + (newShapeObjects.size * 300L) +
+                       (oldImageObjects.size * 500L) + (newImageObjects.size * 500L)
+            }
+            
+            override fun getDescription(): String = "Drawing action"
+        }
+        
+        currentPageCommandManager.execute(command)
+        
+        // Update previous state for next action
+        previousPaths = stateManager.paths.map { it.copy() }.toMutableList()
+        previousTextObjects = stateManager.textObjects.map { it.copy() }.toMutableList()
+        previousShapeObjects = stateManager.shapeObjects.map { it.copy() }.toMutableList()
+        previousImageObjects = stateManager.imageObjects.map { it.copy() }.toMutableList()
     }
     
     /**
-     * Save current state to undo stack (debounced to avoid excessive saves)
+     * Initialize previous state tracking when page loads
      */
-    private fun saveStateToUndoStackDebounced() {
-        // Cancel any pending save
-        pendingStateSave?.let { handler.removeCallbacks(it) }
-        
-        // Schedule new save
-        pendingStateSave = Runnable {
-            saveStateToUndoStack()
-            pendingStateSave = null
-        }
-        
-        handler.postDelayed(pendingStateSave!!, stateSaveDebounceMs)
+    private fun initializePreviousState() {
+        previousPaths = stateManager.paths.map { it.copy() }.toMutableList()
+        previousTextObjects = stateManager.textObjects.map { it.copy() }.toMutableList()
+        previousShapeObjects = stateManager.shapeObjects.map { it.copy() }.toMutableList()
+        previousImageObjects = stateManager.imageObjects.map { it.copy() }.toMutableList()
     }
-    
-    /**
-     * Restore state from snapshot
-     */
-    private fun restoreState(snapshot: UndoRedoManager.DrawingSnapshot?) {
-        if (snapshot == null) return
-        
-        // Clear current state
-        stateManager.clear()
-        
-        // Restore bitmap from diff
-        if (snapshot.bitmapDiff != null) {
-            val restoredBitmap = currentPageUndoRedoManager.reconstructBitmap(snapshot)
-            if (restoredBitmap != null) {
-                bitmapManager.drawingBitmap?.let { currentBitmap ->
-                    if (!currentBitmap.isRecycled) {
-                        val canvas = Canvas(currentBitmap)
-                        canvas.drawColor(android.graphics.Color.WHITE)
-                        canvas.drawBitmap(restoredBitmap, 0f, 0f, null)
-                    }
-                }
-                
-                // Recycle the temporary restored bitmap
-                if (restoredBitmap != bitmapManager.drawingBitmap) {
-                    restoredBitmap.recycle()
-                }
-            }
-        } else {
-            // No bitmap diff, just clear the canvas
-            bitmapManager.drawingBitmap?.let { currentBitmap ->
-                if (!currentBitmap.isRecycled) {
-                    val canvas = Canvas(currentBitmap)
-                    canvas.drawColor(android.graphics.Color.WHITE)
-                }
-            }
-        }
-        
-        // Restore state objects
-        stateManager.paths.addAll(snapshot.paths)
-        stateManager.textObjects.addAll(snapshot.textObjects)
-        stateManager.shapeObjects.addAll(snapshot.shapeObjects)
-        stateManager.imageObjects.addAll(snapshot.imageObjects)
 
-        // Redraw
-        renderManager.redrawCanvas()
-        invalidate()
-    }
-    
     private fun handleSectionControlButtonClick(section: SectionManager.Section, buttonIndex: Int) {
         // Button index: 0=pen, 1=eraser, 2=clear, 3=black, 4=blue, 5=green, 6=red
         when (buttonIndex) {
@@ -297,9 +330,12 @@ class WhiteboardView @JvmOverloads constructor(
             targetSection?.let {
                 textObject.isSelected = true
             }
-        } else stateManager.addTextObject(textObject)
+        } else {
+            stateManager.addTextObject(textObject)
+            // Save command for undo/redo
+            saveDrawingCommand()
+        }
 
-        saveStateToUndoStackDebounced()
         stateManager.drawingChangeListener?.onDrawingChanged()
         invalidate()
     }
@@ -319,7 +355,10 @@ class WhiteboardView @JvmOverloads constructor(
         )
         
         stateManager.addImageObject(imageObject)
-        saveStateToUndoStackDebounced()
+        
+        // Save command for undo/redo
+        saveDrawingCommand()
+        
         stateManager.drawingChangeListener?.onDrawingChanged()
         invalidate()
     }
@@ -368,8 +407,9 @@ class WhiteboardView @JvmOverloads constructor(
         } else {
             stateManager.clear()
             renderManager.redrawCanvas()
+            // Save command for undo/redo
+            saveDrawingCommand()
         }
-        saveStateToUndoStackDebounced()
         stateManager.drawingChangeListener?.onDrawingChanged()
         invalidate()
     }
@@ -381,13 +421,7 @@ class WhiteboardView @JvmOverloads constructor(
      * @return true if undo was successful, false if there's nothing to undo
      */
     fun undo(): Boolean {
-        val manager = currentPageUndoRedoManager ?: return false
-        val snapshot = manager.undo()
-        if (snapshot != null) {
-            restoreState(snapshot)
-            return true
-        }
-        return false
+        return commandHelper?.undo() ?: false
     }
     
     /**
@@ -395,50 +429,25 @@ class WhiteboardView @JvmOverloads constructor(
      * @return true if redo was successful, false if there's nothing to redo
      */
     fun redo(): Boolean {
-        val manager = currentPageUndoRedoManager ?: return false
-        val snapshot = manager.redo()
-        if (snapshot != null) {
-            restoreState(snapshot)
-            return true
-        }
-        return false
+        return commandHelper?.redo() ?: false
     }
     
     /**
      * Check if undo is available
      * @return true if there are actions to undo
      */
-    fun canUndo(): Boolean = currentPageUndoRedoManager?.canUndo() ?: false
+    fun canUndo(): Boolean {
+        return commandHelper?.canUndo() ?: false
+    }
     
     /**
      * Check if redo is available
      * @return true if there are actions to redo
      */
-    fun canRedo(): Boolean = currentPageUndoRedoManager?.canRedo() ?: false
-    
-    /**
-     * Clear all undo/redo history
-     */
-    fun clearUndoRedoHistory() {
-        currentPageUndoRedoManager.clear()
+    fun canRedo(): Boolean {
+        return commandHelper?.canRedo() ?: false
     }
-    
-    /**
-     * Set undo/redo stack size limit
-     * @param size Maximum number of states to keep (10-100)
-     */
-    fun setUndoRedoStackSize(size: Int) {
-        currentPageUndoRedoManager.setMaxStackSize(size)
-    }
-    
-    /**
-     * Enable or disable undo/redo functionality
-     * @param enabled true to enable, false to disable
-     */
-    fun setUndoRedoEnabled(enabled: Boolean) {
-        currentPageUndoRedoManager.setEnabled(enabled)
-    }
-    
+
     /**
      * Set a callback to be notified when undo/redo availability changes
      * @param callback Lambda that receives (canUndo, canRedo) booleans
@@ -447,47 +456,8 @@ class WhiteboardView @JvmOverloads constructor(
         // Store callback at view level
         undoRedoStackChangedCallback = callback
         
-        // Set callback on current page's manager
-        currentPageUndoRedoManager.onStackChanged = callback
-        
         // Immediately invoke callback with current state to initialize button states
         callback?.invoke(canUndo(), canRedo())
-    }
-    
-    /**
-     * Enable or disable incremental diffs for undo/redo
-     * When enabled, only changed bitmap regions are stored (more memory efficient)
-     * When disabled, full bitmaps are stored (simpler but uses more memory)
-     * @param enabled true to use incremental diffs, false for full bitmaps
-     */
-    fun setIncrementalDiffsEnabled(enabled: Boolean) {
-        currentPageUndoRedoManager.setIncrementalDiffsEnabled(enabled)
-    }
-    
-    /**
-     * Check if incremental diffs are enabled
-     * @return true if using incremental diffs
-     */
-    fun isIncrementalDiffsEnabled(): Boolean = currentPageUndoRedoManager.isIncrementalDiffsEnabled()
-    
-    /**
-     * Set debounce delay for state saves (in milliseconds)
-     * Higher values = less frequent saves = better performance but less granular undo
-     * Lower values = more frequent saves = worse performance but more granular undo
-     * @param delayMs Delay in milliseconds (default: 300ms, recommended: 100-500ms)
-     */
-    fun setStateSaveDebounce(delayMs: Long) {
-        stateSaveDebounceMs = delayMs.coerceIn(0L, 2000L)
-    }
-    
-    /**
-     * Set performance mode for diff calculation
-     * FAST: Larger tiles, more sampling - fastest but less accurate
-     * BALANCED: Default settings - good balance
-     * QUALITY: Smaller tiles, less sampling - slower but more accurate
-     */
-    fun setDiffPerformanceMode(mode: BitmapDiffManager.PerformanceMode) {
-        currentPageUndoRedoManager.setDiffPerformanceMode(mode)
     }
 
     // Split mode management
@@ -516,9 +486,18 @@ class WhiteboardView @JvmOverloads constructor(
         // Store reference to current page data
         currentPageData = pageData
         
-        // Set callback on the new page's undo/redo manager
-        currentPageUndoRedoManager.onStackChanged = undoRedoStackChangedCallback
+        // Recreate command helper for the new page
+        commandHelper = CommandBasedUndoRedoHelper(
+            commandManager = currentPageCommandManager,
+            stateManager = stateManager,
+            bitmapManager = bitmapManager
+        ).apply {
+            onInvalidateView = { invalidate() }
+            onRedrawCanvas = { renderManager.redrawCanvas() }
+        }
         
+        currentPageCommandManager.onStackChanged = undoRedoStackChangedCallback
+
         // Load page content
         stateManager.clear()
         stateManager.paths.addAll(pageData.paths)
@@ -533,14 +512,14 @@ class WhiteboardView @JvmOverloads constructor(
         renderManager.redrawCanvas()
         invalidate()
         
-        // Update button states for the new page's undo/redo manager
-        currentPageUndoRedoManager.updateButtonStates()
+        // Initialize previous state tracking
+        initializePreviousState()
         
+        currentPageCommandManager.updateButtonStates()
+
         // Save initial state if this is a new page with no history
         if (!canUndo() && !canRedo()) {
-            post {
-                saveStateToUndoStack()
-            }
+            post {}
         }
     }
     

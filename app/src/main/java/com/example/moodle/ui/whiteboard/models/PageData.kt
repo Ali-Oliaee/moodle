@@ -1,6 +1,6 @@
 package com.example.moodle.ui.whiteboard.models
 
-import com.example.moodle.ui.whiteboard.managers.UndoRedoManager
+import com.example.moodle.ui.whiteboard.managers.CommandManager
 
 /**
  * Data class representing a single page in the whiteboard
@@ -15,7 +15,8 @@ data class PageData(
     val imageObjects: MutableList<ImageObject> = mutableListOf(),
     var backgroundPattern: BackgroundPattern = BackgroundPattern.PLAIN,
     var backgroundColor: BackgroundColor = BackgroundColor.WHITE,
-    val undoRedoManager: UndoRedoManager = UndoRedoManager()
+    // command-based undo/redo
+    val commandManager: CommandManager = CommandManager()
 ) {
     fun clear() {
         paths.clear()
