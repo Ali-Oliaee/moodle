@@ -60,12 +60,12 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnTextRecognition: ImageButton
     private lateinit var btnFormula: ImageButton
     private lateinit var btnShapes: ImageButton
-    private lateinit var btnUndo: ImageButton
-    private lateinit var btnRedo: ImageButton
     private lateinit var btnClear: ImageButton
     private lateinit var btnColorPicker: Button
     private lateinit var btnStrokeWidth: ImageButton
     private lateinit var btnBackground: ImageButton
+    private lateinit var btnUndo: ImageButton
+    private lateinit var btnRedo: ImageButton
     
     // Pagination Buttons
     private lateinit var btnPreviousPage: ImageButton
@@ -116,7 +116,7 @@ class WhiteboardActivity : AppCompatActivity() {
         // Load initial page
         loadCurrentPageFromViewModel()
     }
-
+    
     /**
      * Initialize UI components
      */
@@ -140,12 +140,12 @@ class WhiteboardActivity : AppCompatActivity() {
         btnTextRecognition = findViewById(R.id.btnTextRecognition)
         btnFormula = findViewById(R.id.btnFormula)
         btnShapes = findViewById(R.id.btnShapes)
-        btnUndo = findViewById(R.id.btnUndo)
-        btnRedo = findViewById(R.id.btnRedo)
         btnClear = findViewById(R.id.btnClear)
         btnColorPicker = findViewById(R.id.btnColorPicker)
         btnStrokeWidth = findViewById(R.id.btnStrokeWidth)
         btnBackground = findViewById(R.id.btnBackground)
+        btnUndo = findViewById(R.id.btnUndo)
+        btnRedo = findViewById(R.id.btnRedo)
         
         // Pagination buttons
         btnPreviousPage = findViewById(R.id.btnPreviousPage)
@@ -265,18 +265,6 @@ class WhiteboardActivity : AppCompatActivity() {
             popupController.showShapesPopup(btnShapes)
         }
         
-        btnUndo.setOnClickListener {
-            whiteboardView.undo()
-            saveCurrentPageToViewModel()
-            updateUndoRedoState()
-        }
-        
-        btnRedo.setOnClickListener {
-            whiteboardView.redo()
-            saveCurrentPageToViewModel()
-            updateUndoRedoState()
-        }
-        
         btnClear.setOnClickListener {
             showClearConfirmDialog()
         }
@@ -297,6 +285,14 @@ class WhiteboardActivity : AppCompatActivity() {
         
         btnBackground.setOnClickListener {
             popupController.showBackgroundPatternPopup()
+        }
+        
+        btnUndo.setOnClickListener {
+            whiteboardView.undo()
+        }
+        
+        btnRedo.setOnClickListener {
+            whiteboardView.redo()
         }
     }
     
@@ -361,7 +357,6 @@ class WhiteboardActivity : AppCompatActivity() {
         whiteboardView.setOnDrawingChangeListener(object : OnDrawingChangeListener {
             override fun onDrawingChanged() {
                 saveCurrentPageToViewModel()
-                updateUndoRedoState()
             }
         })
         
@@ -370,6 +365,14 @@ class WhiteboardActivity : AppCompatActivity() {
                 viewModel.requestTextInput(x, y)
             }
         })
+        
+        // Setup undo/redo listener
+        whiteboardView.setOnUndoRedoStackChangedListener { canUndo, canRedo ->
+            btnUndo.isEnabled = canUndo
+            btnUndo.alpha = if (canUndo) 1.0f else 0.5f
+            btnRedo.isEnabled = canRedo
+            btnRedo.alpha = if (canRedo) 1.0f else 0.5f
+        }
     }
     
     /**
@@ -408,13 +411,6 @@ class WhiteboardActivity : AppCompatActivity() {
         // Update drawing mode
         whiteboardView.setDrawingMode(state.isDrawingMode)
         
-        // Update undo/redo buttons
-        btnUndo.isEnabled = state.canUndo
-        btnUndo.alpha = if (state.canUndo) 1.0f else 0.5f
-        
-        btnRedo.isEnabled = state.canRedo
-        btnRedo.alpha = if (state.canRedo) 1.0f else 0.5f
-        
         // Update pagination
         updatePageIndicatorFromState(state)
         
@@ -433,7 +429,6 @@ class WhiteboardActivity : AppCompatActivity() {
         // Handle page change event
         if (state.pageChangeEvent) {
             loadCurrentPageFromViewModel()
-            updateUndoRedoState()
             viewModel.clearPageChangeEvent()
         }
         
@@ -510,14 +505,6 @@ class WhiteboardActivity : AppCompatActivity() {
     }
     
     /**
-     * Update undo/redo state from whiteboard
-     */
-    private fun updateUndoRedoState() {
-        val currentPage = viewModel.getCurrentPage()
-        viewModel.updateUndoRedoState(currentPage.canUndo(), currentPage.canRedo())
-    }
-    
-    /**
      * Save current page data to ViewModel
      */
     private fun saveCurrentPageToViewModel() {
@@ -542,13 +529,9 @@ class WhiteboardActivity : AppCompatActivity() {
      */
     private fun loadCurrentPageFromViewModel() {
         val currentPage = viewModel.getCurrentPage()
-        whiteboardView.loadPageData(
-            currentPage.paths,
-            currentPage.textObjects,
-            currentPage.shapeObjects,
-            currentPage.imageObjects
-        )
-        whiteboardView.setBackgroundPattern(currentPage.backgroundPattern)
+        // Use the new method that accepts PageData directly
+        // This will automatically set up the page's undo/redo manager
+        whiteboardView.loadPageData(currentPage)
     }
     
     /**
@@ -587,7 +570,6 @@ class WhiteboardActivity : AppCompatActivity() {
             .setPositiveButton(getString(R.string.yes)) { _, _ ->
                 viewModel.clearCurrentPage()
                 loadCurrentPageFromViewModel()
-                updateUndoRedoState()
             }
             .setNegativeButton(getString(R.string.no), null)
             .show()
@@ -608,7 +590,6 @@ class WhiteboardActivity : AppCompatActivity() {
             .setPositiveButton(getString(R.string.yes)) { _, _ ->
                 viewModel.deleteCurrentPage()
                 loadCurrentPageFromViewModel()
-                updateUndoRedoState()
             }
             .setNegativeButton(getString(R.string.no), null)
             .show()
@@ -979,7 +960,6 @@ class WhiteboardActivity : AppCompatActivity() {
                     data.data?.let { uri ->
                         viewModel.importImage(uri, whiteboardView) {
                             loadCurrentPageFromViewModel()
-                            updateUndoRedoState()
                         }
                     }
                 }
@@ -989,7 +969,6 @@ class WhiteboardActivity : AppCompatActivity() {
                     data.data?.let { uri ->
                         viewModel.importMoodleFile(uri, whiteboardView) {
                             loadCurrentPageFromViewModel()
-                            updateUndoRedoState()
                         }
                     }
                 }
@@ -1067,7 +1046,6 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Reload the page
         loadCurrentPageFromViewModel()
-        updateUndoRedoState()
         
         Toast.makeText(
             this,

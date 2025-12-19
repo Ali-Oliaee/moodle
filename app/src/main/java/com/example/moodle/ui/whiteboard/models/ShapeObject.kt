@@ -665,5 +665,24 @@ data class ShapeObject(
     enum class ResizeHandle {
         TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT, LINE_START, LINE_END
     }
+    
+    /**
+     * Create a deep copy of this ShapeObject
+     */
+    fun copy(): ShapeObject {
+        return ShapeObject(
+            shapeType = shapeType,
+            startX = startX,
+            startY = startY,
+            endX = endX,
+            endY = endY,
+            color = color,
+            strokeWidth = strokeWidth,
+            rotation = rotation,
+            scaleX = scaleX,
+            scaleY = scaleY,
+            isSelected = isSelected
+        )
+    }
 }
 

@@ -25,7 +25,6 @@ class DrawingStateManager {
     
     // Path tracking
     val paths = mutableListOf<DrawingPath>()
-    private val undoStack = mutableListOf<DrawingPath>()
     
     // Text objects tracking
     val textObjects = mutableListOf<TextObject>()
@@ -71,7 +70,6 @@ class DrawingStateManager {
      */
     fun addPath(path: DrawingPath) {
         paths.add(path)
-        undoStack.clear()
     }
     
     /**
@@ -92,7 +90,6 @@ class DrawingStateManager {
         selectedShapeObject?.isSelected = false
         selectedShapeObject = shapeObject
         shapeObject.isSelected = true
-        undoStack.clear()
     }
     
     /**
@@ -105,13 +102,6 @@ class DrawingStateManager {
         selectedShapeObject?.isSelected = false
         selectedImageObject = imageObject
         imageObject.isSelected = true
-    }
-    
-    /**
-     * Clear undo stack
-     */
-    fun clearUndoStack() {
-        undoStack.clear()
     }
     
     /**
@@ -165,45 +155,10 @@ class DrawingStateManager {
     }
     
     /**
-     * Perform undo operation
-     */
-    fun undo(): Boolean {
-        if (paths.isNotEmpty()) {
-            val lastPath = paths.removeAt(paths.size - 1)
-            undoStack.add(lastPath)
-            return true
-        }
-        return false
-    }
-    
-    /**
-     * Perform redo operation
-     */
-    fun redo(): Boolean {
-        if (undoStack.isNotEmpty()) {
-            val path = undoStack.removeAt(undoStack.size - 1)
-            paths.add(path)
-            return true
-        }
-        return false
-    }
-    
-    /**
-     * Check if undo is available
-     */
-    fun canUndo(): Boolean = paths.isNotEmpty()
-    
-    /**
-     * Check if redo is available
-     */
-    fun canRedo(): Boolean = undoStack.isNotEmpty()
-    
-    /**
      * Clear all drawing data
      */
     fun clear() {
         paths.clear()
-        undoStack.clear()
         textObjects.clear()
         shapeObjects.clear()
         imageObjects.clear()
@@ -717,9 +672,6 @@ class DrawingStateManager {
         if (selectedImageObject in imageObjectsToRemove) {
             selectedImageObject = null
         }
-        
-        // Clear undo stack since we've modified the drawing
-        undoStack.clear()
     }
 }
 
