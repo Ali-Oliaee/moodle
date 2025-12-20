@@ -8,10 +8,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -22,7 +20,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -62,25 +59,23 @@ fun AnimatedSectionDropdown(
             SectionOption(6, R.string.section_count_6)
         )
     }
-    
     val expandedState = remember { MutableTransitionState(false) }
     expandedState.targetState = isExpanded
     
-        // Animated Dropdown Content
-        AnimatedVisibility(
-            visibleState = expandedState,
-            enter = fadeIn(animationSpec = tween(300)) + 
-                    expandVertically(animationSpec = tween(300)),
-            exit = fadeOut(animationSpec = tween(300)) + 
-                   shrinkVertically(animationSpec = tween(300))
-        ) {
-            Card(
-                modifier = Modifier
-                    .width(40.dp)
-                    .padding(top = 4.dp),
+    // Animated Dropdown Content
+    AnimatedVisibility(
+        visibleState = expandedState,
+        enter = fadeIn(animationSpec = tween(300)) + 
+                expandVertically(animationSpec = tween(300)),
+        exit = fadeOut(animationSpec = tween(300)) + 
+               shrinkVertically(animationSpec = tween(300))
+    ) {
+        Card(
+            modifier = modifier
+                .width(100.dp),
                 shape = RoundedCornerShape(10.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White.copy(alpha = 0.95f)
+                    containerColor = Color.White
                 )
             ) {
                 Column(
@@ -116,22 +111,16 @@ private fun DropdownItem(
 ) {
     Box(
         modifier = modifier
-            .width(100.dp)
+            .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = text,
-                fontSize = 13.sp,
-                color = Color(0xFF1F2937),
-                fontWeight = FontWeight.Normal
-            )
-        }
+        Text(
+            text = text,
+            fontSize = 14.sp,
+            color = Color(0xFF1F2937),
+            fontWeight = FontWeight.Normal
+        )
     }
 }
 
