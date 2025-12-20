@@ -6,7 +6,6 @@ import com.example.moodle.data.model.LoginRequest
 import com.example.moodle.data.model.LoginResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import androidx.lifecycle.ViewModelProvider
 
 /**
  * Repository handling authentication operations

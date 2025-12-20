@@ -108,7 +108,7 @@ class LoginViewModel @Inject constructor(
     }
 
     fun getIsLoggedIn(): Boolean {
-        return _uiState.value?.isLoginSuccessful ?: false
+        return authRepository.isLoggedIn()
     }
 
     fun onNavigationHandled() {

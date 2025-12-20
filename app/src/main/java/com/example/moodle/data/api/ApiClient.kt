@@ -11,6 +11,8 @@ import java.util.concurrent.TimeUnit
 object ApiClient {
     
     private fun createOkHttpClient(): OkHttpClient {
+        val TAG = "Moodle-URL"
+
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
@@ -19,30 +21,30 @@ object ApiClient {
             val request = chain.request()
             val url = request.url
             
-            Log.d("Moodle-URL", "=== REQUEST URL DETAILS ===")
-            Log.d("Moodle-URL", "Full URL: $url")
-            Log.d("Moodle-URL", "Scheme: ${url.scheme}")
-            Log.d("Moodle-URL", "Host: ${url.host}")
-            Log.d("Moodle-URL", "Port: ${url.port}")
-            Log.d("Moodle-URL", "Path: ${url.encodedPath}")
-            Log.d("Moodle-URL", "Method: ${request.method}")
-            Log.d("Moodle-URL", "=========================")
+            Log.d(TAG, "=== REQUEST URL DETAILS ===")
+            Log.d(TAG, "Full URL: $url")
+            Log.d(TAG, "Scheme: ${url.scheme}")
+            Log.d(TAG, "Host: ${url.host}")
+            Log.d(TAG, "Port: ${url.port}")
+            Log.d(TAG, "Path: ${url.encodedPath}")
+            Log.d(TAG, "Method: ${request.method}")
+            Log.d(TAG, "=========================")
             
-            Log.d("Moodle-HEADERS", "=== REQUEST HEADERS ===")
+            Log.d(TAG, "=== REQUEST HEADERS ===")
             for (i in 0 until request.headers.size) {
                 val name = request.headers.name(i)
                 val value = request.headers.value(i)
-                Log.d("Moodle-HEADERS", "$name: $value")
+                Log.d(TAG, "$name: $value")
             }
-            Log.d("Moodle-HEADERS", "=======================")
+            Log.d(TAG, "=======================")
             
             val requestBody = request.body
             if (requestBody != null) {
-                Log.d("Moodle-BODY", "=== REQUEST BODY ===")
-                Log.d("Moodle-BODY", "Content-Type: ${requestBody.contentType()}")
-                Log.d("Moodle-BODY", "Content-Length: ${requestBody.contentLength()}")
+                Log.d(TAG, "=== REQUEST BODY ===")
+                Log.d(TAG, "Content-Type: ${requestBody.contentType()}")
+                Log.d(TAG, "Content-Length: ${requestBody.contentLength()}")
                 
-                Log.d("Moodle-BODY", "====================")
+                Log.d(TAG, "====================")
             }
             
             chain.proceed(request)
@@ -58,8 +60,6 @@ object ApiClient {
     }
     
     fun createApiService(): ApiService {
-        // Use 10.0.2.2 for Android Emulator (maps to host's 127.0.0.1)
-        // For physical device, replace with your computer's actual IP address
         val baseUrl = "http://10.0.2.2:8083/"
         
         return Retrofit.Builder()

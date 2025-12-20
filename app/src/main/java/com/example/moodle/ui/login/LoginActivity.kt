@@ -28,9 +28,6 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var errorText: TextView
     private lateinit var viewModel: LoginViewModel
     
-    // TODO: remove this button after testing
-    private lateinit var btnSkip: Button
-    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
@@ -38,6 +35,7 @@ class LoginActivity : AppCompatActivity() {
         // Initialize ViewModel using Hilt
         viewModel = ViewModelProvider(this).get(LoginViewModel::class.java)
 
+        checkLoginStatus()
         initializeViews()
         applyFonts()
         setupClickListeners()
@@ -50,7 +48,6 @@ class LoginActivity : AppCompatActivity() {
         btnLogin = findViewById(R.id.btnLogin)
         progressBar = findViewById(R.id.progressBar)
         errorText = findViewById(R.id.errorText)
-        btnSkip = findViewById(R.id.btnSkip)
     }
 
     private fun applyFonts() {
@@ -69,9 +66,6 @@ class LoginActivity : AppCompatActivity() {
             val username = inputUsername.text.toString()
             val password = inputPassword.text.toString()
             viewModel.performLogin(username, password)
-        }
-        btnSkip.setOnClickListener {
-            navigateToWhiteboard()
         }
     }
 
