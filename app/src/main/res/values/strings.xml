@@ -91,6 +91,13 @@
 
     <!-- Attendance -->
     <string name="attendance_title">حضور و غیاب</string>
+    <string name="attendance_present">حاضر</string>
+    <string name="attendance_absent">غايب</string>
+    <string name="attendance_late">تاخیر</string>
+    <string name="attendance_excused">موجه</string>
+    <string name="attendance_confirm">تایید و ذخیره</string>
+    <string name="attendance_saved">حضور و غیاب با موفقیت ثبت شد</string>
+    <string name="back">بازگشت</string>
 
     <!-- Split Mode -->
     <string name="enable_split">تقسیم تخته</string>

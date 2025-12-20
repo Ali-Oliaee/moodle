@@ -46,6 +46,10 @@
             android:screenOrientation="landscape"
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
+        <activity
+            android:name=".ui.participants.ParticipantsActivity"
+            android:exported="false" />
+
         <service
             android:name=".ui.whiteboard.ScreenRecordService"
             android:foregroundServiceType="mediaProjection"

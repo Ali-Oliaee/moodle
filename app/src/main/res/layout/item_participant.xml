@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@android:color/white"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp"
+    android:layout_marginBottom="1dp"
+    android:gravity="center_vertical"
+    android:layoutDirection="rtl">
+
+    <ImageView
+        android:id="@+id/ivParticipantAvatar"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:src="@android:drawable/ic_menu_gallery"
+        android:contentDescription="@string/app_name"
+        android:scaleType="centerCrop" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginStart="10dp">
+
+        <TextView
+            android:id="@+id/tvParticipantName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ali Oliaee"
+            android:textSize="14sp"
+            android:textColor="#212121"
+            android:textStyle="normal"
+            android:letterSpacing="0"
+            tools:ignore="HardcodedText" />
+
+        <TextView
+            android:id="@+id/tvParticipantId"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0324321414214"
+            android:textSize="11sp"
+            android:textColor="#757575"
+            android:layout_marginTop="2dp"
+            tools:ignore="HardcodedText" />
+    </LinearLayout>
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnPresent"
+        android:layout_width="wrap_content"
+        android:layout_height="38dp"
+        android:text="@string/attendance_present"
+        android:background="@drawable/bg_button_present"
+        android:textColor="@android:color/white"
+        android:textSize="13sp"
+        android:minWidth="62dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:layout_marginEnd="6dp"
+        android:textAllCaps="false"
+        android:textStyle="bold" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnAbsent"
+        android:layout_width="wrap_content"
+        android:layout_height="38dp"
+        android:text="@string/attendance_absent"
+        android:background="@drawable/bg_button_absent"
+        android:textColor="@android:color/white"
+        android:textSize="13sp"
+        android:minWidth="62dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:layout_marginEnd="6dp"
+        android:textAllCaps="false"
+        android:textStyle="bold" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnLate"
+        android:layout_width="wrap_content"
+        android:layout_height="38dp"
+        android:text="@string/attendance_late"
+        android:background="@drawable/bg_button_late"
+        android:textColor="@android:color/white"
+        android:textSize="13sp"
+        android:minWidth="62dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:layout_marginEnd="6dp"
+        android:textAllCaps="false"
+        android:textStyle="bold" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnExcused"
+        android:layout_width="wrap_content"
+        android:layout_height="38dp"
+        android:text="@string/attendance_excused"
+        android:background="@drawable/bg_button_excused"
+        android:textColor="@android:color/white"
+        android:textSize="13sp"
+        android:minWidth="62dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:textAllCaps="false"
+        android:textStyle="bold" />
+
+</LinearLayout>
