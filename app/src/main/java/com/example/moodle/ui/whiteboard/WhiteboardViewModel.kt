@@ -66,8 +66,6 @@ class WhiteboardViewModel @Inject constructor(
             backgroundColor = currentPage.backgroundColor,
             isDrawingMode = true,
             isZooming = false,
-            canUndo = false,
-            canRedo = false,
             currentColor = pageManager.sharedColor,
             currentStrokeWidth = pageManager.sharedStrokeWidth,
             currentTool = DrawingTool.PEN,
@@ -352,15 +350,6 @@ class WhiteboardViewModel @Inject constructor(
      */
     fun clearCurrentPage() {
         pageManager.clearCurrentPage()
-    }
-    
-    /**
-     * Update undo/redo state
-     */
-    fun updateUndoRedoState(canUndo: Boolean, canRedo: Boolean) {
-        updateState { state ->
-            state.copy(canUndo = canUndo, canRedo = canRedo)
-        }
     }
     
     // ========== Import/Export ==========

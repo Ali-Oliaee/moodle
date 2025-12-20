@@ -286,11 +286,8 @@ class TouchGestureHandler(
             activePathsLastX.remove(pointerId)
             activePathsLastY.remove(pointerId)
             
-            // Clear undo stack and notify when all fingers are up
+            // Notify when all fingers are up
             if (activePaths.isEmpty()) {
-                if (!sectionManager.isSplitModeEnabled()) {
-                    stateManager.clearUndoStack()
-                }
                 onDrawingChanged?.invoke()
             }
         }

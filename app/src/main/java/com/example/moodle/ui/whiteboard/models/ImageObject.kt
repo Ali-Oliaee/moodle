@@ -270,5 +270,29 @@ data class ImageObject(
     enum class ResizeHandle {
         TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT
     }
+    
+    /**
+     * Create a deep copy of this ImageObject
+     * Note: Creates a new copy of the bitmap
+     */
+    fun copy(): ImageObject {
+        val bitmapCopy = if (!bitmap.isRecycled) {
+            bitmap.copy(bitmap.config, true)
+        } else {
+            bitmap
+        }
+        
+        return ImageObject(
+            bitmap = bitmapCopy,
+            x = x,
+            y = y,
+            width = width,
+            height = height,
+            rotation = rotation,
+            scaleX = scaleX,
+            scaleY = scaleY,
+            isSelected = isSelected
+        )
+    }
 }
 

@@ -17,5 +17,25 @@ data class DrawingPath(
     val shapeStartY: Float = 0f,
     val shapeEndX: Float = 0f,
     val shapeEndY: Float = 0f
-)
+) {
+    /**
+     * Create a deep copy of this DrawingPath
+     */
+    fun copy(): DrawingPath {
+        val pathCopy = Path(path)
+        val paintCopy = Paint(paint)
+        return DrawingPath(
+            path = pathCopy,
+            paint = paintCopy,
+            tool = tool,
+            text = text,
+            textX = textX,
+            textY = textY,
+            shapeStartX = shapeStartX,
+            shapeStartY = shapeStartY,
+            shapeEndX = shapeEndX,
+            shapeEndY = shapeEndY
+        )
+    }
+}
 

@@ -245,5 +245,20 @@ data class TextObject(
         val distance = sqrt((touchX - deleteButtonX) * (touchX - deleteButtonX) + (touchY - deleteButtonY) * (touchY - deleteButtonY))
         return distance <= deleteButtonRadius
     }
+    
+    /**
+     * Create a deep copy of this TextObject
+     */
+    fun copy(): TextObject {
+        return TextObject(
+            text = text,
+            x = x,
+            y = y,
+            textSize = textSize,
+            color = color,
+            rotation = rotation,
+            isSelected = isSelected
+        )
+    }
 }
 

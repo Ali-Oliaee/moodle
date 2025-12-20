@@ -37,6 +37,11 @@ android {
     buildFeatures {
         viewBinding = true
         buildConfig = true
+        compose = true
+    }
+    
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.8"
     }
     
     signingConfigs {
@@ -101,4 +106,12 @@ dependencies {
 
     // ML Kit Digital Ink Recognition (supports Persian/Farsi handwriting)
     implementation("com.google.mlkit:digital-ink-recognition:18.1.0")
+    
+    // Jetpack Compose
+    implementation("androidx.compose.ui:ui:1.6.0")
+    implementation("androidx.compose.material3:material3:1.2.0")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.6.0")
+    implementation("androidx.compose.animation:animation:1.6.0")
+    implementation("androidx.activity:activity-compose:1.8.2")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.6.0")
 }

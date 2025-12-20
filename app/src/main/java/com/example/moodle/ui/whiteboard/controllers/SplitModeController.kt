@@ -5,9 +5,14 @@ import com.example.moodle.ui.whiteboard.views.WhiteboardView
 import android.view.View
 import android.widget.ImageButton
 import android.widget.LinearLayout
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
 import com.example.moodle.R
+import com.example.moodle.ui.whiteboard.components.AnimatedSectionDropdown
 
 /**
  * Controller responsible for managing split mode functionality
@@ -21,9 +26,11 @@ class SplitModeController(
     private lateinit var btnEnableSplit: ImageButton
     private lateinit var btnDisableSplit: ImageButton
     private lateinit var bottomToolbar: LinearLayout
+    private lateinit var dropdownComposeView: ComposeView
     
     // State
     private var isSplitMode = false
+    private var isDropdownExpanded by mutableStateOf(false)
     
     // Callbacks
     var onSplitModeChanged: ((Boolean) -> Unit)? = null
@@ -34,13 +41,16 @@ class SplitModeController(
     fun initialize(
         enableSplit: ImageButton,
         disableSplit: ImageButton,
-        toolbar: LinearLayout
+        toolbar: LinearLayout,
+        dropdownCompose: ComposeView
     ) {
         btnEnableSplit = enableSplit
         btnDisableSplit = disableSplit
         bottomToolbar = toolbar
+        dropdownComposeView = dropdownCompose
         
         setupSplitModeControls()
+        setupDropdownCompose()
     }
     
     /**
@@ -48,7 +58,7 @@ class SplitModeController(
      */
     private fun setupSplitModeControls() {
         btnEnableSplit.setOnClickListener {
-            showSplitModeDialog()
+            toggleDropdown()
         }
         
         btnDisableSplit.setOnClickListener {
@@ -57,30 +67,55 @@ class SplitModeController(
     }
     
     /**
-     * Show split mode selection dialog
+     * Setup Compose dropdown with animated section selector
      */
-    private fun showSplitModeDialog() {
-        val sectionCounts = arrayOf(
-            activity.getString(R.string.section_count_2),
-            activity.getString(R.string.section_count_3),
-            activity.getString(R.string.section_count_4),
-            activity.getString(R.string.section_count_6)
-        )
-        
-        AlertDialog.Builder(activity)
-            .setTitle(activity.getString(R.string.choose_section_count))
-            .setItems(sectionCounts) { _, which ->
-                val sectionCount = when (which) {
-                    0 -> 2
-                    1 -> 3
-                    2 -> 4
-                    3 -> 6
-                    else -> 2
-                }
-                enableSplitMode(sectionCount)
+    private fun setupDropdownCompose() {
+        dropdownComposeView.setContent {
+            MaterialTheme {
+                AnimatedSectionDropdown(
+                    isExpanded = isDropdownExpanded,
+                    onItemSelected = { sectionCount ->
+                        enableSplitMode(sectionCount)
+                        hideDropdown()
+                    },
+                    onDismiss = {
+                        hideDropdown()
+                    }
+                )
             }
-            .setNegativeButton(activity.getString(R.string.cancel), null)
-            .show()
+        }
+    }
+    
+    /**
+     * Toggle dropdown visibility
+     */
+    private fun toggleDropdown() {
+        if (isDropdownExpanded) {
+            hideDropdown()
+        } else {
+            showDropdown()
+        }
+    }
+    
+    /**
+     * Show the animated dropdown
+     */
+    private fun showDropdown() {
+        isDropdownExpanded = true
+        dropdownComposeView.visibility = View.VISIBLE
+    }
+    
+    /**
+     * Hide the animated dropdown
+     */
+    private fun hideDropdown() {
+        isDropdownExpanded = false
+        // Delay hiding to allow animation to complete
+        dropdownComposeView.postDelayed({
+            if (!isDropdownExpanded) {
+                dropdownComposeView.visibility = View.GONE
+            }
+        }, 300)
     }
     
     /**
@@ -95,6 +130,7 @@ class SplitModeController(
         btnEnableSplit.visibility = View.GONE
         btnDisableSplit.visibility = View.VISIBLE
         bottomToolbar.visibility = View.GONE
+        hideDropdown()
         
         onSplitModeChanged?.invoke(true)
     }

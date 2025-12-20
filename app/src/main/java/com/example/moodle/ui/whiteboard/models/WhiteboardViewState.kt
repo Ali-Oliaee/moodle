@@ -5,8 +5,6 @@ data class WhiteboardViewState(
     val backgroundColor: BackgroundColor,
     val isDrawingMode: Boolean,
     val isZooming: Boolean,
-    val canUndo: Boolean,
-    val canRedo: Boolean,
     val currentColor: Int,
     val currentStrokeWidth: Float,
     val currentTool: DrawingTool,
