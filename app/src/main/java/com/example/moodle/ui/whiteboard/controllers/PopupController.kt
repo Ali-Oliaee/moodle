@@ -13,7 +13,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
 import com.example.moodle.R
+import com.example.moodle.ui.whiteboard.components.PenOptionsPopup
 
 /**
  * Controller responsible for managing all popup windows in the whiteboard
@@ -30,6 +35,10 @@ class PopupController(
     private var formulaPopupWindow: PopupWindow? = null
     private var backgroundPopupWindow: PopupWindow? = null
     private var shapesPopupWindow: PopupWindow? = null
+    
+    // Compose-based popup
+    private var penOptionsComposeView: ComposeView? = null
+    private var isPenOptionsVisible by mutableStateOf(false)
     
     // Callbacks
     var onColorSelected: ((Int) -> Unit)? = null
@@ -75,6 +84,86 @@ class PopupController(
         
         // Show popup above the anchor view
         colorPopupWindow?.showAsDropDown(anchorView, 0, -anchorView.height - 200, Gravity.CENTER)
+    }
+    
+    /**
+     * Show combined pen options popup (color + stroke width) using Jetpack Compose
+     */
+    fun showPenOptionsPopup(anchorView: View, currentColor: Int, currentStrokeWidth: Float) {
+        // Close any existing popup
+        dismissPenOptionsPopup()
+        
+        // Get anchor view location on screen
+        val location = IntArray(2)
+        anchorView.getLocationOnScreen(location)
+        
+        // Calculate popup position: above the anchor button, centered horizontally
+        val popupWidth = 240 * activity.resources.displayMetrics.density // Convert dp to pixels
+        val popupHeight = 250 * activity.resources.displayMetrics.density // Approximate height
+        
+        val anchorX = (location[0] + (anchorView.width / 2) - (popupWidth / 2)).toInt()
+        val anchorY = (location[1] - popupHeight - 16 * activity.resources.displayMetrics.density).toInt() // 16dp margin
+        
+        // Create or reuse ComposeView
+        if (penOptionsComposeView == null) {
+            penOptionsComposeView = ComposeView(activity).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+        }
+        
+        // Add ComposeView to activity's root layout
+        val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+        if (penOptionsComposeView?.parent == null) {
+            rootView.addView(penOptionsComposeView)
+        }
+        
+        // Convert Android Color to Compose Color
+        val composeColor = androidx.compose.ui.graphics.Color(currentColor)
+        
+        // Set Compose content
+        penOptionsComposeView?.setContent {
+            PenOptionsPopup(
+                isVisible = isPenOptionsVisible,
+                currentColor = composeColor,
+                currentStrokeWidth = currentStrokeWidth,
+                anchorX = anchorX,
+                anchorY = anchorY,
+                onColorSelected = { color ->
+                    // Convert Compose Color back to Android Color
+                    val androidColor = android.graphics.Color.argb(
+                        (color.alpha * 255).toInt(),
+                        (color.red * 255).toInt(),
+                        (color.green * 255).toInt(),
+                        (color.blue * 255).toInt()
+                    )
+                    onColorSelected?.invoke(androidColor)
+                },
+                onStrokeWidthChanged = { width ->
+                    onStrokeWidthChanged?.invoke(width)
+                },
+                onDismiss = {
+                    dismissPenOptionsPopup()
+                }
+            )
+        }
+        
+        // Show the popup
+        isPenOptionsVisible = true
+    }
+    
+    /**
+     * Dismiss the pen options popup
+     */
+    fun dismissPenOptionsPopup() {
+        isPenOptionsVisible = false
+        penOptionsComposeView?.let { view ->
+            val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+            rootView.removeView(view)
+        }
+        penOptionsComposeView = null
     }
     
     /**
@@ -408,6 +497,7 @@ class PopupController(
     fun cleanup() {
         colorPopupWindow?.dismiss()
         strokePopupWindow?.dismiss()
+        dismissPenOptionsPopup()
         eraserModePopupWindow?.dismiss()
         formulaPopupWindow?.dismiss()
         backgroundPopupWindow?.dismiss()

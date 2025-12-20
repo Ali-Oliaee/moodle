@@ -48,6 +48,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnLogout: ImageButton
     private lateinit var btnExport: ImageButton
     private lateinit var btnImport: ImageButton
+    private lateinit var btnSelect: ImageButton
     private lateinit var btnPinchMode: ImageButton
     private lateinit var btnToggleToolbars: ImageButton
     private lateinit var topToolbar: LinearLayout
@@ -61,8 +62,6 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnFormula: ImageButton
     private lateinit var btnShapes: ImageButton
     private lateinit var btnClear: ImageButton
-    private lateinit var btnColorPicker: Button
-    private lateinit var btnStrokeWidth: ImageButton
     private lateinit var btnBackground: ImageButton
     private lateinit var btnUndo: ImageButton
     private lateinit var btnRedo: ImageButton
@@ -128,6 +127,7 @@ class WhiteboardActivity : AppCompatActivity() {
         btnLogout = findViewById(R.id.btnLogout)
         btnExport = findViewById(R.id.btnExport)
         btnImport = findViewById(R.id.btnImport)
+        btnSelect = findViewById(R.id.btnSelect)
         btnPinchMode = findViewById(R.id.btnPinchMode)
         btnToggleToolbars = findViewById(R.id.btnToggleToolbars)
         topToolbar = findViewById(R.id.topToolbar)
@@ -141,8 +141,6 @@ class WhiteboardActivity : AppCompatActivity() {
         btnFormula = findViewById(R.id.btnFormula)
         btnShapes = findViewById(R.id.btnShapes)
         btnClear = findViewById(R.id.btnClear)
-        btnColorPicker = findViewById(R.id.btnColorPicker)
-        btnStrokeWidth = findViewById(R.id.btnStrokeWidth)
         btnBackground = findViewById(R.id.btnBackground)
         btnUndo = findViewById(R.id.btnUndo)
         btnRedo = findViewById(R.id.btnRedo)
@@ -223,6 +221,7 @@ class WhiteboardActivity : AppCompatActivity() {
         btnLogout.setOnClickListener { logout() }
         btnExport.setOnClickListener { showExportOptionsDialog() }
         btnImport.setOnClickListener { showImportOptionsDialog() }
+        btnSelect.setOnClickListener { toggleSelectMode() }
         btnPinchMode.setOnClickListener { togglePinchMode() }
         
         // Toggle toolbars button listener
@@ -243,14 +242,48 @@ class WhiteboardActivity : AppCompatActivity() {
      */
     private fun setupToolListeners() {
         btnPen.setOnClickListener {
-            viewModel.togglePenSelectionMode()
+            // Deactivate pinch mode if active
+            if (isPinchModeActive) {
+                isPinchModeActive = false
+                whiteboardView.setPinchModeEnabled(false)
+                btnPinchMode.isSelected = false
+            }
+            
+            // Check if pen tool is already selected
+            val isPenAlreadySelected = viewModel.uiState.value?.currentTool == DrawingTool.PEN
+            
+            if (isPenAlreadySelected) {
+                // Pen is already selected, open popup to change options
+                popupController.showPenOptionsPopup(
+                    btnPen,
+                    viewModel.uiState.value?.currentColor ?: Color.BLACK,
+                    viewModel.uiState.value?.currentStrokeWidth ?: 8f
+                )
+            } else {
+                // First press: just select the pen tool
+                viewModel.selectTool(DrawingTool.PEN)
+            }
         }
         
         btnEraser.setOnClickListener {
+            // Deactivate pinch mode if active
+            if (isPinchModeActive) {
+                isPinchModeActive = false
+                whiteboardView.setPinchModeEnabled(false)
+                btnPinchMode.isSelected = false
+            }
+            
             popupController.showEraserModePopup(btnEraser)
         }
         
         btnText.setOnClickListener {
+            // Deactivate pinch mode if active
+            if (isPinchModeActive) {
+                isPinchModeActive = false
+                whiteboardView.setPinchModeEnabled(false)
+                btnPinchMode.isSelected = false
+            }
+            
             viewModel.selectTool(DrawingTool.TEXT)
         }
         
@@ -259,29 +292,29 @@ class WhiteboardActivity : AppCompatActivity() {
         }
         
         btnFormula.setOnClickListener {
+            // Deactivate pinch mode if active
+            if (isPinchModeActive) {
+                isPinchModeActive = false
+                whiteboardView.setPinchModeEnabled(false)
+                btnPinchMode.isSelected = false
+            }
+            
             popupController.showFormulaPopup()
         }
         
         btnShapes.setOnClickListener {
+            // Deactivate pinch mode if active
+            if (isPinchModeActive) {
+                isPinchModeActive = false
+                whiteboardView.setPinchModeEnabled(false)
+                btnPinchMode.isSelected = false
+            }
+            
             popupController.showShapesPopup(btnShapes)
         }
         
         btnClear.setOnClickListener {
             showClearConfirmDialog()
-        }
-        
-        btnColorPicker.setOnClickListener {
-            popupController.showColorPickerPopup(
-                btnColorPicker,
-                viewModel.uiState.value?.currentColor ?: Color.BLACK
-            )
-        }
-        
-        btnStrokeWidth.setOnClickListener {
-            popupController.showStrokeWidthPopup(
-                btnStrokeWidth,
-                viewModel.uiState.value?.currentStrokeWidth ?: 8f
-            )
         }
         
         btnBackground.setOnClickListener {
@@ -394,17 +427,8 @@ class WhiteboardActivity : AppCompatActivity() {
         whiteboardView.setDrawingTool(state.currentTool)
         updateToolButtonSelection(state.currentTool)
         
-        // Update pen button icon based on tool
-        val penIconRes = if (state.currentTool == DrawingTool.SELECTION) {
-            R.drawable.ic_hand
-        } else {
-            R.drawable.ic_pen
-        }
-        btnPen.setImageResource(penIconRes)
-        
         // Update color
         whiteboardView.setColor(state.currentColor)
-        btnColorPicker.backgroundTintList = android.content.res.ColorStateList.valueOf(state.currentColor)
         
         // Update stroke width
         whiteboardView.setStrokeWidth(state.currentStrokeWidth)
@@ -459,13 +483,25 @@ class WhiteboardActivity : AppCompatActivity() {
      * Update tool button selection state
      */
     private fun updateToolButtonSelection(tool: DrawingTool) {
+        // If pinch mode is active, don't select any tool buttons
+        if (isPinchModeActive) {
+            btnPen.isSelected = false
+            btnSelect.isSelected = false
+            btnEraser.isSelected = false
+            btnText.isSelected = false
+            btnShapes.isSelected = false
+            return
+        }
+        
         btnPen.isSelected = false
+        btnSelect.isSelected = false
         btnEraser.isSelected = false
         btnText.isSelected = false
         btnShapes.isSelected = false
         
         when (tool) {
-            DrawingTool.PEN, DrawingTool.SELECTION -> btnPen.isSelected = true
+            DrawingTool.PEN -> btnPen.isSelected = true
+            DrawingTool.SELECTION -> btnSelect.isSelected = true
             DrawingTool.ERASER, DrawingTool.SELECTIVE_ERASER -> btnEraser.isSelected = true
             DrawingTool.TEXT -> btnText.isSelected = true
             DrawingTool.LINE, DrawingTool.CIRCLE, DrawingTool.TRIANGLE, DrawingTool.RECTANGLE,
@@ -841,6 +877,27 @@ class WhiteboardActivity : AppCompatActivity() {
     }
     
     /**
+     * Toggle selection mode
+     * Allows user to select and move drawn elements
+     */
+    private fun toggleSelectMode() {
+        // Deactivate pinch mode if active
+        if (isPinchModeActive) {
+            isPinchModeActive = false
+            whiteboardView.setPinchModeEnabled(false)
+            btnPinchMode.isSelected = false
+        }
+        
+        if (viewModel.uiState.value?.currentTool == DrawingTool.SELECTION) {
+            // If already in selection mode, switch back to pen
+            viewModel.selectTool(DrawingTool.PEN)
+        } else {
+            // Switch to selection mode
+            viewModel.selectTool(DrawingTool.SELECTION)
+        }
+    }
+    
+    /**
      * Toggle pinch and zoom mode
      * When enabled, users can only zoom/pan, drawing is disabled
      */
@@ -850,6 +907,20 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Update button visual state
         btnPinchMode.isSelected = isPinchModeActive
+        
+        if (isPinchModeActive) {
+            // When pinch mode is activated, deselect all tool buttons visually
+            btnPen.isSelected = false
+            btnSelect.isSelected = false
+            btnEraser.isSelected = false
+            btnText.isSelected = false
+            btnShapes.isSelected = false
+        } else {
+            // When pinch mode is deactivated, restore tool button selection
+            viewModel.uiState.value?.currentTool?.let { tool ->
+                updateToolButtonSelection(tool)
+            }
+        }
     }
     
     /**

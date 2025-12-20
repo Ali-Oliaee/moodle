@@ -325,7 +325,18 @@
                 android:layout_marginHorizontal="8dp"
                 android:background="@drawable/separator_gradient" />
 
-            <!-- View Mode Tool -->
+            <!-- View Mode Tools Group -->
+            <ImageButton
+                android:id="@+id/btnSelect"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_margin="4dp"
+                android:src="@drawable/ic_hand"
+                android:background="@drawable/modern_tool_button_ripple"
+                android:padding="6dp"
+                android:scaleType="fitCenter"
+                android:contentDescription="@string/desc_select_tool" />
+
             <ImageButton
                 android:id="@+id/btnPinchMode"
                 android:layout_width="32dp"
@@ -345,26 +356,6 @@
                 android:background="@drawable/separator_gradient" />
 
             <!-- Style Tools Group -->
-            <Button
-                android:id="@+id/btnColorPicker"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:layout_margin="4dp"
-                android:background="@drawable/modern_color_button_background"
-                android:backgroundTint="#000000"
-                android:contentDescription="@string/colors" />
-
-            <ImageButton
-                android:id="@+id/btnStrokeWidth"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:layout_margin="4dp"
-                android:src="@drawable/ic_stroke_width"
-                android:background="@drawable/modern_tool_button_ripple"
-                android:padding="6dp"
-                android:scaleType="fitCenter"
-                android:contentDescription="@string/stroke_width" />
-
             <ImageButton
                 android:id="@+id/btnBackground"
                 android:layout_width="32dp"
