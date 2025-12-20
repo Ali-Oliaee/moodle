@@ -1,64 +1,70 @@
 package com.example.moodle.ui.participants
 
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.ImageButton
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.moodle.R
+import com.example.moodle.data.datastore.UserPreferences
 import com.example.moodle.data.model.AttendanceStatus
 import com.example.moodle.data.model.Participant
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class ParticipantsActivity : AppCompatActivity() {
 
     private lateinit var rvParticipants: RecyclerView
     private lateinit var btnConfirm: Button
     private lateinit var btnBack: ImageButton
+    private lateinit var loadingLayout: LinearLayout
+    private lateinit var errorLayout: LinearLayout
+    private lateinit var tvEmpty: TextView
+    private lateinit var tvError: TextView
+    private lateinit var btnRetry: Button
+    
     private lateinit var participantAdapter: ParticipantAdapter
+    private lateinit var userPreferences: UserPreferences
+    private val viewModel: ParticipantsViewModel by viewModels()
+    
     private val participants = mutableListOf<Participant>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_participants)
 
+        userPreferences = UserPreferences(this)
+        
         initViews()
-        loadMockData()
         setupRecyclerView()
         setupButtons()
+        observeViewModel()
+        loadParticipants()
     }
 
     private fun initViews() {
         rvParticipants = findViewById(R.id.rvParticipants)
         btnConfirm = findViewById(R.id.btnConfirm)
         btnBack = findViewById(R.id.btnBack)
+        loadingLayout = findViewById(R.id.loadingLayout)
+        errorLayout = findViewById(R.id.errorLayout)
+        tvEmpty = findViewById(R.id.tvEmpty)
+        tvError = findViewById(R.id.tvError)
+        btnRetry = findViewById(R.id.btnRetry)
     }
 
-    private fun loadMockData() {
-        participants.addAll(
-            listOf(
-                Participant("98012345678", "علی علیایی"),
-                Participant("98023456789", "فاطمه محمدی"),
-                Participant("98034567890", "حسین احمدی"),
-                Participant("98045678901", "مریم رضایی"),
-                Participant("98056789012", "رضا کریمی"),
-                Participant("98067890123", "زهرا حسینی"),
-                Participant("98078901234", "محمد جعفری"),
-                Participant("98089012345", "سارا نوری"),
-                Participant("98090123456", "امیر صادقی"),
-                Participant("98101234567", "لیلا موسوی"),
-                Participant("98112345678", "مهدی باقری"),
-                Participant("98123456789", "نرگس حیدری"),
-                Participant("98134567890", "سعید رحیمی"),
-                Participant("98145678901", "پریسا عباسی"),
-                Participant("98156789012", "احمد میرزایی"),
-                Participant("98167890123", "سمیرا قاسمی"),
-                Participant("98178901234", "بهروز سلیمانی"),
-                Participant("98189012345", "نسترن فتحی"),
-                Participant("98190123456", "مسعود آقایی"),
-                Participant("98201234567", "شیما نجفی")
-            )
-        )
+    private fun loadParticipants() {
+        val token = userPreferences.getAuthToken()
+        if (token != null) {
+            viewModel.loadParticipants(token)
+        } else {
+            showError("توکن احراز هویت یافت نشد")
+        }
     }
 
     private fun setupRecyclerView() {
@@ -80,6 +86,59 @@ class ParticipantsActivity : AppCompatActivity() {
         btnConfirm.setOnClickListener {
             confirmAttendance()
         }
+        
+        btnRetry.setOnClickListener {
+            viewModel.clearError()
+            loadParticipants()
+        }
+    }
+    
+    private fun observeViewModel() {
+        viewModel.isLoading.observe(this) { isLoading ->
+            showLoading(isLoading)
+        }
+        
+        viewModel.participants.observe(this) { participantsList ->
+            updateParticipants(participantsList)
+        }
+        
+        viewModel.error.observe(this) { error ->
+            error?.let { showError(it) }
+        }
+    }
+    
+    private fun showLoading(isLoading: Boolean) {
+        if (isLoading) {
+            loadingLayout.visibility = View.VISIBLE
+            rvParticipants.visibility = View.GONE
+            errorLayout.visibility = View.GONE
+            tvEmpty.visibility = View.GONE
+        } else {
+            loadingLayout.visibility = View.GONE
+        }
+    }
+    
+    private fun updateParticipants(participantsList: List<Participant>) {
+        participants.clear()
+        participants.addAll(participantsList)
+        participantAdapter.notifyDataSetChanged()
+        
+        if (participantsList.isEmpty()) {
+            tvEmpty.visibility = View.VISIBLE
+            rvParticipants.visibility = View.GONE
+        } else {
+            tvEmpty.visibility = View.GONE
+            rvParticipants.visibility = View.VISIBLE
+        }
+        errorLayout.visibility = View.GONE
+    }
+    
+    private fun showError(message: String) {
+        errorLayout.visibility = View.VISIBLE
+        tvError.text = message
+        rvParticipants.visibility = View.GONE
+        tvEmpty.visibility = View.GONE
+        loadingLayout.visibility = View.GONE
     }
 
     private fun confirmAttendance() {
@@ -99,7 +158,7 @@ class ParticipantsActivity : AppCompatActivity() {
         val absent = participants.count { it.attendanceStatus == AttendanceStatus.ABSENT }
         val late = participants.count { it.attendanceStatus == AttendanceStatus.LATE }
         val excused = participants.count { it.attendanceStatus == AttendanceStatus.EXCUSED }
-        val notMarked = participants.count { it.attendanceStatus == AttendanceStatus.NONE }
+        val notMarked = participants.count { it.attendanceStatus == AttendanceStatus.NONE || it.attendanceStatus == null }
 
         return """
             ${getString(R.string.attendance_present)}: $present

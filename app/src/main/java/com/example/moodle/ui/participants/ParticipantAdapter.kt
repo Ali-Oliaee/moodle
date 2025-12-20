@@ -4,7 +4,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.moodle.R
@@ -25,8 +24,13 @@ class ParticipantAdapter(
         private val btnExcused: Button = itemView.findViewById(R.id.btnExcused)
 
         fun bind(participant: Participant) {
-            tvName.text = participant.name
-            tvId.text = participant.id
+            tvName.text = participant.fullName
+            tvId.text = participant.nationalCode
+
+            // Initialize attendance status if null
+            if (participant.attendanceStatus == null) {
+                participant.attendanceStatus = AttendanceStatus.NONE
+            }
 
             // Reset button states
             resetButtonStates()
@@ -38,6 +42,7 @@ class ParticipantAdapter(
                 AttendanceStatus.LATE -> highlightButton(btnLate)
                 AttendanceStatus.EXCUSED -> highlightButton(btnExcused)
                 AttendanceStatus.NONE -> {}
+                null -> {} // Safety check
             }
 
             // Set click listeners

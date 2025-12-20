@@ -19,7 +19,9 @@ object ApiClient {
         
         val urlLoggingInterceptor = Interceptor { chain ->
             val request = chain.request()
+            val response = chain.proceed(request)
             val url = request.url
+          
             
             Log.d(TAG, "=== REQUEST URL DETAILS ===")
             Log.d(TAG, "Full URL: $url")
@@ -46,6 +48,12 @@ object ApiClient {
                 
                 Log.d(TAG, "====================")
             }
+
+            Log.d(TAG, "=== RESPONSE ===")
+            Log.d(TAG, "Status: ${response.code}")
+            Log.d(TAG, "Message: ${response.message}")
+            Log.d(TAG, "Body: ${response.body?.string()}")
+            Log.d(TAG, "=========================")
             
             chain.proceed(request)
         }

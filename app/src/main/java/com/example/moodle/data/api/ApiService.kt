@@ -2,8 +2,11 @@ package com.example.moodle.data.api
 
 import com.example.moodle.data.model.LoginRequest
 import com.example.moodle.data.model.LoginResponse
+import com.example.moodle.data.model.ParticipantResponse
+import com.example.moodle.data.model.GetParticipantsRequest
 import retrofit2.Call
 import retrofit2.http.Body
+import retrofit2.http.Header
 import retrofit2.http.POST
 
 interface ApiService {
@@ -11,4 +14,11 @@ interface ApiService {
     fun login(
         @Body request: LoginRequest
     ): Call<LoginResponse>
+
+    @POST("api/users/list")
+    fun getParticipants(
+        @Header("Authorization") accessToken: String,
+        @Body request: GetParticipantsRequest
+    ): Call<ParticipantResponse>
 }
+    

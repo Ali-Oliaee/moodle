@@ -98,6 +98,9 @@
     <string name="attendance_confirm">تایید و ذخیره</string>
     <string name="attendance_saved">حضور و غیاب با موفقیت ثبت شد</string>
     <string name="back">بازگشت</string>
+    <string name="loading_participants">در حال دریافت لیست شرکت‌کنندگان...</string>
+    <string name="error_loading_participants">خطا در دریافت لیست</string>
+    <string name="no_participants">هیچ شرکت‌کننده‌ای یافت نشد</string>
 
     <!-- Split Mode -->
     <string name="enable_split">تقسیم تخته</string>
