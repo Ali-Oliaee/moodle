@@ -6,7 +6,6 @@
 - table
 - auto correct
 - highlighter
-- area eraser
 - emojie
 - guides
 - color picker
