@@ -1,6 +1,5 @@
 package com.example.moodle.ui.whiteboard.controllers
 import com.example.moodle.ui.whiteboard.models.*
-import com.example.moodle.ui.whiteboard.views.*
 
 import com.example.moodle.ui.whiteboard.models.BackgroundPattern
 import com.example.moodle.ui.whiteboard.models.DrawingTool
@@ -18,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import com.example.moodle.R
 import com.example.moodle.ui.whiteboard.components.PenOptionsPopup
+import com.example.moodle.ui.whiteboard.components.BackgroundPatternPopup
 
 /**
  * Controller responsible for managing all popup windows in the whiteboard
@@ -32,12 +32,14 @@ class PopupController(
     private var strokePopupWindow: PopupWindow? = null
     private var eraserModePopupWindow: PopupWindow? = null
     private var formulaPopupWindow: PopupWindow? = null
-    private var backgroundPopupWindow: PopupWindow? = null
     private var shapesPopupWindow: PopupWindow? = null
     
-    // Compose-based popup
+    // Compose-based popups
     private var penOptionsComposeView: ComposeView? = null
     private var isPenOptionsVisible by mutableStateOf(false)
+    
+    private var backgroundPatternComposeView: ComposeView? = null
+    private var isBackgroundPatternVisible by mutableStateOf(false)
     
     // Callbacks
     var onColorSelected: ((Int) -> Unit)? = null
@@ -61,7 +63,7 @@ class PopupController(
         anchorView.getLocationOnScreen(location)
         
         val anchorX = location[0]
-        val anchorY = location[1] - 550
+        val anchorY = location[1] - 600
         
         // Create or reuse ComposeView
         if (penOptionsComposeView == null) {
@@ -126,84 +128,64 @@ class PopupController(
     }
     
     /**
-     * Show background pattern popup
+     * Show background pattern popup using Jetpack Compose
      */
-    fun showBackgroundPatternPopup() {
-        val inflater = LayoutInflater.from(activity)
-        val popupView = inflater.inflate(R.layout.popup_background_patterns, null)
+    fun showBackgroundPatternPopup(currentPattern: BackgroundPattern, currentColor: BackgroundColor) {
+        // Close any existing popup
+        dismissBackgroundPatternPopup()
         
-        backgroundPopupWindow = PopupWindow(
-            popupView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-        
-        // Set up preview views
-        val previewGridSmall = popupView.findViewById<BackgroundPreviewView>(R.id.previewGridSmall)
-        val previewGridLarge = popupView.findViewById<BackgroundPreviewView>(R.id.previewGridLarge)
-        val previewLinesHorizontal = popupView.findViewById<BackgroundPreviewView>(R.id.previewLinesHorizontal)
-        val previewLinesVertical = popupView.findViewById<BackgroundPreviewView>(R.id.previewLinesVertical)
-        val previewLinesBoth = popupView.findViewById<BackgroundPreviewView>(R.id.previewLinesBoth)
-        val previewDotGrid = popupView.findViewById<BackgroundPreviewView>(R.id.previewDotGrid)
-        val previewGraphPaper = popupView.findViewById<BackgroundPreviewView>(R.id.previewGraphPaper)
-        
-        // Set patterns for preview views
-        previewGridSmall.setBackgroundPattern(BackgroundPattern.GRID_SMALL)
-        previewGridLarge.setBackgroundPattern(BackgroundPattern.GRID_LARGE)
-        previewLinesHorizontal.setBackgroundPattern(BackgroundPattern.LINES_HORIZONTAL)
-        previewLinesVertical.setBackgroundPattern(BackgroundPattern.LINES_VERTICAL)
-        previewLinesBoth.setBackgroundPattern(BackgroundPattern.LINES_BOTH)
-        previewDotGrid.setBackgroundPattern(BackgroundPattern.DOT_GRID)
-        previewGraphPaper.setBackgroundPattern(BackgroundPattern.GRAPH_PAPER)
-        
-        // Set up click listeners for background colors
-        setupBackgroundColorClickListener(popupView, R.id.backgroundColorWhite, BackgroundColor.WHITE)
-        setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightGray, BackgroundColor.LIGHT_GRAY)
-        setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightBlue, BackgroundColor.LIGHT_BLUE)
-        setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightGreen, BackgroundColor.LIGHT_GREEN)
-        setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightYellow, BackgroundColor.LIGHT_YELLOW)
-        setupBackgroundColorClickListener(popupView, R.id.backgroundColorLightPink, BackgroundColor.LIGHT_PINK)
-        setupBackgroundColorClickListener(popupView, R.id.backgroundColorDarkBlue, BackgroundColor.DARK_BLUE)
-        setupBackgroundColorClickListener(popupView, R.id.backgroundColorDarkGreen, BackgroundColor.DARK_GREEN)
-        setupBackgroundColorClickListener(popupView, R.id.backgroundColorBlack, BackgroundColor.BLACK)
-        
-        // Set up click listeners for all patterns
-        setupBackgroundPatternClickListener(popupView, R.id.backgroundPlain, BackgroundPattern.PLAIN)
-        setupBackgroundPatternClickListener(popupView, R.id.backgroundGridSmall, BackgroundPattern.GRID_SMALL)
-        setupBackgroundPatternClickListener(popupView, R.id.backgroundGridLarge, BackgroundPattern.GRID_LARGE)
-        setupBackgroundPatternClickListener(popupView, R.id.backgroundLinesHorizontal, BackgroundPattern.LINES_HORIZONTAL)
-        setupBackgroundPatternClickListener(popupView, R.id.backgroundLinesVertical, BackgroundPattern.LINES_VERTICAL)
-        setupBackgroundPatternClickListener(popupView, R.id.backgroundLinesBoth, BackgroundPattern.LINES_BOTH)
-        setupBackgroundPatternClickListener(popupView, R.id.backgroundDotGrid, BackgroundPattern.DOT_GRID)
-        setupBackgroundPatternClickListener(popupView, R.id.backgroundGraphPaper, BackgroundPattern.GRAPH_PAPER)
-        
-        // Setup upload background image button
-        val btnUploadBackgroundImage = popupView.findViewById<Button>(R.id.btnUploadBackgroundImage)
-        btnUploadBackgroundImage?.setOnClickListener {
-            onBackgroundImageUploadRequested?.invoke()
-            backgroundPopupWindow?.dismiss()
+        // Create or reuse ComposeView
+        if (backgroundPatternComposeView == null) {
+            backgroundPatternComposeView = ComposeView(activity).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
         }
         
-        backgroundPopupWindow?.showAtLocation(whiteboardView, Gravity.CENTER, 0, 0)
+        // Add ComposeView to activity's root layout
+        val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+        if (backgroundPatternComposeView?.parent == null) {
+            rootView.addView(backgroundPatternComposeView)
+        }
+        
+        // Set Compose content
+        backgroundPatternComposeView?.setContent {
+            BackgroundPatternPopup(
+                isVisible = isBackgroundPatternVisible,
+                currentPattern = currentPattern,
+                currentColor = currentColor,
+                onPatternSelected = { pattern ->
+                    onBackgroundPatternSelected?.invoke(pattern)
+                },
+                onColorSelected = { color ->
+                    onBackgroundColorSelected?.invoke(color)
+                },
+                onUploadImageRequested = {
+                    onBackgroundImageUploadRequested?.invoke()
+                    dismissBackgroundPatternPopup()
+                },
+                onDismiss = {
+                    dismissBackgroundPatternPopup()
+                }
+            )
+        }
+        
+        // Show the popup
+        isBackgroundPatternVisible = true
     }
     
     /**
-     * Helper to setup background color click listener
+     * Dismiss the background pattern popup
      */
-    private fun setupBackgroundColorClickListener(popupView: View, viewId: Int, color: BackgroundColor) {
-        popupView.findViewById<View>(viewId)?.setOnClickListener {
-            onBackgroundColorSelected?.invoke(color)
+    fun dismissBackgroundPatternPopup() {
+        isBackgroundPatternVisible = false
+        backgroundPatternComposeView?.let { view ->
+            val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+            rootView.removeView(view)
         }
-    }
-    
-    /**
-     * Helper to setup background pattern click listener
-     */
-    private fun setupBackgroundPatternClickListener(popupView: View, viewId: Int, pattern: BackgroundPattern) {
-        popupView.findViewById<FrameLayout>(viewId)?.setOnClickListener {
-            onBackgroundPatternSelected?.invoke(pattern)
-        }
+        backgroundPatternComposeView = null
     }
     
     /**
@@ -421,9 +403,9 @@ class PopupController(
         colorPopupWindow?.dismiss()
         strokePopupWindow?.dismiss()
         dismissPenOptionsPopup()
+        dismissBackgroundPatternPopup()
         eraserModePopupWindow?.dismiss()
         formulaPopupWindow?.dismiss()
-        backgroundPopupWindow?.dismiss()
         shapesPopupWindow?.dismiss()
     }
     

@@ -23,6 +23,7 @@ import com.example.moodle.ui.whiteboard.listeners.OnDrawingChangeListener
 import com.example.moodle.ui.whiteboard.listeners.OnTextInputListener
 import com.example.moodle.ui.whiteboard.managers.PageManager
 import com.example.moodle.ui.whiteboard.managers.TextRecognitionManager
+import com.example.moodle.ui.whiteboard.models.BackgroundColor
 import com.example.moodle.ui.whiteboard.models.DrawingTool
 import com.example.moodle.ui.whiteboard.models.WhiteboardViewState
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
@@ -338,7 +339,9 @@ class WhiteboardActivity : AppCompatActivity() {
         }
         
         btnBackground.setOnClickListener {
-            popupController.showBackgroundPatternPopup()
+            val currentPattern = whiteboardView.getBackgroundPattern()
+            val currentColor = viewModel.uiState.value?.backgroundColor ?: BackgroundColor.WHITE
+            popupController.showBackgroundPatternPopup(currentPattern, currentColor)
         }
         
         btnUndo.setOnClickListener {

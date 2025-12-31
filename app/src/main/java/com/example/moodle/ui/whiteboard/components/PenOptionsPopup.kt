@@ -55,6 +55,8 @@ fun PenOptionsPopup(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var selectedColor by remember(currentColor) { mutableStateOf(currentColor) }
+    
     if (isVisible) {
         Popup(
             alignment = Alignment.TopStart,
@@ -81,8 +83,11 @@ fun PenOptionsPopup(
                     horizontalAlignment = Alignment.Start
                 ) {
                     ColorPickerGrid(
-                        currentColor = currentColor,
-                        onColorSelected = onColorSelected
+                        currentColor = selectedColor,
+                        onColorSelected = { color ->
+                            selectedColor = color
+                            onColorSelected(color)
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
