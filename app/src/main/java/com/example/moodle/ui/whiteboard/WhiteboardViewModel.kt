@@ -148,20 +148,6 @@ class WhiteboardViewModel @Inject constructor(
     }
     
     /**
-     * Toggle pen between drawing and selection mode
-     */
-    fun togglePenSelectionMode() {
-        updateState { state ->
-            val newTool = if (state.currentTool == DrawingTool.PEN) {
-                DrawingTool.SELECTION
-            } else {
-                DrawingTool.PEN
-            }
-            state.copy(currentTool = newTool)
-        }
-    }
-    
-    /**
      * Select a color
      */
     fun selectColor(color: Int) {
@@ -178,24 +164,6 @@ class WhiteboardViewModel @Inject constructor(
         pageManager.updateSharedStrokeWidth(width)
         updateState { state ->
             state.copy(currentStrokeWidth = width)
-        }
-    }
-    
-    /**
-     * Toggle between drawing and pan mode
-     */
-    fun toggleDrawingMode() {
-        updateState { state ->
-            state.copy(isDrawingMode = !state.isDrawingMode)
-        }
-    }
-    
-    /**
-     * Set drawing mode
-     */
-    fun setDrawingMode(isDrawing: Boolean) {
-        updateState { state ->
-            state.copy(isDrawingMode = isDrawing)
         }
     }
     

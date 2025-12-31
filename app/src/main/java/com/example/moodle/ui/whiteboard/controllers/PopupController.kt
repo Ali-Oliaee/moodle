@@ -6,7 +6,6 @@ import com.example.moodle.ui.whiteboard.models.BackgroundPattern
 import com.example.moodle.ui.whiteboard.models.DrawingTool
 import com.example.moodle.ui.whiteboard.views.WhiteboardView
 
-import android.graphics.Color
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -49,43 +48,7 @@ class PopupController(
     var onToolSelected: ((DrawingTool) -> Unit)? = null
     var onEraserModeSelected: ((Boolean) -> Unit)? = null
     
-    /**
-     * Show color picker popup
-     */
-    fun showColorPickerPopup(anchorView: View, currentColor: Int) {
-        val inflater = LayoutInflater.from(activity)
-        val popupView = inflater.inflate(R.layout.popup_color_picker, null)
-        
-        colorPopupWindow = PopupWindow(
-            popupView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-        
-        // Set up color buttons in popup
-        val colors = mapOf(
-            R.id.colorBlack to Color.BLACK,
-            R.id.colorRed to Color.parseColor("#F44336"),
-            R.id.colorBlue to Color.parseColor("#2196F3"),
-            R.id.colorGreen to Color.parseColor("#4CAF50"),
-            R.id.colorYellow to Color.parseColor("#FFEB3B"),
-            R.id.colorPurple to Color.parseColor("#9C27B0"),
-            R.id.colorOrange to Color.parseColor("#FF9800"),
-            R.id.colorWhite to Color.WHITE
-        )
-        
-        colors.forEach { (buttonId, color) ->
-            popupView.findViewById<Button>(buttonId)?.setOnClickListener {
-                onColorSelected?.invoke(color)
-                colorPopupWindow?.dismiss()
-            }
-        }
-        
-        // Show popup above the anchor view
-        colorPopupWindow?.showAsDropDown(anchorView, 0, -anchorView.height - 200, Gravity.CENTER)
-    }
-    
+
     /**
      * Show combined pen options popup (color + stroke width) using Jetpack Compose
      */
@@ -97,12 +60,8 @@ class PopupController(
         val location = IntArray(2)
         anchorView.getLocationOnScreen(location)
         
-        // Calculate popup position: above the anchor button, centered horizontally
-        val popupWidth = 240 * activity.resources.displayMetrics.density // Convert dp to pixels
-        val popupHeight = 250 * activity.resources.displayMetrics.density // Approximate height
-        
-        val anchorX = (location[0] + (anchorView.width / 2) - (popupWidth / 2)).toInt()
-        val anchorY = (location[1] - popupHeight - 16 * activity.resources.displayMetrics.density).toInt() // 16dp margin
+        val anchorX = location[0]
+        val anchorY = location[1] - 550
         
         // Create or reuse ComposeView
         if (penOptionsComposeView == null) {
@@ -164,42 +123,6 @@ class PopupController(
             rootView.removeView(view)
         }
         penOptionsComposeView = null
-    }
-    
-    /**
-     * Show stroke width popup
-     */
-    fun showStrokeWidthPopup(anchorView: View, currentStrokeWidth: Float) {
-        val inflater = LayoutInflater.from(activity)
-        val popupView = inflater.inflate(R.layout.popup_stroke_width, null)
-        
-        strokePopupWindow = PopupWindow(
-            popupView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-        
-        val seekBar = popupView.findViewById<SeekBar>(R.id.strokeWidthSeekBar)
-        
-        // Set current value
-        seekBar.progress = (currentStrokeWidth - 1).toInt()
-        
-        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val strokeWidth = (progress + 1).toFloat() // Min 1, Max 21
-                
-                if (fromUser) {
-                    onStrokeWidthChanged?.invoke(strokeWidth)
-                }
-            }
-            
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        
-        // Show popup above the anchor view
-        strokePopupWindow?.showAsDropDown(anchorView, 0, -anchorView.height - 150, Gravity.CENTER)
     }
     
     /**

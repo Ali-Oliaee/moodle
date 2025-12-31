@@ -3,7 +3,16 @@ package com.example.moodle.ui.whiteboard.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -11,15 +20,20 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
@@ -66,20 +80,13 @@ fun PenOptionsPopup(
                         .padding(16.dp),
                     horizontalAlignment = Alignment.Start
                 ) {
-                    // Color Picker Section
-                    Text(
-                        text = stringResource(R.string.colors),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF666666),
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    
                     ColorPickerGrid(
                         currentColor = currentColor,
                         onColorSelected = onColorSelected
                     )
-                    
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     // Divider
                     Box(
                         modifier = Modifier
@@ -88,16 +95,17 @@ fun PenOptionsPopup(
                             .background(Color(0xFFE0E0E0))
                             .padding(vertical = 12.dp)
                     )
-                    
+
                     // Stroke Width Section
                     Text(
                         text = stringResource(R.string.stroke_width),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF666666),
-                        modifier = Modifier.padding(top = 12.dp, bottom = 8.dp)
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 12.dp, bottom = 8.dp).fillMaxWidth()
                     )
-                    
+
                     StrokeWidthSlider(
                         currentStrokeWidth = currentStrokeWidth,
                         onStrokeWidthChanged = onStrokeWidthChanged
@@ -119,25 +127,29 @@ private fun ColorPickerGrid(
     val colors = listOf(
         listOf(
             Color.Black,
-            Color(0xFFF44336), // Red
-            Color(0xFF2196F3), // Blue
-            Color(0xFF4CAF50)  // Green
+            Color.White,
+            Color.Red,
+            Color.Blue,
+            Color.Green,
+            Color.LightGray
         ),
         listOf(
-            Color(0xFFFFEB3B), // Yellow
-            Color(0xFF9C27B0), // Purple
-            Color(0xFFFF9800), // Orange
-            Color.White
+            Color.Yellow,
+            Color.Cyan,
+            Color.Magenta,
+            Color(0xFFFF9800),
+            Color(0xFF9C27B0)
         )
     )
-    
+
     Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         colors.forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 row.forEach { color ->
                     ColorButton(
@@ -166,8 +178,8 @@ private fun ColorButton(
             .clip(CircleShape)
             .background(color)
             .border(
-                width = if (isSelected) 3.dp else 1.dp,
-                color = if (isSelected) Color(0xFF4338CA) else Color(0xFFCCCCCC),
+                width = if (isSelected) 2.dp else 1.dp,
+                color = if (isSelected) Color.Gray else Color(0xFFCCCCCC),
                 shape = CircleShape
             )
             .clickable(onClick = onClick)
@@ -185,7 +197,7 @@ private fun StrokeWidthSlider(
     var sliderValue by remember(currentStrokeWidth) {
         mutableStateOf(currentStrokeWidth)
     }
-    
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -194,12 +206,12 @@ private fun StrokeWidthSlider(
         Text(
             text = "1",
             fontSize = 12.sp,
-            color = Color(0xFF666666)
+            color = Color.Black
         )
-        
+
         Slider(
             value = sliderValue,
-            onValueChange = { 
+            onValueChange = {
                 sliderValue = it
                 onStrokeWidthChanged(it)
             },
@@ -211,11 +223,11 @@ private fun StrokeWidthSlider(
                 inactiveTrackColor = Color(0xFFE0E0E0)
             )
         )
-        
+
         Text(
             text = "21",
             fontSize = 12.sp,
-            color = Color(0xFF666666)
+            color = Color.Black
         )
     }
 }

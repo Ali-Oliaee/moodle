@@ -62,10 +62,14 @@ class WhiteboardView @JvmOverloads constructor(
     // Debouncing for state saves
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private var pendingStateSave: Runnable? = null
-    private var stateSaveDebounceMs = 300L // Wait 300ms after last change before saving
-    
+
     // Undo/redo callback (stored at view level and applied to each page's manager)
     private var undoRedoStackChangedCallback: ((Boolean, Boolean) -> Unit)? = null
+    
+    // Callbacks to notify when entities are created (for auto-switching to selection mode)
+    var onShapeCompletedCallback: (() -> Unit)? = null
+    var onTextAddedCallback: (() -> Unit)? = null
+    var onImageAddedCallback: (() -> Unit)? = null
 
     init {
         // Setup callbacks for managers
@@ -103,6 +107,7 @@ class WhiteboardView @JvmOverloads constructor(
             stateManager.drawingChangeListener?.onDrawingChanged()
         }
         touchHandler.onTextInputRequested = { x, y -> stateManager.textInputListener?.onTextInputRequested(x, y) }
+        touchHandler.onShapeCompleted = { onShapeCompletedCallback?.invoke() }
         touchHandler.getViewWidth = { width }
         touchHandler.getViewHeight = { height }
         touchHandler.getBitmapBounds = { 
@@ -338,6 +343,9 @@ class WhiteboardView @JvmOverloads constructor(
 
         stateManager.drawingChangeListener?.onDrawingChanged()
         invalidate()
+        
+        // Notify that text was added - switch to selection mode
+        onTextAddedCallback?.invoke()
     }
 
     fun addImage(bitmap: Bitmap, x: Float, y: Float) {
@@ -361,6 +369,9 @@ class WhiteboardView @JvmOverloads constructor(
         
         stateManager.drawingChangeListener?.onDrawingChanged()
         invalidate()
+        
+        // Notify that image was added - switch to selection mode
+        onImageAddedCallback?.invoke()
     }
 
     // Pinch mode controls
@@ -477,6 +488,14 @@ class WhiteboardView @JvmOverloads constructor(
     fun getAllTextObjects(): List<TextObject> = stateManager.textObjects.toList()
     fun getAllShapeObjects(): List<ShapeObject> = stateManager.shapeObjects.toList()
     fun getAllImageObjects(): List<ImageObject> = stateManager.imageObjects.toList()
+    
+    /**
+     * Deselect all entities (text, shapes, images)
+     */
+    fun deselectAll() {
+        stateManager.deselectAll()
+        invalidate()
+    }
     
     /**
      * Load page data and set up undo/redo for this page

@@ -50,6 +50,15 @@ class TouchGestureHandler(
     // Drawing change callback
     var onDrawingChanged: (() -> Unit)? = null
     
+    // Shape completed callback (to switch to selection mode)
+    var onShapeCompleted: (() -> Unit)? = null
+    
+    // Text added callback (to switch to selection mode)
+    var onTextAdded: (() -> Unit)? = null
+    
+    // Image added callback (to switch to selection mode)
+    var onImageAdded: (() -> Unit)? = null
+    
     // Active section tracking
     var currentActiveSection: SectionManager.Section? = null
     
@@ -435,6 +444,9 @@ class TouchGestureHandler(
                 isDrawingShape = false
                 previewPath = null
                 onDrawingChanged?.invoke()
+                
+                // Notify that shape is completed - switch to selection mode
+                onShapeCompleted?.invoke()
             }
         }
         onInvalidate?.invoke()

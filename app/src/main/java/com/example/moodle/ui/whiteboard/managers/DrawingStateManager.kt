@@ -77,7 +77,8 @@ class DrawingStateManager {
      */
     fun addTextObject(textObject: TextObject) {
         textObjects.add(textObject)
-        selectedTextObject?.isSelected = false
+        deselectAll()
+        // Select the new text object
         selectedTextObject = textObject
         textObject.isSelected = true
     }
@@ -87,7 +88,8 @@ class DrawingStateManager {
      */
     fun addShapeObject(shapeObject: ShapeObject) {
         shapeObjects.add(shapeObject)
-        selectedShapeObject?.isSelected = false
+        deselectAll()
+        // Select the new shape object
         selectedShapeObject = shapeObject
         shapeObject.isSelected = true
     }
@@ -97,9 +99,8 @@ class DrawingStateManager {
      */
     fun addImageObject(imageObject: ImageObject) {
         imageObjects.add(imageObject)
-        selectedImageObject?.isSelected = false
-        selectedTextObject?.isSelected = false
-        selectedShapeObject?.isSelected = false
+        deselectAll()
+        // Select the new image object
         selectedImageObject = imageObject
         imageObject.isSelected = true
     }
@@ -152,6 +153,10 @@ class DrawingStateManager {
         
         selectedImageObject?.isSelected = false
         selectedImageObject = null
+        
+        for (textObj in textObjects) textObj.isSelected = false
+        for (shapeObj in shapeObjects) shapeObj.isSelected = false
+        for (imageObj in imageObjects) imageObj.isSelected = false
     }
     
     /**
@@ -167,6 +172,34 @@ class DrawingStateManager {
     
     // Touch handling methods (to be called from TouchGestureHandler)
     fun handleTextTouchDown(x: Float, y: Float, onTextInputRequested: (Float, Float) -> Unit) {
+        // First check if touching selected text's special handles
+        selectedTextObject?.let { textObj ->
+            if (textObj.isDeleteButtonTouched(x, y)) {
+                removeSelectedTextObject()
+                return
+            }
+            if (textObj.isResizeHandleTouched(x, y)) {
+                isResizingText = true
+                dragStartX = x
+                dragStartY = y
+                initialTextSize = textObj.textSize
+                return
+            }
+            if (textObj.isRotationHandleTouched(x, y)) {
+                isRotatingText = true
+                dragStartX = x
+                dragStartY = y
+                initialRotation = textObj.rotation
+                return
+            }
+            if (textObj.contains(x, y)) {
+                isDraggingText = true
+                dragStartX = x
+                dragStartY = y
+                return
+            }
+        }
+        
         // Check if touching existing text
         var touchedText: TextObject? = null
         for (textObj in textObjects.reversed()) {
@@ -177,34 +210,55 @@ class DrawingStateManager {
         }
         
         if (touchedText != null) {
-            selectedTextObject?.isSelected = false
+            deselectAll()
             selectedTextObject = touchedText
             touchedText.isSelected = true
             isDraggingText = true
             dragStartX = x
             dragStartY = y
         } else {
-            selectedTextObject?.isSelected = false
-            selectedTextObject = null
+            deselectAll()
             onTextInputRequested(x, y)
         }
     }
     
     fun handleTextTouchMove(x: Float, y: Float) {
-        selectedTextObject?.let { textObj ->
-            if (isDraggingText) {
-                val deltaX = x - dragStartX
-                val deltaY = y - dragStartY
-                textObj.x += deltaX
-                textObj.y += deltaY
+        if (isDraggingText) {
+            selectedTextObject?.let {
+                val dx = x - dragStartX
+                val dy = y - dragStartY
+                it.x += dx
+                it.y += dy
                 dragStartX = x
                 dragStartY = y
+            }
+        } else if (isResizingText) {
+            selectedTextObject?.let { textObj ->
+                val dx = x - dragStartX
+                val dy = y - dragStartY
+                val distance = kotlin.math.sqrt(dx * dx + dy * dy)
+                val direction = if (dy > 0) 1 else -1
+                textObj.textSize = (initialTextSize + distance * direction * 0.5f).coerceIn(12f, 200f)
+            }
+        } else if (isRotatingText) {
+            selectedTextObject?.let { textObj ->
+                val bounds = android.graphics.Rect()
+                textObj.paint.getTextBounds(textObj.text, 0, textObj.text.length, bounds)
+                val centerX = textObj.x + bounds.width() / 2f
+                val centerY = textObj.y + bounds.height() / 2f
+                
+                val angle1 = kotlin.math.atan2(dragStartY - centerY, dragStartX - centerX)
+                val angle2 = kotlin.math.atan2(y - centerY, x - centerX)
+                val angleDiff = Math.toDegrees((angle2 - angle1).toDouble()).toFloat()
+                textObj.rotation = (initialRotation + angleDiff) % 360f
             }
         }
     }
     
     fun handleTextTouchUp(x: Float, y: Float) {
         isDraggingText = false
+        isResizingText = false
+        isRotatingText = false
     }
     
     fun handleSelectionTouchDown(x: Float, y: Float) {
@@ -329,27 +383,21 @@ class DrawingStateManager {
         
         // Select first found object
         if (touchedText != null) {
-            selectedTextObject?.isSelected = false
-            selectedShapeObject?.isSelected = false
-            selectedImageObject?.isSelected = false
+            deselectAll()
             selectedTextObject = touchedText
             touchedText.isSelected = true
             isDraggingText = true
             dragStartX = x
             dragStartY = y
         } else if (touchedShape != null) {
-            selectedTextObject?.isSelected = false
-            selectedShapeObject?.isSelected = false
-            selectedImageObject?.isSelected = false
+            deselectAll()
             selectedShapeObject = touchedShape
             touchedShape.isSelected = true
             isDraggingShape = true
             dragStartX = x
             dragStartY = y
         } else if (touchedImage != null) {
-            selectedTextObject?.isSelected = false
-            selectedShapeObject?.isSelected = false
-            selectedImageObject?.isSelected = false
+            deselectAll()
             selectedImageObject = touchedImage
             touchedImage.isSelected = true
             isDraggingImage = true
@@ -357,12 +405,7 @@ class DrawingStateManager {
             dragStartY = y
         } else {
             // Deselect all
-            selectedTextObject?.isSelected = false
-            selectedShapeObject?.isSelected = false
-            selectedImageObject?.isSelected = false
-            selectedTextObject = null
-            selectedShapeObject = null
-            selectedImageObject = null
+            deselectAll()
         }
     }
     
@@ -545,16 +588,65 @@ class DrawingStateManager {
     }
     
     fun handleShapeObjectInteraction(x: Float, y: Float, action: Int): Boolean {
-        // Check if touching existing shape
-        if (action == android.view.MotionEvent.ACTION_DOWN) {
-            for (shapeObj in shapeObjects.reversed()) {
-                if (shapeObj.contains(x, y)) {
-                    selectedShapeObject?.isSelected = false
-                    selectedShapeObject = shapeObj
-                    shapeObj.isSelected = true
-                    isDraggingShape = true
-                    dragStartX = x
-                    dragStartY = y
+        when (action) {
+            android.view.MotionEvent.ACTION_DOWN -> {
+                // First check if touching selected shape's special handles
+                selectedShapeObject?.let { shapeObj ->
+                    if (shapeObj.isDeleteButtonTouched(x, y)) {
+                        removeSelectedShapeObject()
+                        return true
+                    }
+                    val resizeHandle = shapeObj.isResizeHandleTouched(x, y)
+                    if (resizeHandle != null) {
+                        isResizingShape = true
+                        currentResizeHandle = resizeHandle
+                        dragStartX = x
+                        dragStartY = y
+                        initialShapeStartX = shapeObj.startX
+                        initialShapeStartY = shapeObj.startY
+                        initialShapeEndX = shapeObj.endX
+                        initialShapeEndY = shapeObj.endY
+                        return true
+                    }
+                    if (shapeObj.isRotationHandleTouched(x, y)) {
+                        isRotatingShape = true
+                        dragStartX = x
+                        dragStartY = y
+                        initialShapeRotation = shapeObj.rotation
+                        return true
+                    }
+                    if (shapeObj.contains(x, y)) {
+                        isDraggingShape = true
+                        dragStartX = x
+                        dragStartY = y
+                        return true
+                    }
+                }
+                
+                // Check if touching any shape object
+                for (shapeObj in shapeObjects.reversed()) {
+                    if (shapeObj.contains(x, y)) {
+                        deselectAll()
+                        selectedShapeObject = shapeObj
+                        shapeObj.isSelected = true
+                        isDraggingShape = true
+                        dragStartX = x
+                        dragStartY = y
+                        return true
+                    }
+                }
+            }
+            
+            android.view.MotionEvent.ACTION_MOVE -> {
+                if (isDraggingShape || isResizingShape || isRotatingShape) {
+                    handleSelectionTouchMove(x, y)
+                    return true
+                }
+            }
+            
+            android.view.MotionEvent.ACTION_UP -> {
+                if (isDraggingShape || isResizingShape || isRotatingShape) {
+                    handleSelectionTouchUp(x, y)
                     return true
                 }
             }

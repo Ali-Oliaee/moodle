@@ -218,11 +218,23 @@ class WhiteboardActivity : AppCompatActivity() {
     private fun setupListeners() {
         // Top bar listeners
         recordContainer.setOnClickListener { recordingController.toggleRecording() }
-        btnAttendance.setOnClickListener { openAttendanceScreen() }
+        btnAttendance.setOnClickListener { 
+            whiteboardView.deselectAll()
+            openAttendanceScreen() 
+        }
         btnLogout.setOnClickListener { logout() }
-        btnExport.setOnClickListener { showExportOptionsDialog() }
-        btnImport.setOnClickListener { showImportOptionsDialog() }
-        btnSelect.setOnClickListener { toggleSelectMode() }
+        btnExport.setOnClickListener { 
+            whiteboardView.deselectAll()
+            showExportOptionsDialog() 
+        }
+        btnImport.setOnClickListener { 
+            whiteboardView.deselectAll()
+            showImportOptionsDialog() 
+        }
+        btnSelect.setOnClickListener { 
+            whiteboardView.deselectAll()
+            toggleSelectMode() 
+        }
         btnPinchMode.setOnClickListener { togglePinchMode() }
         
         // Toggle toolbars button listener
@@ -243,6 +255,7 @@ class WhiteboardActivity : AppCompatActivity() {
      */
     private fun setupToolListeners() {
         btnPen.setOnClickListener {
+            whiteboardView.deselectAll()
             // Deactivate pinch mode if active
             if (isPinchModeActive) {
                 isPinchModeActive = false
@@ -267,6 +280,7 @@ class WhiteboardActivity : AppCompatActivity() {
         }
         
         btnEraser.setOnClickListener {
+            whiteboardView.deselectAll()
             // Deactivate pinch mode if active
             if (isPinchModeActive) {
                 isPinchModeActive = false
@@ -278,6 +292,7 @@ class WhiteboardActivity : AppCompatActivity() {
         }
         
         btnText.setOnClickListener {
+            whiteboardView.deselectAll()
             // Deactivate pinch mode if active
             if (isPinchModeActive) {
                 isPinchModeActive = false
@@ -289,10 +304,12 @@ class WhiteboardActivity : AppCompatActivity() {
         }
         
         btnTextRecognition.setOnClickListener {
+            whiteboardView.deselectAll()
             performTextRecognition()
         }
         
         btnFormula.setOnClickListener {
+            whiteboardView.deselectAll()
             // Deactivate pinch mode if active
             if (isPinchModeActive) {
                 isPinchModeActive = false
@@ -304,6 +321,7 @@ class WhiteboardActivity : AppCompatActivity() {
         }
         
         btnShapes.setOnClickListener {
+            whiteboardView.deselectAll()
             // Deactivate pinch mode if active
             if (isPinchModeActive) {
                 isPinchModeActive = false
@@ -315,6 +333,7 @@ class WhiteboardActivity : AppCompatActivity() {
         }
         
         btnClear.setOnClickListener {
+            whiteboardView.deselectAll()
             showClearConfirmDialog()
         }
         
@@ -323,10 +342,12 @@ class WhiteboardActivity : AppCompatActivity() {
         }
         
         btnUndo.setOnClickListener {
+            whiteboardView.deselectAll()
             whiteboardView.undo()
         }
         
         btnRedo.setOnClickListener {
+            whiteboardView.deselectAll()
             whiteboardView.redo()
         }
     }
@@ -336,16 +357,19 @@ class WhiteboardActivity : AppCompatActivity() {
      */
     private fun setupPaginationListeners() {
         btnPreviousPage.setOnClickListener {
+            whiteboardView.deselectAll()
             saveCurrentPageToViewModel()
             viewModel.previousPage()
         }
         
         btnNextPage.setOnClickListener {
+            whiteboardView.deselectAll()
             saveCurrentPageToViewModel()
             viewModel.nextPageOrCreate()
         }
         
         btnDeletePage.setOnClickListener {
+            whiteboardView.deselectAll()
             showDeletePageConfirmDialog()
         }
     }
@@ -400,6 +424,19 @@ class WhiteboardActivity : AppCompatActivity() {
                 viewModel.requestTextInput(x, y)
             }
         })
+        
+        // Setup entity creation callbacks - auto-switch to selection mode
+        whiteboardView.onShapeCompletedCallback = {
+            viewModel.selectTool(DrawingTool.SELECTION)
+        }
+        
+        whiteboardView.onTextAddedCallback = {
+            viewModel.selectTool(DrawingTool.SELECTION)
+        }
+        
+        whiteboardView.onImageAddedCallback = {
+            viewModel.selectTool(DrawingTool.SELECTION)
+        }
         
         // Setup undo/redo listener
         whiteboardView.setOnUndoRedoStackChangedListener { canUndo, canRedo ->
