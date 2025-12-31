@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.ComposeView
 import com.example.moodle.R
 import com.example.moodle.ui.whiteboard.components.PenOptionsPopup
 import com.example.moodle.ui.whiteboard.components.BackgroundPatternPopup
+import com.example.moodle.ui.whiteboard.components.ShapesPopup
 
 /**
  * Controller responsible for managing all popup windows in the whiteboard
@@ -32,7 +33,6 @@ class PopupController(
     private var strokePopupWindow: PopupWindow? = null
     private var eraserModePopupWindow: PopupWindow? = null
     private var formulaPopupWindow: PopupWindow? = null
-    private var shapesPopupWindow: PopupWindow? = null
     
     // Compose-based popups
     private var penOptionsComposeView: ComposeView? = null
@@ -40,6 +40,9 @@ class PopupController(
     
     private var backgroundPatternComposeView: ComposeView? = null
     private var isBackgroundPatternVisible by mutableStateOf(false)
+    
+    private var shapesComposeView: ComposeView? = null
+    private var isShapesVisible by mutableStateOf(false)
     
     // Callbacks
     var onColorSelected: ((Int) -> Unit)? = null
@@ -289,55 +292,56 @@ class PopupController(
     }
     
     /**
-     * Show shapes selection popup
+     * Show shapes selection popup using Jetpack Compose
      */
-    fun showShapesPopup(anchorView: View) {
-        val inflater = LayoutInflater.from(activity)
-        val popupView = inflater.inflate(R.layout.popup_shapes, null)
+    fun showShapesPopup(currentTool: DrawingTool) {
+        // Close any existing popup
+        dismissShapesPopup()
         
-        shapesPopupWindow = PopupWindow(
-            popupView,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            true
-        )
+        // Create or reuse ComposeView
+        if (shapesComposeView == null) {
+            shapesComposeView = ComposeView(activity).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+        }
         
-        // Find all shape buttons
-        setupShapeButton(popupView, R.id.btnLinePopup, DrawingTool.LINE)
-        setupShapeButton(popupView, R.id.btnCirclePopup, DrawingTool.CIRCLE)
-        setupShapeButton(popupView, R.id.btnEllipsePopup, DrawingTool.ELLIPSE)
-        setupShapeButton(popupView, R.id.btnRectanglePopup, DrawingTool.RECTANGLE)
-        setupShapeButton(popupView, R.id.btnDiamondPopup, DrawingTool.DIAMOND)
+        // Add ComposeView to activity's root layout
+        val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+        if (shapesComposeView?.parent == null) {
+            rootView.addView(shapesComposeView)
+        }
         
-        setupShapeButton(popupView, R.id.btnTrianglePopup, DrawingTool.TRIANGLE)
-        setupShapeButton(popupView, R.id.btnRightTrianglePopup, DrawingTool.RIGHT_TRIANGLE)
-        setupShapeButton(popupView, R.id.btnIsoscelesTrianglePopup, DrawingTool.ISOSCELES_TRIANGLE)
-        setupShapeButton(popupView, R.id.btnStarPopup, DrawingTool.STAR)
-        setupShapeButton(popupView, R.id.btnArrowPopup, DrawingTool.ARROW)
+        // Set Compose content
+        shapesComposeView?.setContent {
+            ShapesPopup(
+                isVisible = isShapesVisible,
+                currentTool = currentTool,
+                onShapeSelected = { tool ->
+                    onToolSelected?.invoke(tool)
+                },
+                onDismiss = {
+                    dismissShapesPopup()
+                }
+            )
+        }
         
-        setupShapeButton(popupView, R.id.btnPentagonPopup, DrawingTool.PENTAGON)
-        setupShapeButton(popupView, R.id.btnHexagonPopup, DrawingTool.HEXAGON)
-        setupShapeButton(popupView, R.id.btnParallelogramPopup, DrawingTool.PARALLELOGRAM)
-        setupShapeButton(popupView, R.id.btnTrapezoidPopup, DrawingTool.TRAPEZOID)
-        
-        setupShapeButton(popupView, R.id.btnCubePopup, DrawingTool.CUBE)
-        setupShapeButton(popupView, R.id.btnCylinderPopup, DrawingTool.CYLINDER)
-        setupShapeButton(popupView, R.id.btnPyramidPopup, DrawingTool.PYRAMID)
-        setupShapeButton(popupView, R.id.btnSpherePopup, DrawingTool.SPHERE)
-        setupShapeButton(popupView, R.id.btnConePopup, DrawingTool.CONE)
-        
-        // Show popup at center of screen
-        shapesPopupWindow?.showAtLocation(anchorView, Gravity.CENTER, 0, 0)
+        // Show the popup
+        isShapesVisible = true
     }
     
     /**
-     * Helper to setup shape button click listener
+     * Dismiss the shapes popup
      */
-    private fun setupShapeButton(popupView: View, buttonId: Int, tool: DrawingTool) {
-        popupView.findViewById<ImageButton>(buttonId)?.setOnClickListener {
-            onToolSelected?.invoke(tool)
-            shapesPopupWindow?.dismiss()
+    fun dismissShapesPopup() {
+        isShapesVisible = false
+        shapesComposeView?.let { view ->
+            val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+            rootView.removeView(view)
         }
+        shapesComposeView = null
     }
     
     /**
@@ -404,9 +408,9 @@ class PopupController(
         strokePopupWindow?.dismiss()
         dismissPenOptionsPopup()
         dismissBackgroundPatternPopup()
+        dismissShapesPopup()
         eraserModePopupWindow?.dismiss()
         formulaPopupWindow?.dismiss()
-        shapesPopupWindow?.dismiss()
     }
     
     /**

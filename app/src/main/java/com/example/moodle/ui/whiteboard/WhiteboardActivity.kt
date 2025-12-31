@@ -330,7 +330,8 @@ class WhiteboardActivity : AppCompatActivity() {
                 btnPinchMode.isSelected = false
             }
             
-            popupController.showShapesPopup(btnShapes)
+            val currentTool = viewModel.uiState.value?.currentTool ?: DrawingTool.LINE
+            popupController.showShapesPopup(currentTool)
         }
         
         btnClear.setOnClickListener {
