@@ -19,6 +19,8 @@ import com.example.moodle.R
 import com.example.moodle.ui.whiteboard.components.PenOptionsPopup
 import com.example.moodle.ui.whiteboard.components.BackgroundPatternPopup
 import com.example.moodle.ui.whiteboard.components.ShapesPopup
+import com.example.moodle.ui.whiteboard.components.MathFormulasPopup
+import com.example.moodle.ui.whiteboard.components.FormulaItem
 
 /**
  * Controller responsible for managing all popup windows in the whiteboard
@@ -32,7 +34,6 @@ class PopupController(
     private var colorPopupWindow: PopupWindow? = null
     private var strokePopupWindow: PopupWindow? = null
     private var eraserModePopupWindow: PopupWindow? = null
-    private var formulaPopupWindow: PopupWindow? = null
     
     // Compose-based popups
     private var penOptionsComposeView: ComposeView? = null
@@ -43,6 +44,9 @@ class PopupController(
     
     private var shapesComposeView: ComposeView? = null
     private var isShapesVisible by mutableStateOf(false)
+    
+    private var mathFormulasComposeView: ComposeView? = null
+    private var isMathFormulasVisible by mutableStateOf(false)
     
     // Callbacks
     var onColorSelected: ((Int) -> Unit)? = null
@@ -226,54 +230,65 @@ class PopupController(
     }
     
     /**
-     * Show formula selection popup
+     * Show formula selection popup using Jetpack Compose
      */
     fun showFormulaPopup() {
-        val inflater = LayoutInflater.from(activity)
-        val popupView = inflater.inflate(R.layout.popup_math_formulas, null)
+        // Close any existing popup
+        dismissFormulaPopup()
         
-        formulaPopupWindow = PopupWindow(
-            popupView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
+        // Create or reuse ComposeView
+        if (mathFormulasComposeView == null) {
+            mathFormulasComposeView = ComposeView(activity).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+        }
         
-        val formulas = getFormulaTemplates()
+        // Add ComposeView to activity's root layout
+        val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+        if (mathFormulasComposeView?.parent == null) {
+            rootView.addView(mathFormulasComposeView)
+        }
         
-        // Set up formula option listeners
-        setupFormulaClickListener(popupView, R.id.formulaQuadratic, formulas[0])
-        setupFormulaClickListener(popupView, R.id.formulaPythagorean, formulas[1])
-        setupFormulaClickListener(popupView, R.id.formulaCircleArea, formulas[2])
-        setupFormulaClickListener(popupView, R.id.formulaDistance, formulas[3])
-        setupFormulaClickListener(popupView, R.id.formulaSlope, formulas[4])
-        setupFormulaClickListener(popupView, R.id.formulaSphereVolume, formulas[5])
-        setupFormulaClickListener(popupView, R.id.formulaCompoundInterest, formulas[6])
-        setupFormulaClickListener(popupView, R.id.formulaCosines, formulas[7])
+        // Get formula items
+        val formulaItems = getFormulaItems()
         
-        // Show popup at center of screen
-        formulaPopupWindow?.showAtLocation(
-            activity.findViewById(android.R.id.content),
-            Gravity.CENTER,
-            0,
-            0
-        )
+        // Set Compose content
+        mathFormulasComposeView?.setContent {
+            MathFormulasPopup(
+                isVisible = isMathFormulasVisible,
+                formulas = formulaItems,
+                onFormulaSelected = { formula ->
+                    addFormulaToBoard(formula)
+                },
+                onDismiss = {
+                    dismissFormulaPopup()
+                }
+            )
+        }
+        
+        // Show the popup
+        isMathFormulasVisible = true
     }
     
     /**
-     * Helper to setup formula click listener
+     * Dismiss the math formulas popup
      */
-    private fun setupFormulaClickListener(popupView: View, viewId: Int, formula: FormulaTemplate) {
-        popupView.findViewById<LinearLayout>(viewId)?.setOnClickListener {
-            formulaPopupWindow?.dismiss()
-            addFormulaToBoard(formula)
+    fun dismissFormulaPopup() {
+        isMathFormulasVisible = false
+        mathFormulasComposeView?.let { view ->
+            val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+            rootView.removeView(view)
         }
+        mathFormulasComposeView = null
     }
     
     /**
      * Add formula to the whiteboard
      */
-    private fun addFormulaToBoard(formula: FormulaTemplate) {
+    private fun addFormulaToBoard(formula: FormulaItem) {
         // Replace placeholders with empty spaces (boxes) for manual filling
         var formulaText = formula.template
         
@@ -345,57 +360,65 @@ class PopupController(
     }
     
     /**
-     * Get list of formula templates
+     * Get list of formula items for Compose popup
      */
-    private fun getFormulaTemplates(): List<FormulaTemplate> {
+    private fun getFormulaItems(): List<FormulaItem> {
         return listOf(
-            FormulaTemplate(
-                "Quadratic Formula",
-                "x = (-{b} ± √({b}²-4{a}{c})) / 2{a}",
-                listOf("a", "b", "c"),
-                listOf("ضریب x²", "ضریب x", "عدد ثابت")
+            FormulaItem(
+                name = "Quadratic Formula",
+                template = "x = (-{b} ± √({b}²-4{a}{c})) / 2{a}",
+                displayText = "x = (-b ± √(b²-4ac)) / 2a",
+                variables = listOf("a", "b", "c"),
+                descriptions = listOf("ضریب x²", "ضریب x", "عدد ثابت")
             ),
-            FormulaTemplate(
-                "Pythagorean Theorem",
-                "{a}² + {b}² = {c}²",
-                listOf("a", "b", "c"),
-                listOf("ضلع اول", "ضلع دوم", "وتر")
+            FormulaItem(
+                name = "Pythagorean Theorem",
+                template = "{a}² + {b}² = {c}²",
+                displayText = "a² + b² = c²",
+                variables = listOf("a", "b", "c"),
+                descriptions = listOf("ضلع اول", "ضلع دوم", "وتر")
             ),
-            FormulaTemplate(
-                "Circle Area",
-                "A = π{r}²",
-                listOf("r"),
-                listOf("شعاع")
+            FormulaItem(
+                name = "Circle Area",
+                template = "A = π{r}²",
+                displayText = "A = πr²",
+                variables = listOf("r"),
+                descriptions = listOf("شعاع")
             ),
-            FormulaTemplate(
-                "Distance Formula",
-                "d = √(({x2}-{x1})² + ({y2}-{y1})²)",
-                listOf("x1", "y1", "x2", "y2"),
-                listOf("x نقطه اول", "y نقطه اول", "x نقطه دوم", "y نقطه دوم")
+            FormulaItem(
+                name = "Distance Formula",
+                template = "d = √(({x2}-{x1})² + ({y2}-{y1})²)",
+                displayText = "d = √((x₂-x₁)² + (y₂-y₁)²)",
+                variables = listOf("x1", "y1", "x2", "y2"),
+                descriptions = listOf("x نقطه اول", "y نقطه اول", "x نقطه دوم", "y نقطه دوم")
             ),
-            FormulaTemplate(
-                "Slope Formula",
-                "m = ({y2}-{y1}) / ({x2}-{x1})",
-                listOf("x1", "y1", "x2", "y2"),
-                listOf("x نقطه اول", "y نقطه اول", "x نقطه دوم", "y نقطه دوم")
+            FormulaItem(
+                name = "Slope Formula",
+                template = "m = ({y2}-{y1}) / ({x2}-{x1})",
+                displayText = "m = (y₂-y₁) / (x₂-x₁)",
+                variables = listOf("x1", "y1", "x2", "y2"),
+                descriptions = listOf("x نقطه اول", "y نقطه اول", "x نقطه دوم", "y نقطه دوم")
             ),
-            FormulaTemplate(
-                "Sphere Volume",
-                "V = (4/3)π{r}³",
-                listOf("r"),
-                listOf("شعاع")
+            FormulaItem(
+                name = "Sphere Volume",
+                template = "V = (4/3)π{r}³",
+                displayText = "V = (4/3)πr³",
+                variables = listOf("r"),
+                descriptions = listOf("شعاع")
             ),
-            FormulaTemplate(
-                "Compound Interest",
-                "A = {P}(1 + {r}/{n})^({n}{t})",
-                listOf("P", "r", "n", "t"),
-                listOf("سرمایه اولیه", "نرخ بهره", "تعداد دفعات", "زمان")
+            FormulaItem(
+                name = "Compound Interest",
+                template = "A = {P}(1 + {r}/{n})^({n}{t})",
+                displayText = "A = P(1 + r/n)^(nt)",
+                variables = listOf("P", "r", "n", "t"),
+                descriptions = listOf("سرمایه اولیه", "نرخ بهره", "تعداد دفعات", "زمان")
             ),
-            FormulaTemplate(
-                "Law of Cosines",
-                "{c}² = {a}² + {b}² - 2{a}{b} cos({C})",
-                listOf("a", "b", "c", "C"),
-                listOf("ضلع اول", "ضلع دوم", "ضلع سوم", "زاویه")
+            FormulaItem(
+                name = "Law of Cosines",
+                template = "{c}² = {a}² + {b}² - 2{a}{b} cos({C})",
+                displayText = "c² = a² + b² - 2ab cos(C)",
+                variables = listOf("a", "b", "c", "C"),
+                descriptions = listOf("ضلع اول", "ضلع دوم", "ضلع سوم", "زاویه")
             )
         )
     }
@@ -409,18 +432,8 @@ class PopupController(
         dismissPenOptionsPopup()
         dismissBackgroundPatternPopup()
         dismissShapesPopup()
+        dismissFormulaPopup()
         eraserModePopupWindow?.dismiss()
-        formulaPopupWindow?.dismiss()
     }
-    
-    /**
-     * Data class for formula templates
-     */
-    data class FormulaTemplate(
-        val name: String,
-        val template: String,
-        val variables: List<String>,
-        val descriptions: List<String>
-    )
 }
 
