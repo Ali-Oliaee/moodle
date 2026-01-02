@@ -28,6 +28,12 @@ class CanvasRenderManager(
         pathEffect = DashPathEffect(floatArrayOf(10f, 5f), 0f)
         alpha = 150
     }
+
+    private val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        isFilterBitmap = true
+    }
+
+    private val highQualityZoomThreshold = 1.5f
     
     fun drawCanvas(canvas: Canvas, activePaths: Map<Int, Path>, selectionPath: Path?, previewPath: Path?, pointerSectionMap: Map<Int, SectionManager.Section>, currentActiveSection: SectionManager.Section?) {
         if (sectionManager.isSplitModeEnabled()) 
@@ -97,15 +103,19 @@ class CanvasRenderManager(
         
         drawBackgroundPattern(canvas)
         
-        // Draw the infinite bitmap with all previous strokes
-        try {
-            bitmapManager.drawingBitmap?.let { bitmap ->
-                if (!bitmap.isRecycled && bitmap.width > 0 && bitmap.height > 0) {
-                    canvas.drawBitmap(bitmap, 0f, 0f, null)
+        if (zoomPanController.scaleFactor >= highQualityZoomThreshold) {
+            drawVectorPaths(canvas)
+        } else {
+            // Draw the cached bitmap for performance at lower zoom levels.
+            try {
+                bitmapManager.drawingBitmap?.let { bitmap ->
+                    if (!bitmap.isRecycled && bitmap.width > 0 && bitmap.height > 0) {
+                        canvas.drawBitmap(bitmap, 0f, 0f, bitmapPaint)
+                    }
                 }
+            } catch (e: Exception) {
+                android.util.Log.e("CanvasRenderManager", "Error drawing bitmap", e)
             }
-        } catch (e: Exception) {
-            android.util.Log.e("CanvasRenderManager", "Error drawing bitmap", e)
         }
         
         // Draw current active paths being drawn
@@ -140,6 +150,61 @@ class CanvasRenderManager(
         }
         
         canvas.restore()
+    }
+
+    private fun drawVectorPaths(canvas: Canvas) {
+        if (stateManager.paths.isEmpty()) return
+
+        val needsLayer = stateManager.paths.any { it.paint.xfermode != null }
+        if (needsLayer) {
+            val layerBounds = getVisibleBoundsForLayer()
+            val saveCount = if (layerBounds.isEmpty) canvas.saveLayer(null, null)
+            else canvas.saveLayer(layerBounds, null)
+            for (drawingPath in stateManager.paths) {
+                if (drawingPath.tool == DrawingTool.TEXT && drawingPath.text != null) {
+                    canvas.drawText(drawingPath.text, drawingPath.textX, drawingPath.textY, drawingPath.paint)
+                } else {
+                    canvas.drawPath(drawingPath.path, drawingPath.paint)
+                }
+            }
+            canvas.restoreToCount(saveCount)
+        } else {
+            for (drawingPath in stateManager.paths) {
+                if (drawingPath.tool == DrawingTool.TEXT && drawingPath.text != null) {
+                    canvas.drawText(drawingPath.text, drawingPath.textX, drawingPath.textY, drawingPath.paint)
+                } else {
+                    canvas.drawPath(drawingPath.path, drawingPath.paint)
+                }
+            }
+        }
+    }
+
+    private fun getVisibleBoundsForLayer(): RectF {
+        val bitmapWidth = bitmapManager.drawingBitmap?.width?.toFloat() ?: 0f
+        val bitmapHeight = bitmapManager.drawingBitmap?.height?.toFloat() ?: 0f
+        if (bitmapWidth <= 0f || bitmapHeight <= 0f) return RectF()
+
+        val viewDimensions = zoomPanController.getViewDimensions?.invoke()
+        val scale = zoomPanController.scaleFactor
+        if (viewDimensions == null || scale <= 0f) {
+            return RectF(0f, 0f, bitmapWidth, bitmapHeight)
+        }
+
+        val (viewWidth, viewHeight) = viewDimensions
+        if (zoomPanController.focusX < 0f || zoomPanController.focusY < 0f) {
+            return RectF(0f, 0f, bitmapWidth, bitmapHeight)
+        }
+
+        val left = zoomPanController.focusX.coerceIn(0f, bitmapWidth)
+        val top = zoomPanController.focusY.coerceIn(0f, bitmapHeight)
+        val right = (left + viewWidth / scale).coerceAtMost(bitmapWidth)
+        val bottom = (top + viewHeight / scale).coerceAtMost(bitmapHeight)
+
+        if (right <= left || bottom <= top) {
+            return RectF(0f, 0f, bitmapWidth, bitmapHeight)
+        }
+
+        return RectF(left, top, right, bottom)
     }
     
     private fun drawBackgroundColor(canvas: Canvas) {
