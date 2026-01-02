@@ -447,11 +447,14 @@ class ImportManager(private val context: Context) {
      * Deserialize Page from JSON
      */
     private fun deserializePage(pageObj: JSONObject): PageData {
+        val pageManager = PageManager()
         val pageId = pageObj.optInt("pageId", 1)
-        val backgroundPatternId = pageObj.optInt("backgroundPattern", BackgroundPattern.PLAIN.id)
-        val backgroundPattern = BackgroundPattern.fromId(backgroundPatternId)
-        
-        val page = PageData(pageId, backgroundPattern = backgroundPattern)
+
+        val page = PageData(
+            pageId,
+            backgroundPattern = pageManager.sharedBackgroundPattern,
+            backgroundColor = pageManager.sharedBackgroundColor
+        )
         
         // Deserialize paths
         if (pageObj.has("paths")) {

@@ -13,8 +13,8 @@ data class PageData(
     val textObjects: MutableList<TextObject> = mutableListOf(),
     val shapeObjects: MutableList<ShapeObject> = mutableListOf(),
     val imageObjects: MutableList<ImageObject> = mutableListOf(),
-    var backgroundPattern: BackgroundPattern = BackgroundPattern.PLAIN,
-    var backgroundColor: BackgroundColor = BackgroundColor.WHITE,
+    var backgroundPattern: BackgroundPattern,
+    var backgroundColor: BackgroundColor,
     // command-based undo/redo
     val commandManager: CommandManager = CommandManager()
 ) {

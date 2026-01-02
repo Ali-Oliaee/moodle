@@ -58,12 +58,9 @@ class WhiteboardViewModel @Inject constructor(
      * Initialize default values
      */
     private fun initializeDefaultValues() {
-        // Load saved shared settings
-        val currentPage = pageManager.getCurrentPage()
-        
         _uiState.value = WhiteboardViewState(
-            backgroundPattern = currentPage.backgroundPattern,
-            backgroundColor = currentPage.backgroundColor,
+            backgroundPattern = pageManager.sharedBackgroundPattern,
+            backgroundColor = pageManager.sharedBackgroundColor,
             isDrawingMode = true,
             isZooming = false,
             currentColor = pageManager.sharedColor,
@@ -180,8 +177,7 @@ class WhiteboardViewModel @Inject constructor(
      * Select background pattern for current page
      */
     fun selectBackgroundPattern(pattern: BackgroundPattern) {
-        val currentPage = pageManager.getCurrentPage()
-        currentPage.backgroundPattern = pattern
+        pageManager.updateSharedBackgroundPattern(pattern)
         updateState { state ->
             state.copy(backgroundPattern = pattern)
         }
@@ -191,8 +187,7 @@ class WhiteboardViewModel @Inject constructor(
      * Select background color for current page
      */
     fun selectBackgroundColor(color: BackgroundColor) {
-        val currentPage = pageManager.getCurrentPage()
-        currentPage.backgroundColor = color
+        pageManager.updateSharedBackgroundColor(color)
         updateState { state ->
             state.copy(backgroundColor = color)
         }

@@ -101,10 +101,8 @@ fun BackgroundPatternPopup(
                     BackgroundColorGrid(
                         currentColor = color,
                         onColorSelected = { c ->
-                            run {
-                                onColorSelected(c)
-                                color = c
-                            }
+                            onColorSelected(c)
+                            color = c
                         }
                     )
 
@@ -134,10 +132,10 @@ fun BackgroundPatternPopup(
 
                     BackgroundPatternGrid(
                         currentPattern = pattern,
-                        onPatternSelected = { p -> run {
+                        onPatternSelected = { p ->
                             onPatternSelected(p)
                             pattern = p
-                        }}
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))

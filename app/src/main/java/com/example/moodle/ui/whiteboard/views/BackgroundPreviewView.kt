@@ -36,11 +36,6 @@ class BackgroundPreviewView @JvmOverloads constructor(
         isAntiAlias = true
     }
 
-    fun setBackgroundPattern(pattern: BackgroundPattern) {
-        backgroundPattern = pattern
-        invalidate()
-    }
-
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
