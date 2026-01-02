@@ -28,6 +28,7 @@ class ZoomPanController(context: Context) {
     // Zoom limits
     private val minZoomLevel = 0.5f
     private val maxZoomLevel = 3.0f
+    val maxScaleFactor = 5.0f
     
     // Callbacks
     var onInvalidate: (() -> Unit)? = null
@@ -158,7 +159,7 @@ class ZoomPanController(context: Context) {
         // Apply the scale factor increment from the gesture
         scaleFactor *= detector.scaleFactor
         // Clamp to min/max zoom levels
-        scaleFactor = max(minScaleFactor, kotlin.math.min(scaleFactor, 5.0f))
+        scaleFactor = max(minScaleFactor, kotlin.math.min(scaleFactor, maxScaleFactor))
         
         // Zoom toward the focal point (center between two fingers)
         // Algorithm:
@@ -184,4 +185,3 @@ class ZoomPanController(context: Context) {
         isScaling = false
     }
 }
-

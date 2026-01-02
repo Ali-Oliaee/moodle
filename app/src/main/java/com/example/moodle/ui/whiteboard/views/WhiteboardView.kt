@@ -15,6 +15,7 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import androidx.core.graphics.toColorInt
+import kotlin.math.roundToInt
 
 /**
  * Custom view for whiteboard drawing functionality
@@ -70,6 +71,9 @@ class WhiteboardView @JvmOverloads constructor(
     var onShapeCompletedCallback: (() -> Unit)? = null
     var onTextAddedCallback: (() -> Unit)? = null
     var onImageAddedCallback: (() -> Unit)? = null
+    var onZoomGestureStart: (() -> Unit)? = null
+    var onZoomPercentChanged: ((Int) -> Unit)? = null
+    var onZoomGestureEnd: (() -> Unit)? = null
 
     init {
         // Setup callbacks for managers
@@ -215,6 +219,15 @@ class WhiteboardView @JvmOverloads constructor(
         previousTextObjects = stateManager.textObjects.map { it.copy() }.toMutableList()
         previousShapeObjects = stateManager.shapeObjects.map { it.copy() }.toMutableList()
         previousImageObjects = stateManager.imageObjects.map { it.copy() }.toMutableList()
+    }
+
+    private fun getZoomPercent(scaleFactor: Float): Int {
+        val minZoom = zoomPanController.minScaleFactor
+        val maxZoom = zoomPanController.maxScaleFactor
+        val range = maxZoom - minZoom
+        if (range <= 0f) return 100
+        val normalized = (scaleFactor - minZoom) / range
+        return (normalized * 100f).coerceIn(0f, 100f).roundToInt()
     }
 
     private fun handleSectionControlButtonClick(section: SectionManager.Section, buttonIndex: Int) {
@@ -585,17 +598,21 @@ class WhiteboardView @JvmOverloads constructor(
     private inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
             zoomPanController.onScaleBegin(detector)
+            onZoomGestureStart?.invoke()
+            onZoomPercentChanged?.invoke(getZoomPercent(zoomPanController.scaleFactor))
             return true
         }
 
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             zoomPanController.onScale(detector)
+            onZoomPercentChanged?.invoke(getZoomPercent(zoomPanController.scaleFactor))
             invalidate()
             return true
         }
 
         override fun onScaleEnd(detector: ScaleGestureDetector) {
             zoomPanController.onScaleEnd(detector)
+            onZoomGestureEnd?.invoke()
         }
     }
 }

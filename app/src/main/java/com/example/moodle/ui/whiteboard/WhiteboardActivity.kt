@@ -5,6 +5,8 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
@@ -67,6 +69,9 @@ class WhiteboardActivity : AppCompatActivity() {
     private lateinit var btnBackground: ImageButton
     private lateinit var btnUndo: ImageButton
     private lateinit var btnRedo: ImageButton
+    private lateinit var zoomIndicator: TextView
+    private val zoomIndicatorHandler = Handler(Looper.getMainLooper())
+    private var zoomIndicatorHideRunnable: Runnable? = null
     
     // Pagination Buttons
     private lateinit var btnPreviousPage: ImageButton
@@ -95,7 +100,6 @@ class WhiteboardActivity : AppCompatActivity() {
     // Toolbar visibility state
     private var areToolbarsVisible = true
     
-    // Pinch mode state
     private var isPinchModeActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -110,6 +114,7 @@ class WhiteboardActivity : AppCompatActivity() {
         hideSystemBars()
         
         initializeViews()
+        setupZoomIndicator()
         initializeUIControllers()
         setupListeners()
         observeViewModel()
@@ -134,6 +139,7 @@ class WhiteboardActivity : AppCompatActivity() {
         btnToggleToolbars = findViewById(R.id.btnToggleToolbars)
         topToolbar = findViewById(R.id.topToolbar)
         bottomToolbar = findViewById(R.id.bottomToolbar)
+        zoomIndicator = findViewById(R.id.zoomIndicator)
         
         // Tool buttons
         btnPen = findViewById(R.id.btnPen)
@@ -155,6 +161,36 @@ class WhiteboardActivity : AppCompatActivity() {
         
         // Set initial tool selection
         btnPen.isSelected = true
+    }
+
+    private fun setupZoomIndicator() {
+        zoomIndicator.visibility = View.GONE
+        zoomIndicatorHideRunnable = Runnable { zoomIndicator.visibility = View.GONE }
+
+        whiteboardView.onZoomGestureStart = {
+            showZoomIndicator()
+        }
+        whiteboardView.onZoomPercentChanged = { percent ->
+            showZoomIndicator()
+            zoomIndicator.text = "$percent%"
+        }
+        whiteboardView.onZoomGestureEnd = {
+            scheduleZoomIndicatorHide()
+        }
+    }
+
+    private fun showZoomIndicator() {
+        zoomIndicatorHideRunnable?.let { zoomIndicatorHandler.removeCallbacks(it) }
+        if (zoomIndicator.visibility != View.VISIBLE) {
+            zoomIndicator.visibility = View.VISIBLE
+        }
+    }
+
+    private fun scheduleZoomIndicatorHide() {
+        zoomIndicatorHideRunnable?.let {
+            zoomIndicatorHandler.removeCallbacks(it)
+            zoomIndicatorHandler.postDelayed(it, ZOOM_INDICATOR_HIDE_DELAY_MS)
+        }
     }
     
     /**
@@ -194,10 +230,7 @@ class WhiteboardActivity : AppCompatActivity() {
                     showToolbar(topToolbar)
                     btnToggleToolbars.setImageResource(R.drawable.ic_chevron_up)
                 }
-            } else {
-                // Show toggle button in normal mode
-                btnToggleToolbars.visibility = android.view.View.VISIBLE
-            }
+            } else btnToggleToolbars.visibility = android.view.View.VISIBLE
             // Disable background button in split mode, enable in normal mode
             btnBackground.isEnabled = !enabled
             btnBackground.alpha = if (enabled) 0.5f else 1.0f
@@ -946,7 +979,7 @@ class WhiteboardActivity : AppCompatActivity() {
     private fun togglePinchMode() {
         isPinchModeActive = !isPinchModeActive
         whiteboardView.setPinchModeEnabled(isPinchModeActive)
-        
+
         // Update button visual state
         btnPinchMode.isSelected = isPinchModeActive
         
@@ -1200,6 +1233,7 @@ class WhiteboardActivity : AppCompatActivity() {
     
     override fun onDestroy() {
         super.onDestroy()
+        zoomIndicatorHideRunnable?.let { zoomIndicatorHandler.removeCallbacks(it) }
         recordingController.cleanup()
         popupController.cleanup()
         whiteboardView.cleanup()
@@ -1210,5 +1244,6 @@ class WhiteboardActivity : AppCompatActivity() {
         private const val REQUEST_CODE_IMPORT_IMAGE = 2001
         private const val REQUEST_CODE_IMPORT_MOODLE = 2002
         private const val REQUEST_CODE_BACKGROUND_IMAGE = 2003
+        private const val ZOOM_INDICATOR_HIDE_DELAY_MS = 600L
     }
 }
