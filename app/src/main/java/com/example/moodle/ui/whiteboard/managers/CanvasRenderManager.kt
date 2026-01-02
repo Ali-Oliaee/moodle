@@ -167,13 +167,12 @@ class CanvasRenderManager(
     }
     
     fun drawBackgroundPattern(canvas: Canvas) {
-        if (currentBackgroundPattern == BackgroundPattern.PLAIN) {
-            return
-        }
+        if (currentBackgroundPattern == BackgroundPattern.PLAIN) return
+
         
         val patternPaint = Paint().apply {
             color = Color.parseColor("#E0E0E0")
-            strokeWidth = 1f / zoomPanController.scaleFactor
+            strokeWidth = 1f
             style = Paint.Style.STROKE
         }
         
@@ -198,44 +197,39 @@ class CanvasRenderManager(
     }
     
     private fun drawGrid(canvas: Canvas, paint: Paint, spacing: Float, width: Float, height: Float) {
-        val adjustedSpacing = spacing / zoomPanController.scaleFactor
-        
         // Vertical lines
         var x = 0f
         while (x <= width) {
             canvas.drawLine(x, 0f, x, height, paint)
-            x += adjustedSpacing
+            x += spacing
         }
         
         // Horizontal lines
         var y = 0f
         while (y <= height) {
             canvas.drawLine(0f, y, width, y, paint)
-            y += adjustedSpacing
+            y += spacing
         }
     }
     
     private fun drawHorizontalLines(canvas: Canvas, paint: Paint, spacing: Float, width: Float, height: Float) {
-        val adjustedSpacing = spacing / zoomPanController.scaleFactor
         var y = 0f
         while (y <= height) {
             canvas.drawLine(0f, y, width, y, paint)
-            y += adjustedSpacing
+            y += spacing
         }
     }
     
     private fun drawVerticalLines(canvas: Canvas, paint: Paint, spacing: Float, width: Float, height: Float) {
-        val adjustedSpacing = spacing / zoomPanController.scaleFactor
         var x = 0f
         while (x <= width) {
             canvas.drawLine(x, 0f, x, height, paint)
-            x += adjustedSpacing
+            x += spacing
         }
     }
     
     private fun drawDotGrid(canvas: Canvas, paint: Paint, spacing: Float, width: Float, height: Float) {
-        val adjustedSpacing = spacing / zoomPanController.scaleFactor
-        val dotRadius = 2f / zoomPanController.scaleFactor
+        val dotRadius = 2f
         paint.style = Paint.Style.FILL
         
         var y = 0f
@@ -243,20 +237,20 @@ class CanvasRenderManager(
             var x = 0f
             while (x <= width) {
                 canvas.drawCircle(x, y, dotRadius, paint)
-                x += adjustedSpacing
+                x += spacing
             }
-            y += adjustedSpacing
+            y += spacing
         }
     }
 
     private fun drawGraphPaper(canvas: Canvas, width: Float, height: Float) {
-        val smallSpacing = 20f / zoomPanController.scaleFactor
-        val largeSpacing = 100f / zoomPanController.scaleFactor
+        val smallSpacing = 20f
+        val largeSpacing = 100f
         
         // Small grid
         val smallPaint = Paint().apply {
             color = Color.parseColor("#EEEEEE")
-            strokeWidth = 0.5f / zoomPanController.scaleFactor
+            strokeWidth = 0.5f
             style = Paint.Style.STROKE
         }
         
@@ -274,7 +268,7 @@ class CanvasRenderManager(
         // Large grid
         val largePaint = Paint().apply {
             color = Color.parseColor("#BDBDBD")
-            strokeWidth = 1.5f / zoomPanController.scaleFactor
+            strokeWidth = 1.5f
             style = Paint.Style.STROKE
         }
         
@@ -419,13 +413,7 @@ class CanvasRenderManager(
     
     fun redrawCanvas() {
         bitmapManager.drawingCanvas?.let { canvas ->
-            // Clear and draw background (includes image if set)
-            drawBackgroundColor(canvas)
-            
-            // Draw background pattern (grid, lines, etc.)
-            drawBackgroundPattern(canvas)
-            
-            // Draw all paths
+            canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
             for (drawingPath in stateManager.paths) {
                 if (drawingPath.tool == DrawingTool.TEXT && drawingPath.text != null) 
                     canvas.drawText(drawingPath.text, drawingPath.textX, drawingPath.textY, drawingPath.paint)
@@ -434,4 +422,3 @@ class CanvasRenderManager(
         }
     }
 }
-

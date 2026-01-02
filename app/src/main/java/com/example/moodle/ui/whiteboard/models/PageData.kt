@@ -15,7 +15,6 @@ data class PageData(
     val imageObjects: MutableList<ImageObject> = mutableListOf(),
     var backgroundPattern: BackgroundPattern,
     var backgroundColor: BackgroundColor,
-    // command-based undo/redo
     val commandManager: CommandManager = CommandManager()
 ) {
     fun clear() {

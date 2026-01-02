@@ -44,7 +44,7 @@ class BitmapManager {
                 
                 drawingBitmap = Bitmap.createBitmap(canvasWidth, canvasHeight, Bitmap.Config.ARGB_8888)
                 drawingCanvas = Canvas(drawingBitmap!!)
-                drawingCanvas?.drawColor(Color.WHITE)
+                drawingBitmap?.eraseColor(Color.TRANSPARENT)
                 
                 onBitmapInitialized?.invoke(canvasWidth, canvasHeight)
             }
@@ -64,7 +64,7 @@ class BitmapManager {
         drawingBitmap?.recycle()
         drawingBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         drawingCanvas = Canvas(drawingBitmap!!)
-        drawingCanvas?.drawColor(Color.WHITE)
+        drawingBitmap?.eraseColor(Color.TRANSPARENT)
         
         onBitmapInitialized?.invoke(w, h)
     }
@@ -78,4 +78,3 @@ class BitmapManager {
         drawingCanvas = null
     }
 }
-

@@ -141,7 +141,6 @@ class PageManager(private val userPreferences: com.example.moodle.data.datastore
     fun updateSharedBackgroundPattern(pattern: BackgroundPattern) {
         sharedBackgroundPattern = pattern
         userPreferences?.saveSharedBackgroundPattern(pattern.id)
-        // Update background pattern for all existing pages
         pages.values.forEach { page ->
             page.backgroundPattern = pattern
         }
