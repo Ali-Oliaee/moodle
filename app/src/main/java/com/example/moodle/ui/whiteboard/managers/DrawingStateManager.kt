@@ -64,6 +64,12 @@ class DrawingStateManager {
     var initialImageScaleX = 1f
     var initialImageScaleY = 1f
     var initialImageRotation = 0f
+
+    fun hasActiveTransform(): Boolean {
+        return isResizingText || isRotatingText ||
+            isResizingShape || isRotatingShape ||
+            isResizingImage || isRotatingImage
+    }
     
     /**
      * Add a completed drawing path
@@ -262,6 +268,8 @@ class DrawingStateManager {
     }
     
     fun handleSelectionTouchDown(x: Float, y: Float) {
+        syncSelectedObjects()
+
         // First check if touching selected object's special handles
         selectedTextObject?.let { textObj ->
             if (textObj.isDeleteButtonTouched(x, y)) {
@@ -408,6 +416,87 @@ class DrawingStateManager {
             deselectAll()
         }
     }
+
+    fun handleSelectedObjectHandleTouchDown(x: Float, y: Float): Boolean {
+        syncSelectedObjects()
+
+        selectedTextObject?.let { textObj ->
+            if (textObj.isDeleteButtonTouched(x, y)) {
+                removeSelectedTextObject()
+                return true
+            }
+            if (textObj.isResizeHandleTouched(x, y)) {
+                isResizingText = true
+                dragStartX = x
+                dragStartY = y
+                initialTextSize = textObj.textSize
+                return true
+            }
+            if (textObj.isRotationHandleTouched(x, y)) {
+                isRotatingText = true
+                dragStartX = x
+                dragStartY = y
+                initialRotation = textObj.rotation
+                return true
+            }
+        }
+
+        selectedShapeObject?.let { shapeObj ->
+            if (shapeObj.isDeleteButtonTouched(x, y)) {
+                removeSelectedShapeObject()
+                return true
+            }
+            val resizeHandle = shapeObj.isResizeHandleTouched(x, y)
+            if (resizeHandle != null) {
+                isResizingShape = true
+                currentResizeHandle = resizeHandle
+                dragStartX = x
+                dragStartY = y
+                initialShapeStartX = shapeObj.startX
+                initialShapeStartY = shapeObj.startY
+                initialShapeEndX = shapeObj.endX
+                initialShapeEndY = shapeObj.endY
+                return true
+            }
+            if (shapeObj.isRotationHandleTouched(x, y)) {
+                isRotatingShape = true
+                dragStartX = x
+                dragStartY = y
+                initialShapeRotation = shapeObj.rotation
+                return true
+            }
+        }
+
+        selectedImageObject?.let { imageObj ->
+            if (imageObj.isDeleteButtonTouched(x, y)) {
+                removeSelectedImageObject()
+                return true
+            }
+            val resizeHandle = imageObj.isResizeHandleTouched(x, y)
+            if (resizeHandle != null) {
+                isResizingImage = true
+                currentImageResizeHandle = resizeHandle
+                dragStartX = x
+                dragStartY = y
+                initialImageX = imageObj.x
+                initialImageY = imageObj.y
+                initialImageWidth = imageObj.width
+                initialImageHeight = imageObj.height
+                initialImageScaleX = imageObj.scaleX
+                initialImageScaleY = imageObj.scaleY
+                return true
+            }
+            if (imageObj.isRotationHandleTouched(x, y)) {
+                isRotatingImage = true
+                dragStartX = x
+                dragStartY = y
+                initialImageRotation = imageObj.rotation
+                return true
+            }
+        }
+
+        return false
+    }
     
     fun handleSelectionTouchMove(x: Float, y: Float) {
         // Handle text operations
@@ -458,20 +547,52 @@ class DrawingStateManager {
             selectedShapeObject?.let { shapeObj ->
                 when (currentResizeHandle) {
                     ShapeObject.ResizeHandle.TOP_LEFT -> {
-                        shapeObj.startX = initialShapeStartX + (x - dragStartX)
-                        shapeObj.startY = initialShapeStartY + (y - dragStartY)
+                        val minX = kotlin.math.min(initialShapeStartX, initialShapeEndX)
+                        val maxX = kotlin.math.max(initialShapeStartX, initialShapeEndX)
+                        val minY = kotlin.math.min(initialShapeStartY, initialShapeEndY)
+                        val maxY = kotlin.math.max(initialShapeStartY, initialShapeEndY)
+                        val newMinX = minX + (x - dragStartX)
+                        val newMinY = minY + (y - dragStartY)
+                        shapeObj.startX = kotlin.math.min(newMinX, maxX)
+                        shapeObj.endX = kotlin.math.max(newMinX, maxX)
+                        shapeObj.startY = kotlin.math.min(newMinY, maxY)
+                        shapeObj.endY = kotlin.math.max(newMinY, maxY)
                     }
                     ShapeObject.ResizeHandle.TOP_RIGHT -> {
-                        shapeObj.endX = initialShapeEndX + (x - dragStartX)
-                        shapeObj.startY = initialShapeStartY + (y - dragStartY)
+                        val minX = kotlin.math.min(initialShapeStartX, initialShapeEndX)
+                        val maxX = kotlin.math.max(initialShapeStartX, initialShapeEndX)
+                        val minY = kotlin.math.min(initialShapeStartY, initialShapeEndY)
+                        val maxY = kotlin.math.max(initialShapeStartY, initialShapeEndY)
+                        val newMaxX = maxX + (x - dragStartX)
+                        val newMinY = minY + (y - dragStartY)
+                        shapeObj.startX = kotlin.math.min(minX, newMaxX)
+                        shapeObj.endX = kotlin.math.max(minX, newMaxX)
+                        shapeObj.startY = kotlin.math.min(newMinY, maxY)
+                        shapeObj.endY = kotlin.math.max(newMinY, maxY)
                     }
                     ShapeObject.ResizeHandle.BOTTOM_LEFT -> {
-                        shapeObj.startX = initialShapeStartX + (x - dragStartX)
-                        shapeObj.endY = initialShapeEndY + (y - dragStartY)
+                        val minX = kotlin.math.min(initialShapeStartX, initialShapeEndX)
+                        val maxX = kotlin.math.max(initialShapeStartX, initialShapeEndX)
+                        val minY = kotlin.math.min(initialShapeStartY, initialShapeEndY)
+                        val maxY = kotlin.math.max(initialShapeStartY, initialShapeEndY)
+                        val newMinX = minX + (x - dragStartX)
+                        val newMaxY = maxY + (y - dragStartY)
+                        shapeObj.startX = kotlin.math.min(newMinX, maxX)
+                        shapeObj.endX = kotlin.math.max(newMinX, maxX)
+                        shapeObj.startY = kotlin.math.min(minY, newMaxY)
+                        shapeObj.endY = kotlin.math.max(minY, newMaxY)
                     }
                     ShapeObject.ResizeHandle.BOTTOM_RIGHT -> {
-                        shapeObj.endX = initialShapeEndX + (x - dragStartX)
-                        shapeObj.endY = initialShapeEndY + (y - dragStartY)
+                        val minX = kotlin.math.min(initialShapeStartX, initialShapeEndX)
+                        val maxX = kotlin.math.max(initialShapeStartX, initialShapeEndX)
+                        val minY = kotlin.math.min(initialShapeStartY, initialShapeEndY)
+                        val maxY = kotlin.math.max(initialShapeStartY, initialShapeEndY)
+                        val newMaxX = maxX + (x - dragStartX)
+                        val newMaxY = maxY + (y - dragStartY)
+                        shapeObj.startX = kotlin.math.min(minX, newMaxX)
+                        shapeObj.endX = kotlin.math.max(minX, newMaxX)
+                        shapeObj.startY = kotlin.math.min(minY, newMaxY)
+                        shapeObj.endY = kotlin.math.max(minY, newMaxY)
                     }
                     ShapeObject.ResizeHandle.LINE_START -> {
                         shapeObj.startX = x
@@ -586,8 +707,42 @@ class DrawingStateManager {
         currentResizeHandle = null
         currentImageResizeHandle = null
     }
+
+    private fun syncSelectedObjects() {
+        val syncedText = if (selectedTextObject != null && textObjects.any { it === selectedTextObject }) {
+            selectedTextObject
+        } else {
+            textObjects.lastOrNull { it.isSelected }
+        }
+        selectedTextObject = syncedText
+        if (selectedTextObject != null && selectedTextObject?.isSelected == false) {
+            selectedTextObject?.isSelected = true
+        }
+
+        val syncedShape = if (selectedShapeObject != null && shapeObjects.any { it === selectedShapeObject }) {
+            selectedShapeObject
+        } else {
+            shapeObjects.lastOrNull { it.isSelected }
+        }
+        selectedShapeObject = syncedShape
+        if (selectedShapeObject != null && selectedShapeObject?.isSelected == false) {
+            selectedShapeObject?.isSelected = true
+        }
+
+        val syncedImage = if (selectedImageObject != null && imageObjects.any { it === selectedImageObject }) {
+            selectedImageObject
+        } else {
+            imageObjects.lastOrNull { it.isSelected }
+        }
+        selectedImageObject = syncedImage
+        if (selectedImageObject != null && selectedImageObject?.isSelected == false) {
+            selectedImageObject?.isSelected = true
+        }
+    }
     
     fun handleShapeObjectInteraction(x: Float, y: Float, action: Int): Boolean {
+        syncSelectedObjects()
+
         when (action) {
             android.view.MotionEvent.ACTION_DOWN -> {
                 // First check if touching selected shape's special handles
@@ -766,4 +921,3 @@ class DrawingStateManager {
         }
     }
 }
-

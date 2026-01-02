@@ -95,7 +95,7 @@ class CanvasRenderManager(
     private fun drawNormalMode(canvas: Canvas, activePaths: Map<Int, Path>, selectionPath: Path?, previewPath: Path?) {
         canvas.save()
         
-        // Apply transformations
+        // Apply transformations (translate first, then scale) to match touch mapping
         canvas.translate(-zoomPanController.focusX, -zoomPanController.focusY)
         canvas.scale(zoomPanController.scaleFactor, zoomPanController.scaleFactor)
         

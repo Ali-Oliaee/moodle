@@ -140,6 +140,14 @@ class TouchGestureHandler(
         
         // Get coordinates for actual drawing
         val (x, y) = transformScreenToDrawing(screenX, screenY)
+
+        if (stateManager.handleSelectedObjectHandleTouchDown(x, y)) {
+            if (!stateManager.hasActiveTransform()) {
+                onDrawingChanged?.invoke()
+            }
+            onInvalidate?.invoke()
+            return
+        }
         
         // Get the tool to use
         val toolToUse = getToolForPointer(pointerId)
@@ -173,8 +181,15 @@ class TouchGestureHandler(
     }
     
     private fun handleTouchMove(event: MotionEvent) {
-        // Handle special tools for first pointer only
-        if (event.pointerCount == 1) {
+        if (stateManager.hasActiveTransform()) {
+            val (x, y) = transformScreenToDrawing(event.x, event.y)
+            stateManager.handleSelectionTouchMove(x, y)
+            onInvalidate?.invoke()
+            return
+        }
+
+        // Handle special tools for the primary pointer
+        if (event.pointerCount > 0) {
             val id = event.getPointerId(0)
             val toolToUse = getToolForPointer(id)
             
@@ -244,6 +259,13 @@ class TouchGestureHandler(
         val screenX = event.getX(pointerIndex)
         val screenY = event.getY(pointerIndex)
         val (x, y) = transformScreenToDrawing(screenX, screenY)
+
+        if (stateManager.hasActiveTransform()) {
+            stateManager.handleSelectionTouchUp(x, y)
+            onDrawingChanged?.invoke()
+            onInvalidate?.invoke()
+            return
+        }
         
         val toolToUse = getToolForPointer(pointerId)
         
@@ -823,4 +845,3 @@ class TouchGestureHandler(
     
     fun getPointerSectionMap(): Map<Int, SectionManager.Section> = pointerSectionMap
 }
-
